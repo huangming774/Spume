@@ -13,7 +13,7 @@ cd api
 cargo run
 ```
 
-默认监听 `0.0.0.0:8787`。用 `ACG_API_ADDR` 修改地址，例如 `:8787`。示例变量在 `.env.example`。
+默认监听 `0.0.0.0:8080`。用 `ACG_API_ADDR` 修改地址，例如 `:8080`。示例变量在 `.env.example`。
 
 ```text
 cargo fmt --all
@@ -30,7 +30,7 @@ cargo test
 | `OWNER_EMAIL` | 站长账号 |
 | `ACG_ALLOWED_ORIGINS` | 允许带 cookie 的跨域来源 |
 | `DEEPSEEK_API_KEY` | 聊天模型。请求发到 `DEEPSEEK_BASE_URL/v1/chat/completions` |
-| `DASHSCOPE_API_KEY` | 生图 |
+| `AGNES_API_KEY`、`DASHSCOPE_API_KEY` | 生图。Agnes 优先，没有时用百炼。`ALIYUN_BAILIAN_API_KEY` 也可以代替百炼密钥 |
 | `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`、`R2_PUBLIC_BASE` | 图片对象存储 |
 | `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN` | 配置后，限流计数走 Redis |
 | `UPSTASH_VECTOR_REST_URL`、`UPSTASH_VECTOR_REST_TOKEN` | 站内内容检索 |

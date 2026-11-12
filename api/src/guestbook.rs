@@ -542,7 +542,7 @@ fn item_json(
     value
 }
 
-fn china_clock(time: DateTime<Utc>) -> String {
+pub fn china_clock(time: DateTime<Utc>) -> String {
     let Some(offset) = chrono::FixedOffset::east_opt(8 * 3600) else {
         return time.to_rfc3339();
     };

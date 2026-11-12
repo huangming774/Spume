@@ -28,7 +28,7 @@ pub enum ImageStoreError {
     #[error("生图地址不是 https")]
     BadSource,
     /// 下载失败或文件不是图片。
-    #[error("生图完成了，但临时图片下载失败")]
+    #[error("生图完成了，但临时图片下载失败，请稍后再试。")]
     Download,
     /// 上传失败。
     #[error("生成图保存到 R2 失败")]
@@ -74,7 +74,7 @@ pub async fn store_remote_image(
         .bytes()
         .await
         .map_err(|_| ImageStoreError::Download)?;
-    if bytes.is_empty() || bytes.len() > 8 * 1024 * 1024 {
+    if bytes.is_empty() || bytes.len() > 12 * 1024 * 1024 {
         return Err(ImageStoreError::Download);
     }
     let digest = Sha256::digest(&bytes);

@@ -131,18 +131,33 @@ pub fn bvid_from_cover_name(name: &str) -> Option<&str> {
 }
 
 pub async fn cover_source(state: &AppState, name: &str) -> Result<Option<String>, String> {
-    let Some(bvid) = bvid_from_cover_name(name) else {
+    if !safe_image_name(name) {
         return Ok(None);
-    };
+    }
     let Some(pool) = state.db.as_ref() else {
         return Ok(None);
     };
-    let remote: Option<String> =
-        sqlx::query_scalar("SELECT cover_remote FROM bilibili_videos WHERE bvid = $1")
+    let remote: Option<String> = if let Some(bvid) = bvid_from_cover_name(name) {
+        sqlx::query_scalar::<_, String>("SELECT cover_remote FROM bilibili_videos WHERE bvid = $1")
             .bind(bvid)
             .fetch_optional(pool)
             .await
-            .map_err(|error| format!("封面地址没有读出来: {error}"))?;
+            .map_err(|error| format!("封面地址没有读出来: {error}"))?
+    } else if let Some(id) = bangumi_cover_id(name) {
+        sqlx::query_scalar::<_, String>("SELECT cover_path FROM bangumi_items WHERE id = $1")
+            .bind(id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|error| format!("番剧封面没有读出来: {error}"))?
+    } else if let Some(uid) = radar_cover_uid(name) {
+        sqlx::query_scalar::<_, String>("SELECT cover_path FROM radar_feed WHERE up_uid = $1")
+            .bind(uid)
+            .fetch_optional(pool)
+            .await
+            .map_err(|error| format!("雷达封面没有读出来: {error}"))?
+    } else {
+        None
+    };
     Ok(remote.and_then(|value| remote_cover(&value)))
 }
 
@@ -428,6 +443,26 @@ fn valid_uid(uid: &str) -> bool {
         && uid.parse::<i64>().is_ok()
 }
 
+fn safe_image_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.contains("..")
+        && name
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
+}
+
+fn bangumi_cover_id(name: &str) -> Option<&str> {
+    let id = name.strip_suffix(".jpg")?;
+    let number = id.strip_prefix('s')?;
+    (!number.is_empty() && !number.starts_with('0') && number.chars().all(|ch| ch.is_ascii_digit()))
+        .then_some(id)
+}
+
+fn radar_cover_uid(name: &str) -> Option<&str> {
+    let uid = name.strip_suffix(".jpg")?.strip_prefix("radar_")?;
+    valid_uid(uid).then_some(uid)
+}
+
 fn valid_bvid(value: &str) -> bool {
     value
         .strip_prefix("BV")
@@ -544,5 +579,13 @@ mod tests {
         body["data"]["list"]["vlist"][0]["pic"] = json!("https://evil.example/cover.jpg");
         assert!(parse_page("1061280173", 1, &body).is_err());
         assert!(normalize_cover("https://i0.hdslb.com.evil/cover.jpg").is_none());
+    }
+
+    #[test]
+    fn cached_cover_names_identify_bangumi_and_radar() {
+        assert_eq!(bangumi_cover_id("s42.jpg"), Some("s42"));
+        assert_eq!(bangumi_cover_id("s0.jpg"), None);
+        assert_eq!(radar_cover_uid("radar_1061280173.jpg"), Some("1061280173"));
+        assert!(!safe_image_name("../secret.jpg"));
     }
 }

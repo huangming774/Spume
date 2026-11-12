@@ -12,6 +12,11 @@ pub struct Config {
     pub deepseek_model: String,
     pub deepseek_base_url: String,
     pub dashscope_api_key: String,
+    pub dashscope_base_url: String,
+    pub dashscope_image_model: String,
+    pub agnes_api_key: String,
+    pub agnes_base_url: String,
+    pub agnes_image_model: String,
     pub bilibili_uid: String,
     pub r2_account_id: String,
     pub r2_access_key: String,
@@ -48,7 +53,7 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Self {
         Self {
-            bind: env("ACG_API_ADDR", ":8787"),
+            bind: env("ACG_API_ADDR", ":8080"),
             database_url: nonempty("DATABASE_URL"),
             session_secret: env("SESSION_SECRET", "dev-session-secret"),
             owner_email: env("OWNER_EMAIL", "").to_lowercase(),
@@ -69,7 +74,19 @@ impl Config {
             deepseek_base_url: env("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
                 .trim_end_matches('/')
                 .to_string(),
-            dashscope_api_key: env("DASHSCOPE_API_KEY", ""),
+            dashscope_api_key: env_first(&["DASHSCOPE_API_KEY", "ALIYUN_BAILIAN_API_KEY"]),
+            dashscope_base_url: env(
+                "DASHSCOPE_BASE_URL",
+                "https://dashscope.aliyuncs.com/api/v1",
+            )
+            .trim_end_matches('/')
+            .to_string(),
+            dashscope_image_model: env("AI_IMAGE_MODEL", "z-image-turbo"),
+            agnes_api_key: env("AGNES_API_KEY", ""),
+            agnes_base_url: env("AGNES_BASE_URL", "https://apihub.agnes-ai.com")
+                .trim_end_matches('/')
+                .to_string(),
+            agnes_image_model: agnes_model_from_env(),
             bilibili_uid: env("BILIBILI_UID", "1061280173"),
             r2_account_id: env("R2_ACCOUNT_ID", ""),
             r2_access_key: env("R2_ACCESS_KEY_ID", ""),
@@ -120,6 +137,11 @@ impl Config {
             deepseek_model: "deepseek-v4-flash".into(),
             deepseek_base_url: "https://api.deepseek.com".into(),
             dashscope_api_key: String::new(),
+            dashscope_base_url: "https://dashscope.aliyuncs.com/api/v1".into(),
+            dashscope_image_model: "z-image-turbo".into(),
+            agnes_api_key: String::new(),
+            agnes_base_url: "https://apihub.agnes-ai.com".into(),
+            agnes_image_model: "agnes-image-2.1-flash".into(),
             bilibili_uid: "1061280173".into(),
             r2_account_id: "account".into(),
             r2_access_key: "access".into(),
@@ -185,4 +207,22 @@ fn nonempty(key: &str) -> Option<String> {
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
+}
+
+fn env_first(keys: &[&str]) -> String {
+    keys.iter()
+        .find_map(|key| nonempty(key))
+        .unwrap_or_default()
+}
+
+fn agnes_model_from_env() -> String {
+    if let Some(model) = nonempty("AGNES_IMAGE_MODEL") {
+        return model;
+    }
+    if let Some(model) = nonempty("AI_IMAGE_MODEL") {
+        if model.to_ascii_lowercase().starts_with("agnes-") {
+            return model;
+        }
+    }
+    "agnes-image-2.1-flash".to_string()
 }

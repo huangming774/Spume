@@ -116,10 +116,12 @@ fn fail(status: StatusCode, error: &str, message: &str) -> Response {
 }
 
 fn query_failed(error: &sqlx::Error) -> Response {
+    // 原始错误（可能含 SQL、连接串）只进日志，不给客户端。
+    tracing::error!(error = %error, "database query failed");
     fail(
         StatusCode::INTERNAL_SERVER_ERROR,
         "SERVER_ERROR",
-        &error.to_string(),
+        "服务器开小差了，请稍后再试",
     )
 }
 
@@ -247,7 +249,32 @@ async fn auth_me(State(state): State<AppState>, headers: HeaderMap) -> Json<Valu
     }))
 }
 
-async fn auth_register(State(state): State<AppState>, Json(body): Json<AuthBody>) -> Response {
+async fn auth_register(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AuthBody>,
+) -> Response {
+    if let Some(response) = auth_limited(&state, &headers) {
+        return response;
+    }
+    let email = body.email.trim().to_lowercase();
+    if !state.cfg.owner_email.is_empty() && email == state.cfg.owner_email {
+        return fail(
+            StatusCode::FORBIDDEN,
+            "OWNER_EMAIL_RESERVED",
+            "该邮箱为站长专用，请直接登录并完成学号验证",
+        );
+    }
+    if !crate::account::valid_email(&email) {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_EMAIL",
+            "请输入有效的邮箱地址",
+        );
+    }
+    if let Some(message) = crate::account::password_message(&body.password) {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_PASSWORD", message);
+    }
     let Ok(pool) = db_required(&state) else {
         return fail(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -255,14 +282,6 @@ async fn auth_register(State(state): State<AppState>, Json(body): Json<AuthBody>
             "数据库还没有连上",
         );
     };
-    let email = body.email.trim().to_lowercase();
-    if !email.contains('@') || body.password.len() < 8 {
-        return fail(
-            StatusCode::BAD_REQUEST,
-            "INVALID_INPUT",
-            "请填写有效邮箱，密码至少 8 位",
-        );
-    }
     let hash = match bcrypt::hash(&body.password, bcrypt::DEFAULT_COST) {
         Ok(hash) => hash,
         Err(_) => {
@@ -273,22 +292,18 @@ async fn auth_register(State(state): State<AppState>, Json(body): Json<AuthBody>
             )
         }
     };
-    let owner = email == state.cfg.owner_email && !email.is_empty();
     let inserted = sqlx::query_as::<_, (i64,)>(
         "INSERT INTO users (email, password_hash, is_owner) VALUES ($1, $2, $3) RETURNING id",
     )
     .bind(&email)
     .bind(&hash)
-    .bind(owner)
+    .bind(false)
     .fetch_one(pool)
     .await;
     let Ok((id,)) = inserted else {
         return fail(StatusCode::CONFLICT, "EMAIL_TAKEN", "这个邮箱已经注册过了");
     };
-    if owner && !state.cfg.owner_security_answer.is_empty() {
-        return begin_owner_challenge(&state, pool, id, &email, &email, "").await;
-    }
-    issue_session(&state, pool, id, owner).await
+    issue_session(&state, pool, id, false).await
 }
 
 async fn auth_login(
@@ -296,6 +311,9 @@ async fn auth_login(
     headers: HeaderMap,
     Json(body): Json<AuthBody>,
 ) -> Response {
+    if let Some(response) = auth_limited(&state, &headers) {
+        return response;
+    }
     let Ok(pool) = db_required(&state) else {
         return fail(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -469,12 +487,8 @@ async fn auth_profile(
         return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
     };
     let name = body.display_name.trim();
-    if name.is_empty() || name.chars().count() > 24 {
-        return fail(
-            StatusCode::BAD_REQUEST,
-            "INVALID_DISPLAY_NAME",
-            "昵称需要 1 到 24 个字",
-        );
+    if let Some(message) = crate::account::display_name_message(name) {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_DISPLAY_NAME", message);
     }
     let Ok(pool) = db_required(&state) else {
         return fail(
@@ -512,6 +526,9 @@ async fn auth_verify_security(
     headers: HeaderMap,
     Json(body): Json<VerifyBody>,
 ) -> Response {
+    if let Some(response) = auth_limited(&state, &headers) {
+        return response;
+    }
     let Ok(pool) = db_required(&state) else {
         return fail(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -604,7 +621,10 @@ async fn auth_avatar(
     let Some(user) = session_user(&state, &headers).await else {
         return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
     };
-    let (public, key, _name, _size) = match store_upload(&state, multipart, "avatars").await {
+    if let Some(response) = auth_limited(&state, &headers) {
+        return response;
+    }
+    let (public, key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await {
         Ok(saved) => saved,
         Err(response) => return *response,
     };
@@ -1114,8 +1134,8 @@ async fn radar_feed(State(state): State<AppState>) -> Response {
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"items": []})).into_response();
     };
-    let rows = match sqlx::query_as::<_, (String, String, String, String, String, bool)>(
-        "SELECT id, creator_name, latest_text, cover_path, link_url, is_new FROM radar_feed ORDER BY published_at DESC LIMIT 40",
+    let rows = match sqlx::query_as::<_, (String, String, String, String, String, String, bool)>(
+        "SELECT id, creator_name, latest_text, cover_path, link_url, up_uid, is_new FROM radar_feed ORDER BY published_at DESC LIMIT 40",
     )
     .fetch_all(pool)
     .await
@@ -1123,7 +1143,10 @@ async fn radar_feed(State(state): State<AppState>) -> Response {
         Ok(rows) => rows,
         Err(error) => return query_failed(&error),
     };
-    let items: Vec<Value> = rows.into_iter().map(|(id, name, text, cover, link, is_new)| json!({"id": id, "creatorName": name, "latestText": text, "cover": cover, "linkUrl": link, "isNew": is_new})).collect();
+    let items: Vec<Value> = rows.into_iter().map(|(id, name, text, cover, link, uid, is_new)| {
+        let cover = crate::feed::proxied_cover(&format!("radar_{uid}"), &cover);
+        json!({"id": id, "creatorName": name, "latestText": text, "cover": cover, "coverUrl": cover, "linkUrl": link, "isNew": is_new})
+    }).collect();
     Json(json!({"items": items})).into_response()
 }
 
@@ -1134,7 +1157,10 @@ async fn list_simple(state: &AppState, sql: &str) -> Result<Vec<Value>, sqlx::Er
     let rows = sqlx::query_as::<_, (String, String, i32, i32, i32, String, String)>(sql)
         .fetch_all(pool)
         .await?;
-    Ok(rows.into_iter().map(|(id, title, watched, total, latest, cover, link)| json!({"id": id, "title": title, "watched": watched, "total": total, "latestEpisode": latest, "cover": cover, "linkUrl": link})).collect())
+    Ok(rows.into_iter().map(|(id, title, watched, total, latest, cover, link)| {
+        let cover = crate::feed::proxied_cover(&id, &cover);
+        json!({"id": id, "title": title, "watched": watched, "total": total, "latestEpisode": latest, "cover": cover, "coverUrl": cover, "linkUrl": link})
+    }).collect())
 }
 
 async fn bili_videos(State(state): State<AppState>) -> Response {
@@ -1153,7 +1179,7 @@ async fn acg_image(State(state): State<AppState>, Path(name): Path<String>) -> R
     match crate::bili::fetch_cover(&state, &remote).await {
         Ok(bytes) => (
             [
-                (header::CONTENT_TYPE, HeaderValue::from_static("image/jpeg")),
+                (header::CONTENT_TYPE, sniffed_image_type(&bytes)),
                 (
                     header::CACHE_CONTROL,
                     HeaderValue::from_static("public, max-age=604800, immutable"),
@@ -1164,6 +1190,21 @@ async fn acg_image(State(state): State<AppState>, Path(name): Path<String>) -> R
             .into_response(),
         Err(()) => (StatusCode::BAD_GATEWAY, "cover unavailable").into_response(),
     }
+}
+
+fn sniffed_image_type(bytes: &[u8]) -> HeaderValue {
+    let mime = if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        "image/png"
+    } else if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        "image/gif"
+    } else if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else {
+        "application/octet-stream"
+    };
+    HeaderValue::from_static(mime)
 }
 
 #[derive(Deserialize)]
@@ -1227,7 +1268,8 @@ async fn wallpaper_draw(
         match crate::wallpaper::sync_pool(&state).await {
             Ok(_) => {}
             Err(error) => {
-                return Json(json!({"item": fallback, "fallback": true, "apiOnly": true, "syncError": error.to_string()}))
+                tracing::warn!(error = %error, "wallpaper sync failed, serving fallback");
+                return Json(json!({"item": fallback, "fallback": true, "apiOnly": true, "syncError": "图池暂时无法刷新，已为你展示备选壁纸"}))
                     .into_response();
             }
         }
@@ -1261,7 +1303,14 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
         .await
     {
         Ok(response) => response,
-        Err(error) => return fail(StatusCode::BAD_GATEWAY, "SEARCH_UPSTREAM", &error.to_string()),
+        Err(error) => {
+            tracing::error!(error = %error, "vector query transport failed");
+            return fail(
+                StatusCode::BAD_GATEWAY,
+                "SEARCH_UPSTREAM",
+                "搜索服务暂时不可用，请稍后再试",
+            );
+        }
     };
     if !response.status().is_success() {
         return fail(
@@ -1273,20 +1322,24 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
     let body = match response.json::<Value>().await {
         Ok(body) => body,
         Err(error) => {
+            tracing::error!(error = %error, "vector query response parse failed");
             return fail(
                 StatusCode::BAD_GATEWAY,
                 "SEARCH_UPSTREAM",
-                &error.to_string(),
-            )
+                "搜索服务返回异常，请稍后再试",
+            );
         }
     };
     match crate::search_hits::hits_from_vector(&body) {
         Ok(items) => Json(json!({"configured": true, "items": items})).into_response(),
-        Err(error) => fail(
-            StatusCode::BAD_GATEWAY,
-            "SEARCH_UPSTREAM",
-            &error.to_string(),
-        ),
+        Err(error) => {
+            tracing::error!(error = %error, "vector hits parse failed");
+            fail(
+                StatusCode::BAD_GATEWAY,
+                "SEARCH_UPSTREAM",
+                "搜索结果解析失败，请稍后再试",
+            )
+        }
     }
 }
 
@@ -1421,7 +1474,14 @@ async fn sync_wallpaper(
     }
     match crate::wallpaper::sync_pool(&state).await {
         Ok(count) => Json(json!({"ok": true, "count": count})).into_response(),
-        Err(error) => fail(StatusCode::BAD_GATEWAY, "SYNC_FAILED", &error.to_string()),
+        Err(error) => {
+            tracing::error!(error = %error, "sync trigger failed");
+            fail(
+                StatusCode::BAD_GATEWAY,
+                "SYNC_FAILED",
+                "同步任务失败，请稍后再试",
+            )
+        }
     }
 }
 
@@ -1437,7 +1497,14 @@ async fn sync_radar(
     match crate::feed::sync_radar(&state, Utc::now()).await {
         Ok(report) => Json(json!({"ok": true, "saved": report.saved, "failed": report.failed}))
             .into_response(),
-        Err(error) => fail(StatusCode::BAD_GATEWAY, "SYNC_FAILED", &error.to_string()),
+        Err(error) => {
+            tracing::error!(error = %error, "sync trigger failed");
+            fail(
+                StatusCode::BAD_GATEWAY,
+                "SYNC_FAILED",
+                "同步任务失败，请稍后再试",
+            )
+        }
     }
 }
 
@@ -1819,10 +1886,14 @@ async fn fixed_answer(
     let Some(pool) = state.db.as_ref() else {
         return Ok(None);
     };
+    let normalized = crate::fixed_answers::normalize_question(message);
+    if normalized.is_empty() {
+        return Ok(None);
+    }
     sqlx::query_as(
-        "SELECT id, answer FROM ai_fixed_answers WHERE status = 'active' AND lower(question) = lower($1) LIMIT 1",
+        "SELECT id, answer FROM ai_fixed_answers WHERE status = 'active' AND normalized_question = $1 LIMIT 1",
     )
-    .bind(message)
+    .bind(normalized)
     .fetch_optional(pool)
     .await
     .map_err(|error| Box::new(query_failed(&error)))
@@ -1859,13 +1930,25 @@ async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery
         let hourly = match sqlx::query_as::<_, (String, i32, i32, i32, i32, i32)>(
             "SELECT bucket, success, upstream_error, quota_denied, rate_denied, not_configured FROM ai_chat_hourly WHERE bucket LIKE $1 || '%' ORDER BY bucket",
         )
-        .bind(prefix)
+        .bind(&prefix)
         .fetch_all(pool)
         .await
         {
             Ok(rows) => rows,
             Err(error) => return query_failed(&error),
         };
+        let quota = match sqlx::query_as::<_, (NaiveDate, i64, i64, i64)>(
+            "SELECT quota_date, COALESCE(SUM(used), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'guest:%' THEN used ELSE 0 END), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'user:%' THEN used ELSE 0 END), 0)::bigint FROM ai_chat_quota WHERE quota_date >= $1 GROUP BY quota_date",
+        )
+        .bind(since)
+        .fetch_all(pool)
+        .await
+        {
+            Ok(rows) => rows,
+            Err(error) => return query_failed(&error),
+        };
+        let mut daily = daily;
+        merge_quota_daily(&mut daily, &quota);
         (daily, hourly)
     } else {
         (Vec::new(), Vec::new())
@@ -1882,6 +1965,31 @@ async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery
 
 type DailyRow = (NaiveDate, i32, i32, i32, i32, i32, i32, i32);
 type HourlyRow = (String, i32, i32, i32, i32, i32);
+
+fn merge_quota_daily(daily: &mut Vec<DailyRow>, quota: &[(NaiveDate, i64, i64, i64)]) {
+    for (date, used, guest, user) in quota {
+        if *used <= 0 {
+            continue;
+        }
+        let used = i32::try_from(*used).unwrap_or(i32::MAX);
+        let guest = i32::try_from(*guest).unwrap_or(i32::MAX);
+        let user = i32::try_from(*user).unwrap_or(i32::MAX);
+        if let Some(row) = daily.iter_mut().find(|row| row.0 == *date) {
+            if row.1 < used {
+                row.1 = used;
+            }
+            if row.6 < guest {
+                row.6 = guest;
+            }
+            if row.7 < user {
+                row.7 = user;
+            }
+        } else {
+            daily.push((*date, used, 0, 0, 0, 0, guest, user));
+        }
+    }
+    daily.sort_by_key(|row| row.0);
+}
 
 fn chat_stats_json(
     model: &str,
@@ -1910,7 +2018,7 @@ fn chat_stats_json(
         }
     }
     let hourly_items: Vec<Value> = by_hour.iter().enumerate().map(|(hour, (success, upstream, quota, rate, missing))| {
-        json!({"hour": format!("{hour:02}"), "success": success, "upstreamError": upstream, "quotaDenied": quota, "rateDenied": rate, "notConfigured": missing, "total": success + upstream + quota + rate + missing})
+        json!({"hour": format!("{hour:02}"), "success": success, "upstreamError": upstream, "quotaDenied": quota, "rateDenied": rate, "notConfigured": missing, "total": success + upstream + quota + rate})
     }).collect();
     let today_key = today.to_string();
     let mut today_success = 0;
@@ -1971,7 +2079,7 @@ fn image_quota_json(state: &AppState, user: &Option<SessionUser>, limit: i64, us
     let unlimited = user
         .as_ref()
         .is_some_and(|item| item.unlimited || item.is_owner);
-    let enabled = !state.cfg.dashscope_api_key.is_empty();
+    let enabled = crate::image_gen::configured(&state.cfg);
     json!({
         "limit": if unlimited { -1 } else { limit },
         "used": used,
@@ -1980,7 +2088,7 @@ fn image_quota_json(state: &AppState, user: &Option<SessionUser>, limit: i64, us
         "unlimited": unlimited,
         "imageEnabled": enabled,
         "canGenerate": user.is_some() && enabled && (unlimited || used < limit),
-        "model": "wanx-v1",
+        "model": crate::image_gen::public_model(&state.cfg),
         "promptExtend": false,
         "userId": user.as_ref().map(|item| item.id).unwrap_or(0)
     })
@@ -2048,7 +2156,7 @@ async fn image_create(
         body["message"] = json!("请先登录后再生图，避免额度被刷爆。");
         return (StatusCode::UNAUTHORIZED, Json(body)).into_response();
     }
-    if state.cfg.dashscope_api_key.is_empty() {
+    if !crate::image_gen::configured(&state.cfg) {
         let mut body = quota;
         body["error"] = json!("IMAGE_NOT_CONFIGURED");
         body["message"] = json!("生图还没配置 Agnes API Key，站长配好后就能用了。");
@@ -2078,42 +2186,29 @@ async fn image_create(
         body["message"] = json!("今日生图次数用完啦，明天再来画吧～");
         return (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response();
     }
-    let size = body.size.unwrap_or_else(|| "1024*1024".into());
-    let response = state
-        .http
-        .post("https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis")
-        .bearer_auth(&state.cfg.dashscope_api_key)
-        .json(
-            &json!({"model": "wanx-v1", "input": {"prompt": prompt}, "parameters": {"size": size}}),
-        )
-        .send()
-        .await;
-    let Ok(response) = response else {
-        return fail(
-            StatusCode::BAD_GATEWAY,
-            "UPSTREAM_ERROR",
-            "生图服务没有回应",
-        );
+    let size = crate::image_gen::normalize_size(body.size.as_deref().unwrap_or(""));
+    let generated = match crate::image_gen::generate(&state.http, &state.cfg, prompt, size).await {
+        Ok(generated) => generated,
+        Err(crate::image_gen::ImageGenError::PromptRejected) => {
+            let mut body = quota;
+            body["error"] = json!("IMAGE_PROMPT_REJECTED");
+            body["message"] = json!(crate::image_gen::PROMPT_REJECTED_MESSAGE);
+            return (StatusCode::BAD_REQUEST, Json(body)).into_response();
+        }
+        Err(crate::image_gen::ImageGenError::NotConfigured) => {
+            let mut body = quota;
+            body["error"] = json!("IMAGE_NOT_CONFIGURED");
+            body["message"] = json!("生图还没配置 Agnes API Key，站长配好后就能用了。");
+            return (StatusCode::SERVICE_UNAVAILABLE, Json(body)).into_response();
+        }
+        Err(crate::image_gen::ImageGenError::Provider) => {
+            let mut body = quota;
+            body["error"] = json!("IMAGE_PROVIDER_ERROR");
+            body["message"] = json!("Agnes 生图暂时失败了，请稍后再试。");
+            return (StatusCode::BAD_GATEWAY, Json(body)).into_response();
+        }
     };
-    let Ok(payload) = response.json::<Value>().await else {
-        return fail(
-            StatusCode::BAD_GATEWAY,
-            "UPSTREAM_ERROR",
-            "生图结果无法解析",
-        );
-    };
-    let url = payload["output"]["results"][0]["url"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
-    if url.is_empty() {
-        return fail(
-            StatusCode::BAD_GATEWAY,
-            "UPSTREAM_ERROR",
-            "生图没有返回图片",
-        );
-    }
-    let stored = match crate::image_store::store_remote_image(&state, &url).await {
+    let stored = match crate::image_store::store_remote_image(&state, &generated.url).await {
         Ok(stored) => stored,
         Err(error) => {
             let (status, code) = match error {
@@ -2128,7 +2223,13 @@ async fn image_create(
                     (StatusCode::BAD_GATEWAY, "R2_UPLOAD_ERROR")
                 }
             };
-            return fail(status, code, &error.to_string());
+            tracing::error!(error = %error, "image store failed");
+            let message = match code {
+                "R2_NOT_CONFIGURED" => "图床还没有配置好",
+                "IMAGE_DOWNLOAD_ERROR" => "生成图片下载失败，请稍后再试",
+                _ => "图片保存失败，请稍后再试",
+            };
+            return fail(status, code, message);
         }
     };
     let Some(pool) = state.db.as_ref() else {
@@ -2147,7 +2248,7 @@ async fn image_create(
     )
     .bind(prompt)
     .bind(&stored.url)
-    .bind(&size)
+    .bind(size)
     .bind(author)
     .bind(&stored.key)
     .execute(pool)
@@ -2178,8 +2279,11 @@ async fn image_create(
     }
     let used = if unlimited { used } else { used + 1 };
     let mut out = image_quota_json(&state, &user, limit, used);
-    out["image"] = json!({"url": stored.url, "path": stored.key, "mimeType": stored.mime, "size": stored.size, "width": 0, "height": 0});
-    out["size"] = json!(size);
+    out["image"] = json!({"url": stored.url, "path": stored.key, "mimeType": stored.mime, "size": stored.size, "width": generated.width, "height": generated.height});
+    out["size"] = json!(generated.size);
+    out["model"] = json!(generated.model);
+    out["requestId"] = json!(generated.request_id);
+    out["promptExtend"] = json!(false);
     Json(out).into_response()
 }
 
@@ -2215,13 +2319,7 @@ async fn image_gallery(
     .await;
     let rows = match rows {
         Ok(rows) => rows,
-        Err(error) => {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                &error.to_string(),
-            )
-        }
+        Err(error) => return query_failed(&error),
     };
     let full = rows.len() as i64 == limit;
     let items: Vec<Value> = rows.into_iter().map(|(prompt, url, size, author, created)| json!({"prompt": prompt, "imageUrl": url, "size": size, "author": author, "createdAt": created.to_rfc3339()})).collect();
@@ -2386,12 +2484,15 @@ async fn owner_status(State(state): State<AppState>, headers: HeaderMap) -> Resp
         Err(error) => return query_failed(&error),
     };
     let today_success: i64 = if let Some(pool) = pool {
-        match sqlx::query_scalar("SELECT success::bigint FROM ai_chat_daily WHERE bucket = $1")
-            .bind(Utc::now().date_naive())
-            .fetch_optional(pool)
-            .await
+        let prefix = Utc::now().format("%Y-%m-%dT").to_string();
+        match sqlx::query_scalar(
+            "SELECT COALESCE(SUM(success), 0) FROM ai_chat_hourly WHERE bucket LIKE $1 || '%'",
+        )
+        .bind(prefix)
+        .fetch_one(pool)
+        .await
         {
-            Ok(value) => value.unwrap_or(0),
+            Ok(value) => value,
             Err(error) => return query_failed(&error),
         }
     } else {
@@ -2492,16 +2593,24 @@ async fn owner_draft_create(
     let kind = body
         .get("kind")
         .and_then(Value::as_str)
-        .unwrap_or("article");
+        .unwrap_or("")
+        .trim();
+    let kind = if kind.is_empty() { "article" } else { kind };
     let text = body.get("body").and_then(Value::as_str).unwrap_or("");
     if text.len() > 200_000 {
         return fail(StatusCode::BAD_REQUEST, "INVALID_BODY", "草稿正文太大。");
     }
-    let cover = body.get("coverUrl").and_then(Value::as_str).unwrap_or("");
+    let cover = body
+        .get("coverUrl")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
     let status = body
         .get("status")
         .and_then(Value::as_str)
-        .unwrap_or("draft");
+        .unwrap_or("")
+        .trim();
+    let status = if status.is_empty() { "draft" } else { status };
     let row = sqlx::query_as::<_, (i64, DateTime<Utc>, DateTime<Utc>)>("INSERT INTO owner_drafts (kind, title, body, cover_url, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at, updated_at")
         .bind(kind).bind(title).bind(text).bind(cover).bind(status).fetch_one(pool).await;
     let Ok((id, created, updated)) = row else {
@@ -2633,17 +2742,19 @@ async fn mark_draft_published(state: &AppState, draft_id: i64) -> Result<(), Box
             "文章已写入仓库，但数据库还没有连上，草稿状态没有更新",
         )));
     };
-    let updated = sqlx::query("UPDATE owner_drafts SET status = 'published' WHERE id = $1")
-        .bind(draft_id)
-        .execute(pool)
-        .await
-        .map_err(|error| {
-            Box::new(fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "DRAFT_UPDATE_FAILED",
-                &format!("文章已写入仓库，草稿状态没有更新: {error}"),
-            ))
-        })?;
+    let updated = sqlx::query(
+        "UPDATE owner_drafts SET status = 'published', updated_at = now() WHERE id = $1",
+    )
+    .bind(draft_id)
+    .execute(pool)
+    .await
+    .map_err(|error| {
+        Box::new(fail(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "DRAFT_UPDATE_FAILED",
+            &format!("文章已写入仓库，草稿状态没有更新: {error}"),
+        ))
+    })?;
     if updated.rows_affected() == 0 {
         return Err(Box::new(fail(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -3030,7 +3141,7 @@ async fn fixed_answers(State(state): State<AppState>, headers: HeaderMap) -> Res
         return Json(json!({"items": []})).into_response();
     };
     let rows = sqlx::query_as::<_, (i64, String, String, String)>(
-        "SELECT id, question, answer, status FROM ai_fixed_answers ORDER BY id DESC",
+        "SELECT id, question, answer, status FROM ai_fixed_answers WHERE status = 'active' ORDER BY updated_at DESC, id DESC LIMIT 50",
     )
     .fetch_all(pool)
     .await;
@@ -3057,38 +3168,34 @@ async fn fixed_answer_create(
             "数据库还没有连上",
         );
     };
-    let question = body
-        .get("question")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim();
-    let answer = body
-        .get("answer")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim();
-    if question.is_empty() || answer.is_empty() {
+    let question = body.get("question").and_then(Value::as_str).unwrap_or("");
+    let answer = body.get("answer").and_then(Value::as_str).unwrap_or("");
+    if !crate::fixed_answers::input_ok(question, answer) {
         return fail(
             StatusCode::BAD_REQUEST,
             "INVALID_FIXED_ANSWER",
             "固定答案需要填写问题和答案，且内容不能过长。",
         );
     }
-    let row = sqlx::query_as::<_, (i64, DateTime<Utc>)>(
-        "INSERT INTO ai_fixed_answers (question, answer) VALUES ($1, $2) RETURNING id, created_at",
+    let question = question.trim();
+    let answer = answer.trim();
+    let normalized = crate::fixed_answers::normalize_question(question);
+    let row = sqlx::query_as::<_, (i64, DateTime<Utc>, DateTime<Utc>)>(
+        "INSERT INTO ai_fixed_answers (question, normalized_question, answer, status) VALUES ($1, $2, $3, 'active') ON CONFLICT (normalized_question) WHERE normalized_question <> '' DO UPDATE SET question = EXCLUDED.question, answer = EXCLUDED.answer, status = 'active', updated_at = now() RETURNING id, created_at, updated_at",
     )
     .bind(question)
+    .bind(normalized)
     .bind(answer)
     .fetch_one(pool)
     .await;
-    let Ok((id, created)) = row else {
+    let Ok((id, created, updated)) = row else {
         return fail(
             StatusCode::INTERNAL_SERVER_ERROR,
             "SERVER_ERROR",
             "固定答案没有保存",
         );
     };
-    Json(json!({"ok": true, "item": {"id": id, "question": question, "answer": answer, "status": "active", "createdAt": created.to_rfc3339(), "updatedAt": created.to_rfc3339()}})).into_response()
+    Json(json!({"ok": true, "item": {"id": id, "question": question, "answer": answer, "status": "active", "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()}})).into_response()
 }
 
 async fn notification_read(
@@ -3152,7 +3259,7 @@ async fn owner_upload(
         return *response;
     }
     match store_upload(&state, multipart, "uploads").await {
-        Ok((public, key, name, size)) => Json(json!({"ok": true, "item": {"name": name, "url": public, "path": key, "size": size, "mimeType": "image/jpeg"}})).into_response(),
+        Ok((public, key, name, size, mime)) => Json(json!({"ok": true, "item": {"name": name, "url": public, "path": key, "size": size, "mimeType": mime}})).into_response(),
         Err(response) => *response,
     }
 }
@@ -3239,7 +3346,7 @@ async fn owner_asset(
         );
     }
     match put_bytes(&state, &format!("{kind}/{album}"), &name, bytes).await {
-        Ok((public, key, name, size)) => Json(json!({"ok": true, "item": {"kind": kind, "url": public, "path": key, "name": name, "size": size, "mimeType": "image/jpeg"}})).into_response(),
+        Ok((public, key, name, size, mime)) => Json(json!({"ok": true, "item": {"kind": kind, "url": public, "path": key, "name": name, "size": size, "mimeType": mime}})).into_response(),
         Err(response) => *response,
     }
 }
@@ -3248,7 +3355,7 @@ async fn store_upload(
     state: &AppState,
     mut multipart: Multipart,
     folder: &str,
-) -> Result<(String, String, String, usize), Box<Response>> {
+) -> Result<(String, String, String, usize, &'static str), Box<Response>> {
     let mut bytes = Bytes::new();
     let mut name = String::from("upload.bin");
     loop {
@@ -3287,7 +3394,7 @@ async fn put_bytes(
     folder: &str,
     name: &str,
     bytes: Bytes,
-) -> Result<(String, String, String, usize), Box<Response>> {
+) -> Result<(String, String, String, usize, &'static str), Box<Response>> {
     if !state.cfg.r2_ready() {
         return Err(Box::new(fail(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -3309,12 +3416,25 @@ async fn put_bytes(
             "上传文件超过 8 MiB 限制。",
         )));
     }
+    let Some(mime) = image_mime(&bytes) else {
+        return Err(Box::new(fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_FILE_TYPE",
+            "当前只支持上传图片。",
+        )));
+    };
     let safe_name = name.replace(['/', '\\'], "-");
     let key = format!("{folder}/{}/{}", Utc::now().format("%Y%m%d"), safe_name);
     let hash = hex::encode(Sha256::digest(&bytes));
     let size = bytes.len();
     let url = signed_put_url(&state.cfg, &key, &hash, 300);
-    let sent = state.http.put(url).body(bytes).send().await;
+    let sent = state
+        .http
+        .put(url)
+        .header(header::CONTENT_TYPE, HeaderValue::from_static(mime))
+        .body(bytes)
+        .send()
+        .await;
     if sent.and_then(|item| item.error_for_status()).is_err() {
         return Err(Box::new(fail(
             StatusCode::BAD_GATEWAY,
@@ -3322,7 +3442,21 @@ async fn put_bytes(
             "上传到 R2 失败",
         )));
     }
-    Ok((public_url(&state.cfg, &key), key, safe_name, size))
+    Ok((public_url(&state.cfg, &key), key, safe_name, size, mime))
+}
+
+fn image_mime(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        Some("image/jpeg")
+    } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        Some("image/png")
+    } else if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        Some("image/gif")
+    } else if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
+        Some("image/webp")
+    } else {
+        None
+    }
 }
 
 async fn owner_draft_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, sqlx::Error> {
@@ -3338,37 +3472,46 @@ async fn fixed_answer_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
     let Some(pool) = pool else {
         return Ok(Vec::new());
     };
-    let rows = sqlx::query_as::<_, (i64, String, String, String, DateTime<Utc>)>(
-        "SELECT id, question, answer, status, created_at FROM ai_fixed_answers ORDER BY id DESC",
+    let rows = sqlx::query_as::<_, (i64, String, String, String, DateTime<Utc>, DateTime<Utc>)>(
+        "SELECT id, question, answer, status, created_at, updated_at FROM ai_fixed_answers WHERE status = 'active' ORDER BY updated_at DESC, id DESC LIMIT 50",
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows.into_iter().map(|(id, question, answer, status, created)| json!({"id": id, "question": question, "answer": answer, "status": status, "createdAt": created.to_rfc3339(), "updatedAt": created.to_rfc3339()})).collect())
+    Ok(rows.into_iter().map(|(id, question, answer, status, created, updated)| json!({"id": id, "question": question, "answer": answer, "status": status, "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()})).collect())
 }
 
 async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, sqlx::Error> {
     let Some(pool) = pool else {
         return Ok(Vec::new());
     };
-    let rows = sqlx::query_as::<_, (i64, String, String, String, String, DateTime<Utc>)>(
-        "SELECT id, channel, nickname, content, contact_email, created_at FROM guestbook_messages WHERE status = 'visible' AND owner_read_at IS NULL ORDER BY id DESC LIMIT 30",
+    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>)>(
+        "SELECT gm.id, gm.channel, gm.nickname, gm.content, gm.contact_email, COALESCE(u.email, ''), gm.created_at FROM guestbook_messages gm LEFT JOIN users u ON u.id = gm.user_id WHERE gm.status = 'visible' AND gm.owner_read_at IS NULL ORDER BY gm.id DESC LIMIT 30",
     )
     .fetch_all(pool).await?;
     Ok(rows
         .into_iter()
-        .map(|(id, channel, nickname, content, email, created)| {
-            json!({
-                "id": id,
-                "source": channel,
-                "title": crate::guestbook::notice_title(&channel),
-                "detail": crate::guestbook::notice_detail(&channel, &nickname, created),
-                "nickname": nickname,
-                "content": content,
-                "contactEmail": email.trim().to_lowercase(),
-                "createdAt": created.to_rfc3339(),
-                "count": 1
-            })
-        })
+        .map(
+            |(id, channel, nickname, content, contact_email, account_email, created)| {
+                let submitted = contact_email.trim().to_lowercase();
+                let account = account_email.trim().to_lowercase();
+                let contact = if submitted.is_empty() {
+                    account
+                } else {
+                    submitted
+                };
+                json!({
+                    "id": id,
+                    "source": channel,
+                    "title": crate::guestbook::notice_title(&channel),
+                    "detail": crate::guestbook::notice_detail(&channel, &nickname, created),
+                    "nickname": nickname,
+                    "content": content,
+                    "contactEmail": contact,
+                    "createdAt": crate::guestbook::china_clock(created),
+                    "count": 1
+                })
+            },
+        )
         .collect())
 }
 
@@ -3532,6 +3675,19 @@ async fn admit(
         Ok(())
     } else {
         Err(Box::new(rate_limited()))
+    }
+}
+
+fn auth_limited(state: &AppState, headers: &HeaderMap) -> Option<Response> {
+    let ip = client_ip(headers);
+    if state.auth_gate.allow(&ip) {
+        None
+    } else {
+        Some(fail(
+            StatusCode::TOO_MANY_REQUESTS,
+            "RATE_LIMITED",
+            "操作太频繁，请稍后再试",
+        ))
     }
 }
 
@@ -3731,5 +3887,25 @@ mod tests {
         assert_eq!(body["summary"]["periodSuccess"], 5);
         assert_eq!(body["summary"]["periodTotal"], 7);
         assert_eq!(body["summary"]["successRateText"], "71%");
+    }
+
+    #[test]
+    fn quota_counts_fill_days_the_hourly_log_missed() {
+        let today = NaiveDate::from_ymd_opt(2026, 11, 12).unwrap();
+        let mut daily = vec![(today, 1, 0, 0, 0, 0, 0, 1)];
+        merge_quota_daily(&mut daily, &[(today, 4, 1, 3), (today - chrono::Duration::days(1), 2, 2, 0)]);
+        assert_eq!(daily[0].1, 2);
+        assert_eq!(daily[1], (today, 4, 0, 0, 0, 0, 1, 3));
+    }
+
+    #[test]
+    fn upload_mime_recognizes_png_gif_and_webp() {
+        assert_eq!(image_mime(&[0xFF, 0xD8, 0xFF, 0x00]), Some("image/jpeg"));
+        assert_eq!(image_mime(b"\x89PNG\r\n\x1a\nrest"), Some("image/png"));
+        assert_eq!(image_mime(b"GIF89a"), Some("image/gif"));
+        let mut webp = b"RIFF....WEBP".to_vec();
+        webp[4] = b'x';
+        assert_eq!(image_mime(&webp), Some("image/webp"));
+        assert_eq!(image_mime(b"not-an-image"), None);
     }
 }

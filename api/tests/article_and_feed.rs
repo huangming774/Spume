@@ -15,7 +15,7 @@ fn article_keeps_an_existing_date_and_uses_the_requested_cover() {
         now,
     )
     .expect("article");
-    assert_eq!(article.path, "blog/source/_posts/Spume.md");
+    assert_eq!(article.path, "blog/source/_posts/spume.md");
     assert!(article.markdown.contains("title: Spume\n"));
     assert!(article.markdown.contains("date: 2026-06-01 08:00:00\n"));
     assert!(article
@@ -72,6 +72,14 @@ fn bangumi_progress_and_cover_are_normalized() {
     assert_eq!(rows[0].watched, 3);
     assert_eq!(rows[0].latest_episode, 4);
     assert_eq!(rows[0].cover, "https://i0.hdslb.com/bfs/bangumi/cover.jpg");
+    assert_eq!(
+        taozhiyy_api::feed::proxied_cover("s42", &rows[0].cover),
+        "/api/v1/acg/image/s42.jpg"
+    );
+    assert_eq!(
+        taozhiyy_api::feed::proxied_cover("s42", "https://evil.test/a.jpg"),
+        ""
+    );
 }
 
 #[test]

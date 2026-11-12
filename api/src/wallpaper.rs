@@ -1,6 +1,8 @@
 //! 从 Alcy 壁纸接口收集跳转后的 `.webp` 地址，写入图池。
 //!
-//! 请求不跟随跳转，只用 `Location`。这样同步不会把整张图下载下来。
+//! 请求不跟随跳转，只用 `Location`。写入成功后再预热预览，失败不影响这次同步。
+
+use std::sync::atomic::{AtomicI64, Ordering};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -12,6 +14,12 @@ const SOURCE: &str = "alcy";
 const REFRESH: i32 = 10;
 const ATTEMPTS: i32 = 24;
 const MAX_ITEMS: i64 = 120;
+
+/// 单实例内同一时间只允许一个 sync_pool，避免并发请求同时打满上游。
+static SYNC_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+/// 上次发起同步的 Unix 秒。冷却期内不再打上游，防止上游故障时被匿名请求放大。
+static LAST_SYNC: AtomicI64 = AtomicI64::new(0);
+const SYNC_COOLDOWN_SECS: i64 = 60;
 
 /// 一张可以放进图池的壁纸。
 pub struct WallpaperCandidate {
@@ -66,6 +74,18 @@ pub fn wallpaper_from_redirect(
 
 /// 停用其它来源的接口壁纸，再向 Alcy 要最多 10 张新图。
 pub async fn sync_pool(state: &AppState) -> Result<usize, WallpaperError> {
+    let _guard = SYNC_LOCK
+        .try_lock()
+        .map_err(|_| WallpaperError::Upstream("壁纸同步正在进行中，本次请求使用现有图池".into()))?;
+    let now = chrono::Utc::now().timestamp();
+    let last = LAST_SYNC.load(Ordering::Relaxed);
+    if now - last < SYNC_COOLDOWN_SECS {
+        return Err(WallpaperError::Upstream(
+            "壁纸同步处于冷却期，本次请求使用现有图池".into(),
+        ));
+    }
+    LAST_SYNC.store(now, Ordering::Relaxed);
+
     let pool = state
         .db
         .as_ref()
@@ -140,7 +160,44 @@ pub async fn sync_pool(state: &AppState) -> Result<usize, WallpaperError> {
     tx.commit()
         .await
         .map_err(|error| WallpaperError::Database(error.to_string()))?;
+    warm_previews(&state.http, &items).await;
     Ok(items.len())
+}
+
+async fn warm_previews(http: &reqwest::Client, items: &[WallpaperCandidate]) {
+    for item in items {
+        if !item.url.starts_with("https://") {
+            continue;
+        }
+        let response = match http
+            .get(&item.url)
+            .timeout(std::time::Duration::from_secs(8))
+            .header(reqwest::header::USER_AGENT, "taozhiyy-wallpaper-pool/1.0")
+            .header(reqwest::header::REFERER, "https://taozhiyy.top/")
+            .send()
+            .await
+        {
+            Ok(response) => response,
+            Err(error) => {
+                tracing::warn!(%error, "wallpaper warm skipped");
+                continue;
+            }
+        };
+        discard_prefix(response).await;
+    }
+}
+
+async fn discard_prefix(mut response: reqwest::Response) {
+    let mut read = 0usize;
+    loop {
+        if read >= 2 * 1024 * 1024 {
+            break;
+        }
+        match response.chunk().await {
+            Ok(Some(chunk)) => read = read.saturating_add(chunk.len()),
+            _ => break,
+        }
+    }
 }
 
 async fn fetch_one(http: &reqwest::Client) -> Result<WallpaperCandidate, WallpaperError> {

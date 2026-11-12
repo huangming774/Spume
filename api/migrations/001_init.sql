@@ -192,6 +192,11 @@ ALTER TABLE guestbook_messages ADD COLUMN IF NOT EXISTS user_agent_hash TEXT NOT
 ALTER TABLE guestbook_messages ADD COLUMN IF NOT EXISTS content_hash TEXT NOT NULL DEFAULT '';
 ALTER TABLE ai_chat_quota ADD COLUMN IF NOT EXISTS last_request_at TIMESTAMPTZ;
 ALTER TABLE owner_drafts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE ai_fixed_answers ADD COLUMN IF NOT EXISTS normalized_question TEXT NOT NULL DEFAULT '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS ai_fixed_answers_normalized_question_key
+  ON ai_fixed_answers (normalized_question)
+  WHERE normalized_question <> '';
 
 CREATE TABLE IF NOT EXISTS guestbook_ip_cache (
   ip_hash TEXT PRIMARY KEY,

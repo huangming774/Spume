@@ -1,7 +1,7 @@
 //! 番剧和雷达同步。
 //!
 //! 雷达默认跟踪 Go 版写死的四位 UP。`RADAR_CREATORS` 用 `uid:名字` 逗号分隔来替换。
-//! 封面只保留 `i*.hdslb.com` 的地址，页面直接使用这个地址。
+//! 封面只保留 `i*.hdslb.com` 的地址。列表接口把它换成 `/api/v1/acg/image/` 下的同源路径。
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde_json::Value;
@@ -171,6 +171,59 @@ pub async fn sync_bangumi(state: &AppState) -> Result<usize, FeedError> {
     Ok(rows.len())
 }
 
+/// 表是空的时候写入 Go 版那组占位番剧和雷达。同步到真实数据后会被替换。
+pub async fn seed_defaults(pool: &sqlx::PgPool) -> Result<(bool, bool), sqlx::Error> {
+    let mut bangumi_seeded = false;
+    let mut radar_seeded = false;
+    let bangumi_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM bangumi_items").fetch_one(pool).await?;
+    if bangumi_count == 0 {
+        for (id, title, watched, total, latest) in [
+            ("b1", "A Certain Scientific Railgun", 12, 24, 24),
+            ("b2", "Healing Sketchbook", 8, 12, 10),
+            ("b3", "Chronicles of Creation", 3, 13, 7),
+            ("b4", "Reimu Garden", 6, 12, 9),
+        ] {
+            sqlx::query(
+                "INSERT INTO bangumi_items (id, title, watched, total, latest_episode) VALUES ($1, $2, $3, $4, $5)",
+            )
+            .bind(id)
+            .bind(title)
+            .bind(watched)
+            .bind(total)
+            .bind(latest)
+            .execute(pool)
+            .await?;
+        }
+        bangumi_seeded = true;
+    }
+    let radar_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM radar_feed").fetch_one(pool).await?;
+    if radar_count == 0 {
+        let now = Utc::now();
+        for (id, uid, name, text, is_new, hours) in [
+            ("seed_r1", "seed_tech_lullaby", "UP · TechLullaby", "Posted a calm devlog with a fresh cover — worth a peek tonight.", true, 2),
+            ("seed_r2", "seed_systems_garden", "UP · SystemsGarden", "New video: stream caches, latency tuning, no ads.", false, 26),
+            ("seed_r3", "seed_mythic_coder", "UP · MythicCoder", "Radar sync: 3 creators added to the watch list.", true, 5),
+            ("seed_r4", "seed_calm_canvas", "UP · CalmCanvas", "Mobile grid polish for ACG navigation cards.", false, 48),
+        ] {
+            sqlx::query(
+                "INSERT INTO radar_feed (id, up_uid, creator_name, latest_text, link_url, is_new, published_at) VALUES ($1, $2, $3, $4, 'https://space.bilibili.com/', $5, $6)",
+            )
+            .bind(id)
+            .bind(uid)
+            .bind(name)
+            .bind(text)
+            .bind(is_new)
+            .bind(now - chrono::Duration::hours(hours))
+            .execute(pool)
+            .await?;
+        }
+        radar_seeded = true;
+    }
+    Ok((bangumi_seeded, radar_seeded))
+}
+
 /// 投稿是否落在现在往前 24 小时内。
 pub fn is_fresh(published: DateTime<Utc>, now: DateTime<Utc>) -> bool {
     let age = now.signed_duration_since(published);
@@ -185,10 +238,27 @@ struct LatestPost {
 }
 
 async fn fetch_latest(state: &AppState, uid: &str) -> Result<LatestPost, FeedError> {
-    let url =
-        format!("https://api.bilibili.com/x/space/arc/search?mid={uid}&ps=1&pn=1&order=pubdate");
+    let (img, sub) = crate::wbi::keys(&state.http)
+        .await
+        .map_err(FeedError::Upstream)?;
+    let query = crate::wbi::signed_query(
+        &[("mid", uid), ("pn", "1"), ("ps", "1"), ("order", "pubdate")],
+        &img,
+        &sub,
+        Utc::now().timestamp(),
+    );
+    let url = format!("https://api.bilibili.com/x/space/wbi/arc/search?{query}");
     let body = bili_json(state, &url, &format!("https://space.bilibili.com/{uid}/")).await?;
     parse_latest(uid, &body)
+}
+
+/// 有可用封面时返回同源代理路径，否则返回空字符串。
+pub fn proxied_cover(name: &str, remote: &str) -> String {
+    if remote_cover(remote).is_some() {
+        format!("/api/v1/acg/image/{name}.jpg")
+    } else {
+        String::new()
+    }
 }
 
 async fn fetch_bangumi(state: &AppState) -> Result<Vec<BangumiItem>, FeedError> {
