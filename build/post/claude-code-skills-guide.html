@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Skills 配置指南——打造你的AI超能力工具箱</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">Claude Code Skills 配置指南——打造你的AI超能力工具箱</span><span class="i18n-en" style="display:none">Claude Code Skills Guide — Building Your AI Superpower Toolbox</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-09</span>
+      <span>2500 <span data-i18n="metaWords">字</span></span>
+      <span>768 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>10 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><p>Claude Code是Anthropic推出的命令行AI编程助手，其Skills（技能）系统是它的核心亮点之一。Skills相当于给AI装上"专业插件"，让它在特定任务上表现更出色——无论是生成Word文档、处理PDF、设计前端界面，还是管理Hexo博客，都可以通过对应的Skill一键调用。</p>
+<p>这篇文章记录了我配置的19个Skills的分类、功能和使用体验。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-09_11-09-08.png" alt="Claude Code Skills" style="max-width:80%;"></p>
+<h2>一、什么是Skills？</h2>
+<p>Skills是Claude Code的可扩展能力模块。每个Skill本质上是一个Markdown文件（SKILL.md），包含：</p>
+<ul>
+<li><strong>触发条件</strong> — 用户说什么时自动激活</li>
+<li><strong>工作流程</strong> — 分步骤的操作指令</li>
+<li><strong>输出格式</strong> — 统一的结果呈现模板</li>
+</ul>
+<p>当你输入<code>/skill-name</code>或提及相关关键词，Claude Code会自动加载该Skill并按其流程执行。</p>
+<h2>二、我的Skills全家福</h2>
+<h3>文档办公类</h3>
+<table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>功能</th>
+<th>一句话总结</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>docx</td>
+<td>Word文档创建/编辑</td>
+<td>自动生成专业排版的.docx文件</td>
+</tr>
+<tr>
+<td>xlsx</td>
+<td>表格数据处理</td>
+<td>打开、创建、清洗、分析表格文件</td>
+</tr>
+<tr>
+<td>pdf</td>
+<td>PDF全能操作</td>
+<td>合并、拆分、加密、OCR、提取文字</td>
+</tr>
+<tr>
+<td>pptx</td>
+<td>幻灯片制作</td>
+<td>从零生成演示文稿或编辑现有PPT</td>
+</tr>
+</tbody>
+</table>
+<p>日常办公场景的文档需求基本全覆盖，告别手动排版。</p>
+<h3>设计与前端类</h3>
+<table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>功能</th>
+<th>一句话总结</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>frontend-design</td>
+<td>前端界面设计</td>
+<td>生成有设计感、不落俗套的网页/组件</td>
+</tr>
+<tr>
+<td>ui-ux-pro-max</td>
+<td>UI/UX设计智能</td>
+<td>67种风格、96套配色、57种字体搭配可选</td>
+</tr>
+</tbody>
+</table>
+<p>这两个技能配合使用，能让AI生成的前端界面拥有真正的"设计感"。</p>
+<h3>开发辅助类</h3>
+<table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>功能</th>
+<th>一句话总结</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>skill-creator</td>
+<td>创建/优化Skills</td>
+<td>用AI造新的AI技能</td>
+</tr>
+<tr>
+<td>claude-api</td>
+<td>Claude API开发</td>
+<td>构建和调试Anthropic SDK应用</td>
+</tr>
+<tr>
+<td>simplify</td>
+<td>代码审查优化</td>
+<td>自动检查代码的复用性、质量和效率</td>
+</tr>
+<tr>
+<td>review</td>
+<td>PR审查</td>
+<td>对Pull Request进行自动化审查</td>
+</tr>
+<tr>
+<td>security-review</td>
+<td>安全审查</td>
+<td>检查当前分支的代码安全问题</td>
+</tr>
+<tr>
+<td>init</td>
+<td>项目初始化</td>
+<td>自动生成CLAUDE.md项目文档</td>
+</tr>
+</tbody>
+</table>
+<p>从写代码、审代码到部署前的安全检查，一条龙服务。</p>
+<h3>效率与工具类</h3>
+<table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>功能</th>
+<th>一句话总结</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>loop</td>
+<td>定时循环任务</td>
+<td>每N分钟自动执行指定命令</td>
+</tr>
+<tr>
+<td>find-skills</td>
+<td>技能发现</td>
+<td>搜索和安装新的Skills</td>
+</tr>
+<tr>
+<td>fewer-permission-prompts</td>
+<td>权限优化</td>
+<td>减少重复的权限确认弹窗</td>
+</tr>
+<tr>
+<td>update-config</td>
+<td>配置管理</td>
+<td>修改Claude Code的settings.json</td>
+</tr>
+</tbody>
+</table>
+<p>让工具本身更顺手，减少操作摩擦。</p>
+<h3>自建Skills</h3>
+<p>除了官方Skills，我还自己创建了三个专属Skill：</p>
+<table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>功能</th>
+<th>训练来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>blog-skill</strong></td>
+<td>Hexo博客管理：版本检查、Git配置、文章统计、部署验证</td>
+<td>自建</td>
+</tr>
+<tr>
+<td><strong>blog-tag-skill</strong></td>
+<td>42个Butterfly标签插件（18大类），写博客时自动加载</td>
+<td>Akilarの糖果屋</td>
+</tr>
+<tr>
+<td><strong>git-first</strong></td>
+<td>修改前commit、节点提交、敏感文件排除，每一步可追溯</td>
+<td>自建</td>
+</tr>
+</tbody>
+</table>
+<h2>三、如何创建自己的Skill？</h2>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step 1</td>
+<td>输入 <code>/skill-creator</code></td>
+<td>告诉它想创建的Skill功能，它会引导你完成流程</td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>确定核心要素</td>
+<td>名称、触发条件、工作步骤、输出格式</td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>测试迭代</td>
+<td>跑测试用例，根据实际效果反复优化</td>
+</tr>
+<tr>
+<td>Step 4</td>
+<td>打包发布</td>
+<td>生成 <code>.skill</code> 文件后分享给其他人安装</td>
+</tr>
+</tbody>
+</table>
+<h2>四、Skills存放位置</h2>
+<p>所有Skills安装后存放在：</p>
+<pre><code>C:\Users\lenovo\.claude\skills\
+├── blog-skill/        # 自建-博客管理
+├── blog-tag-skill/    # 自建-美化标签
+├── git-first/         # 自建-版本控制
+├── docx/              # 文档
+├── xlsx/              # 表格
+├── pdf/               # PDF
+├── pptx/              # 幻灯片
+├── frontend-design/   # 前端设计
+├── ui-ux-pro-max/     # UI/UX
+├── skill-creator/     # 技能创建器
+├── claude-api/        # API开发
+├── simplify/          # 代码优化
+├── review/            # PR审查
+├── security-review/   # 安全审查
+├── init/              # 项目初始化
+├── loop/              # 定时任务
+├── find-skills/       # 技能发现
+├── fewer-permission-prompts/ # 权限优化
+└── update-config/     # 配置管理
+</code></pre>
+<h2>五、使用感受</h2>
+<p>Skills系统让Claude Code从一个"通用AI助手"变成了一个"可定制的工作台"：</p>
+<table>
+<thead>
+<tr>
+<th>感受</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>专业性提升</td>
+<td>处理特定文件格式（docx/pdf/xlsx）时不再需要临时摸索</td>
+</tr>
+<tr>
+<td>效率翻倍</td>
+<td>博客更新：编辑器→Markdown→git push → 变成一句话的事</td>
+</tr>
+<tr>
+<td>可扩展性</td>
+<td>不满意内置Skill？用skill-creator自己造一个</td>
+</tr>
+<tr>
+<td>减少重复</td>
+<td>loop让AI定时检查部署状态、PR进度等</td>
+</tr>
+</tbody>
+</table>
+<p>如果你也在用Claude Code，强烈建议花点时间配置适合自己工作流的Skills。</p>
+<h2>参考资料</h2>
+<ul>
+<li><a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code官方文档</a></li>
+<li><a href="https://docs.anthropic.com/en/docs/claude-code/skills">Skill Creator使用指南</a></li>
+<li><a href="https://akilar.top/posts/615e2dec/">Akilarの糖果屋 — Butterfly标签插件</a></li>
+</ul>
+<hr>
+<p><em>感谢iflab学长们的指导，感谢Claude Code让这一切变得简单。</em></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Claude Code Skills Guide</h2>
+<p>Skills are Claude Code's extensible capability modules — essentially Markdown files containing trigger conditions, workflows, and output formats. They turn Claude Code from a general AI assistant into a customizable workbench.</p>
+<h3>My 19 Skills</h3>
+<p><strong>Document Processing</strong>: docx (Word), xlsx (Excel), pdf, pptx<br>
+<strong>Design</strong>: frontend-design, ui-ux-pro-max<br>
+<strong>Development</strong>: skill-creator, claude-api, simplify, review, security-review, init<br>
+<strong>Efficiency</strong>: loop, find-skills, fewer-permission-prompts, update-config</p>
+<h3>Custom Skills</h3>
+<ul>
+<li><strong>blog-skill</strong>: Hexo blog management</li>
+<li><strong>blog-tag-skill</strong>: 42 Butterfly tag plugins for beautiful blog formatting</li>
+<li><strong>git-first</strong>: Enforces git version control discipline</li>
+</ul>
+<h3>Creating Your Own Skill</h3>
+<p>Use <code>/skill-creator</code> to walk through the creation process. Key elements: name, trigger conditions, workflow steps, and output format.</p>
+<h3>Verdict</h3>
+<p>Skills dramatically boost Claude Code's professionalism and efficiency. Highly recommend investing time in configuring skills for your workflow.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

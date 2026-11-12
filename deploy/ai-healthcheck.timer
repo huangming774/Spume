@@ -1,0 +1,11 @@
+[Unit]
+Description=Start Taozhiyy AI healthcheck once per day
+
+[Timer]
+OnCalendar=*-*-* 07:45:00
+RandomizedDelaySec=30min
+Persistent=true
+Unit=ai-healthcheck.service
+
+[Install]
+WantedBy=timers.target

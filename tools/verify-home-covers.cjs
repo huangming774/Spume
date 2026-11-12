@@ -1,0 +1,504 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { chromium } = require("playwright");
+const base = process.argv[2] || "http://127.0.0.1:5202";
+const storageKey = "taozhiyy.home-cover.v1";
+const out = path.resolve(
+  __dirname,
+  "../previews/project-gallery/.qa/home-covers",
+);
+const apiPreview = (route) =>
+  route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: '{"error":"PREVIEW_ONLY"}',
+  });
+const frame = (page, index) =>
+  page.locator(`dialog.cover-picker [data-cover-index="${index}"]`);
+const command = (page, name) => page.getByRole("button", { name, exact: true });
+const previewIndex = (page) =>
+  page
+    .locator("dialog.cover-picker [data-preview-index]")
+    .getAttribute("data-preview-index");
+const filter = (page, selector) =>
+  page.locator(selector).evaluate((el) => getComputedStyle(el).filter);
+const saved = (page, key) =>
+  page.evaluate((key) => localStorage.getItem(key), key);
+const shot = (page, name) =>
+  page.screenshot({ path: path.join(out, `${name}.png`) });
+async function readyHome(page) {
+  await page.waitForFunction(
+    () =>
+      document.getElementById("bg-image")?.complete &&
+      document.getElementById("bg-image").naturalWidth > 0,
+  );
+  await page
+    .locator("div.flex-center.bg-violet-50")
+    .waitFor({ state: "detached" });
+}
+async function openPicker(page, allReady = true) {
+  await command(page, "切换首页封面").click();
+  await page.locator("dialog.cover-picker[open]").waitFor();
+  if (allReady)
+    await page.waitForFunction(() => {
+      const buttons = [
+        ...document.querySelectorAll("dialog.cover-picker [data-cover-index]"),
+      ];
+      return (
+        buttons.length === 4 && buttons.every((button) => !button.disabled)
+      );
+    });
+  await page.waitForTimeout(750);
+}
+async function closedPicker(page) {
+  await page.locator("dialog.cover-picker").waitFor({ state: "detached" });
+  await page.waitForFunction(
+    () =>
+      document.body.style.overflow !== "hidden" &&
+      document.body.style.position !== "fixed",
+  );
+}
+async function choose(page, index, hover = false) {
+  if (hover) await frame(page, index).locator("[data-fan-hit]").hover();
+  else await frame(page, index).focus();
+  await page.waitForFunction(
+    (expected) =>
+      document.querySelector("dialog.cover-picker [data-preview-index]")
+        ?.dataset.previewIndex === String(expected),
+    index,
+  );
+}
+async function applyLeaf(page, index, touch = false) {
+  const hit = frame(page, index).locator("[data-fan-hit]");
+  if (touch) await hit.tap();
+  else await hit.click();
+  await closedPicker(page);
+  assert.equal(
+    await page.locator("#previous-image").count(),
+    0,
+    "a completed fan reveal must not replay the old cover",
+  );
+  assert.equal(
+    await page
+      .locator("#bg-image")
+      .evaluate((el) => Number(getComputedStyle(el).opacity)),
+    1,
+    "the completed reveal hands off without a flash",
+  );
+}
+async function checkFit(page, width, height) {
+  const result = await page
+    .locator("dialog.cover-picker")
+    .evaluate((dialog) => {
+      const rect = dialog.getBoundingClientRect();
+      const bad = [
+        ...dialog.querySelectorAll(
+          "button,[data-fit-text]",
+        ),
+      ]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return (
+            r.width &&
+            r.height &&
+            (r.left < -0.5 ||
+              r.top < -0.5 ||
+              r.right > innerWidth + 0.5 ||
+              r.bottom > innerHeight + 0.5 ||
+              el.scrollWidth > el.clientWidth + 1)
+          );
+        })
+        .map((el) => ({
+          name: el.getAttribute("aria-label") || el.className,
+          r: el.getBoundingClientRect().toJSON(),
+          s: el.scrollWidth,
+          c: el.clientWidth,
+        }));
+      return {
+        x: rect.x,
+        y: rect.y,
+        w: rect.width,
+        h: rect.height,
+        bad,
+        overflow: dialog.scrollWidth > dialog.clientWidth + 1,
+      };
+    });
+  assert.ok(
+    Math.abs(result.x) < 1 &&
+      Math.abs(result.y) < 1 &&
+      Math.abs(result.w - width) < 1 &&
+      Math.abs(result.h - height) < 1,
+    JSON.stringify(result),
+  );
+  assert.deepEqual(
+    result.bad,
+    [],
+    `clipped scene ${width}x${height}: ${JSON.stringify(result.bad)}`,
+  );
+  assert.equal(result.overflow, false, "dialog must not overflow");
+}
+async function newPage(browser, options = {}) {
+  const context = await browser.newContext(options);
+  await context.addInitScript(() => { Math.random = () => 0.1; });
+  const page = await context.newPage();
+  page.setDefaultTimeout(20000);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/api/**", apiPreview);
+  return { context, page, errors };
+}
+
+(async () => {
+  const { getHeroCoverSrc } = await import("../main/src/components/heroCoverAssets.js");
+  const coverFile = (index) => getHeroCoverSrc(index).split("/").at(-1);
+  fs.mkdirSync(out, { recursive: true });
+  const browser = await chromium.launch({ channel: "msedge", headless: true });
+  try {
+    for (const [width, height] of [
+      [1440, 900],
+      [1024, 768],
+      [768, 1024],
+      [390, 844],
+      [320, 568],
+      [844, 390],
+      [667, 375],
+      [500, 400],
+    ]) {
+      const { context, page, errors } = await newPage(browser, {
+        viewport: { width, height },
+        hasTouch: width < 768,
+        isMobile: width < 768,
+      });
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await readyHome(page);
+      const original = await page.locator("#bg-image").getAttribute("src");
+      await openPicker(page);
+      await checkFit(page, width, height);
+      assert.equal(await page.locator(".fan-leaf").count(), 4);
+      assert.equal(await page.locator(".fan-screen__pivot").count(), 1);
+      if (width < 768) {
+        assert.equal(await page.locator(".fan-screen__pivot").isVisible(), false);
+        assert.equal(await frame(page, 1).evaluate(el => getComputedStyle(el).clipPath), "none");
+        const boxes = await page.locator(".fan-leaf").evaluateAll(leaves => leaves.map(el => el.getBoundingClientRect().toJSON()));
+        assert.ok(Math.abs(boxes[0].y - boxes[1].y) < 1 && boxes[2].y > boxes[0].y);
+        assert.ok(Math.abs(boxes[0].width - boxes[0].height) < 1, "mobile covers must be square");
+      }
+      assert.equal(await frame(page, 1).count(), 1);
+      assert.equal(await page.locator(".aperture-dial").count(), 0);
+      await choose(page, 2, width >= 768);
+      assert.equal(
+        await page.locator("#bg-image").getAttribute("src"),
+        original,
+      );
+      assert.equal(await saved(page, storageKey), null);
+      assert.equal(await page.getByRole("slider").count(), 0);
+      assert.equal(await command(page, "重置亮度").count(), 0);
+      assert.equal(await page.locator(".fan-controls").count(), 0);
+      for (const name of ["随机一景", "纯净观赏", "使用此封面"])
+        assert.equal(await command(page, name).count(), 0);
+      assert.equal(
+        await filter(page, ".cover-picker__media"),
+        "none",
+      );
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll("dialog.cover-picker img")].every(
+          (img) => img.complete && img.naturalWidth > 0,
+        ),
+      );
+      await page.waitForTimeout(350);
+      await checkFit(page, width, height);
+      await shot(page, `picker-${width}`);
+      const before = await previewIndex(page);
+      await choose(page, 4);
+      assert.notEqual(await previewIndex(page), before);
+      assert.equal(await saved(page, storageKey), null);
+      await page.keyboard.press("Escape");
+      await closedPicker(page);
+      assert.equal(
+        await page.locator("#bg-image").getAttribute("src"),
+        original,
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          document.activeElement.getAttribute("aria-label"),
+        ),
+        "切换首页封面",
+      );
+      if (width === 1440) {
+        await openPicker(page);
+        await choose(page, 4);
+        await frame(page, 4).locator("[data-fan-hit]").click();
+        assert.equal(
+          await page.locator("dialog.cover-picker").getAttribute("data-phase"),
+          "unfolding",
+        );
+        assert.equal(
+          await page.locator(".cover-picker__petal-burst>i").count(),
+          6,
+        );
+        assert.ok(
+          (
+            await page.locator(".cover-picker__reveal img").getAttribute("src")
+          ).endsWith("hero-4.webp"),
+        );
+        await page.waitForTimeout(180);
+        const expanding = await page
+          .locator(".cover-picker__reveal")
+          .boundingBox();
+        assert.ok(
+          expanding.width > width * 0.25 && expanding.height > height * 0.25,
+          "the selected image expands visibly",
+        );
+        await page.keyboard.press("Escape");
+        await closedPicker(page);
+        await page.waitForTimeout(650);
+        assert.equal(
+          await page.locator("#bg-image").getAttribute("src"),
+          original,
+        );
+        assert.equal(await saved(page, storageKey), null);
+      }
+      await openPicker(page);
+      await choose(page, 3);
+      await applyLeaf(page, 3, width < 768);
+      assert.ok(
+        (await page.locator("#bg-image").getAttribute("src")).endsWith(
+          coverFile(3),
+        ),
+      );
+      assert.equal(await saved(page, storageKey), "3");
+      await page.locator("#previous-image").waitFor({ state: "detached" });
+      await shot(page, `applied-${width}`);
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await readyHome(page);
+      assert.ok((await page.locator("#bg-image").getAttribute("src")).endsWith(coverFile(1)), "reload must randomize instead of restoring applied cover 3");
+      assert.equal(
+        await filter(page, ".hero-wordmark"),
+        "none",
+        "text must not be dimmed",
+      );
+      await openPicker(page);
+      assert.equal(await page.getByRole("slider").count(), 0);
+      await frame(page, 3).focus();
+      await page.keyboard.press("Enter");
+      await closedPicker(page);
+      assert.ok(
+        (await page.locator("#bg-image").getAttribute("src")).endsWith(
+          coverFile(3),
+        ),
+      );
+      if (width === 1440) {
+        await openPicker(page);
+        await choose(page, 3);
+        await frame(page, 4).evaluate((button) => button.click());
+        await closedPicker(page);
+        assert.ok(
+          (await page.locator("#bg-image").getAttribute("src")).endsWith(
+            "hero-4.webp",
+          ),
+        );
+      }
+      await page.evaluate(() => scrollTo(0, 300));
+      await page.waitForTimeout(200);
+      const scroll = await page.evaluate(() => scrollY);
+      await page.evaluate(() =>
+        window.dispatchEvent(new CustomEvent("showHeroPreview")),
+      );
+      await page.locator("dialog.cover-picker[open]").waitFor();
+      await page.keyboard.press("Escape");
+      await closedPicker(page);
+      assert.ok(Math.abs((await page.evaluate(() => scrollY)) - scroll) < 2);
+      assert.deepEqual(errors, []);
+      console.log(
+        `PASS ${width}x${height}: responsive cover layout, no toolbar, preview, direct selection, cancellation, random entry and keyboard`,
+      );
+      await context.close();
+    }
+
+    const reduced = await newPage(browser, {
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+    });
+    await reduced.context.addInitScript(() =>
+      Object.defineProperty(window, "localStorage", {
+        get() {
+          throw new Error("blocked");
+        },
+      }),
+    );
+    await reduced.page.goto(`${base}/?cover=select`, {
+      waitUntil: "domcontentloaded",
+    });
+    await reduced.page.waitForFunction(
+      () => !document.querySelector('[data-cover-index="2"]').disabled,
+    );
+    await choose(reduced.page, 2);
+    assert.equal(await reduced.page.getByRole("slider").count(), 0);
+    await frame(reduced.page, 2).press("Enter");
+    await closedPicker(reduced.page);
+    await reduced.page.waitForTimeout(100);
+    assert.equal(await reduced.page.locator("#previous-image").count(), 0);
+    assert.deepEqual(reduced.errors, []);
+    await reduced.context.close();
+    console.log("PASS reduced motion and blocked storage without a slider");
+
+    const slow = await newPage(browser, {
+      viewport: { width: 390, height: 844 },
+    });
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    await slow.page.route("**/hero-4.webp", async (route) => {
+      await gate;
+      await route.continue();
+    });
+    try {
+      await slow.page.goto(base, { waitUntil: "domcontentloaded" });
+      await readyHome(slow.page);
+      const originalStyles = await slow.page.evaluate(() => {
+        document.body.style.setProperty("overflow", "auto", "important");
+        document.body.style.setProperty("padding-right", "7px", "important");
+        return document.body.getAttribute("style");
+      });
+      await openPicker(slow.page, false);
+      assert.equal(await frame(slow.page, 4).isDisabled(), true);
+      assert.equal(await frame(slow.page, 4).getAttribute("aria-busy"), "true");
+      for (let i = 0; i < 4; i++) {
+        await frame(slow.page, 4).evaluate(button => button.click());
+        assert.notEqual(await previewIndex(slow.page), "4");
+        assert.equal(await slow.page.locator("dialog.cover-picker[open]").count(), 1);
+      }
+      release();
+      await slow.page.waitForFunction(
+        () => !document.querySelector('[data-cover-index="4"]').disabled,
+      );
+      await choose(slow.page, 4);
+      await command(slow.page, "关闭封面选择").click();
+      await closedPicker(slow.page);
+      assert.equal(
+        await slow.page.evaluate(() => document.body.getAttribute("style")),
+        originalStyles,
+      );
+      assert.equal(await saved(slow.page, storageKey), null);
+      const axisStyles = () =>
+        [
+          "overflow",
+          "overflow-x",
+          "overflow-y",
+          "position",
+          "padding-right",
+        ].map((property) => [
+          property,
+          document.body.style.getPropertyValue(property),
+          document.body.style.getPropertyPriority(property),
+        ]);
+      await slow.page.evaluate(() => {
+        document.body.style.removeProperty("overflow");
+        document.body.style.setProperty("overflow-y", "hidden", "important");
+      });
+      const originalAxes = await slow.page.evaluate(axisStyles);
+      await openPicker(slow.page);
+      await command(slow.page, "关闭封面选择").click();
+      await closedPicker(slow.page);
+      assert.deepEqual(
+        await slow.page.evaluate(axisStyles),
+        originalAxes,
+        "axis-specific overflow and priorities must survive close",
+      );
+    } finally {
+      release();
+      await slow.context.close();
+    }
+    console.log(
+      "PASS delayed media, disabled selection and exact body restoration",
+    );
+
+    const failing = await newPage(browser, {
+      viewport: { width: 1366, height: 768 },
+    });
+    let fail = true;
+    await failing.page.route("**/hero-4.webp", (route) =>
+      fail ? route.abort() : route.continue(),
+    );
+    await failing.page.goto(base, { waitUntil: "domcontentloaded" });
+    await readyHome(failing.page);
+    await openPicker(failing.page, false);
+    await failing.page.locator(".cover-picker__retry").waitFor();
+    assert.equal(await frame(failing.page, 4).isDisabled(), true);
+    for (let i = 0; i < 3; i++) {
+      await frame(failing.page, 4).evaluate(button => button.click());
+      assert.notEqual(await previewIndex(failing.page), "4");
+    }
+    fail = false;
+    await failing.page.locator(".cover-picker__retry").click();
+    await failing.page.waitForFunction(
+      () => !document.querySelector('[data-cover-index="4"]').disabled,
+    );
+    await choose(failing.page, 4);
+    await applyLeaf(failing.page, 4);
+    await closedPicker(failing.page);
+    assert.ok(
+      (await failing.page.locator("#bg-image").getAttribute("src")).endsWith(
+        "hero-4.webp",
+      ),
+    );
+    await failing.context.close();
+    console.log("PASS failed slide retry and direct selection");
+
+    const savedFailure = await newPage(browser, {
+      viewport: { width: 390, height: 844 },
+    });
+    await savedFailure.context.addInitScript(
+      (key) => localStorage.setItem(key, "4"),
+      storageKey,
+    );
+    await savedFailure.page.route("**/hero-4.webp", (route) => route.abort());
+    await savedFailure.page.goto(`${base}/?cover=select`, {
+      waitUntil: "domcontentloaded",
+    });
+    await readyHome(savedFailure.page);
+    await savedFailure.page.waitForFunction(
+      () =>
+        document.querySelector("[data-preview-index]")?.dataset.previewIndex ===
+        "1",
+    );
+    assert.equal(await saved(savedFailure.page, storageKey), "4");
+    await savedFailure.page.keyboard.press("Escape");
+    await closedPicker(savedFailure.page);
+    await savedFailure.context.close();
+    console.log(
+      "PASS random entry ignores the old fixed preference without overwriting it",
+    );
+
+    const retry = await newPage(browser, {
+      viewport: { width: 390, height: 844 },
+    });
+    let failCurrent = true;
+    await retry.page.route("**/hero-1.webp", (route) =>
+      failCurrent ? route.abort() : route.continue(),
+    );
+    await retry.page.goto(base, { waitUntil: "domcontentloaded" });
+    await command(retry.page, "重新加载封面").waitFor();
+    assert.equal(
+      await retry.page.locator("#bg-image").evaluate((img) => img.naturalWidth),
+      0,
+    );
+    failCurrent = false;
+    await command(retry.page, "重新加载封面").click();
+    await readyHome(retry.page);
+    assert.ok(
+      await retry.page
+        .locator("#bg-image")
+        .evaluate((img) => img.naturalWidth > 0),
+    );
+    await retry.context.close();
+    console.log("PASS retry replaces the actual failed Hero image");
+  } finally {
+    await browser.close();
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

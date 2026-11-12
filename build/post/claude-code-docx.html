@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code手机版实战：多轮修正Word文档直到完美提交</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">Claude Code手机版实战：多轮修正Word文档直到完美提交</span><span class="i18n-en" style="display:none">Claude Code Mobile — Multi-Round DOCX Editing to Perfection</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-14</span>
+      <span>1800 <span data-i18n="metaWords">字</span></span>
+      <span>356 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>7 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>场景</h2>
+<p>今天在手机上完成了一次完整的文档修改工作流：一份数据库实验报告需要做格式规范化，通过Claude Code直接在手机上操作.docx文件，经过两轮迭代修改，最终达到提交标准。</p>
+<p>整个过程全部在手机上完成：接收文件→解压XML→Claude分析修改→打包→发送回微信。全程没有打开电脑上的Word，甚至没有离开聊天界面。</p>
+<h2>任务背景</h2>
+<p>手头有份《数据库原理及应用 实验二》的实验报告，上一轮已经改过主要问题（NVARCHAR、N前缀、触发器集合写法、权限管理），但还有几处格式细节需要打磨：</p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>位置</th>
+<th>问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>第（二）1 存储过程</td>
+<td>GO放在了注释后面</td>
+</tr>
+<tr>
+<td>2</td>
+<td>第（二）2 存储过程</td>
+<td>WHERE子句缺少分号</td>
+</tr>
+<tr>
+<td>3</td>
+<td>第（四）1 安全管理</td>
+<td>CREATE LOGIN后缺GO</td>
+</tr>
+<tr>
+<td>4</td>
+<td>第（四）3 授权</td>
+<td>GRANT前缺USE/GO</td>
+</tr>
+</tbody>
+</table>
+<h2>修正过程</h2>
+<h3>第一轮：四个格式问题</h3>
+<p><strong>1. GO从注释后移到END;之后</strong></p>
+<p>修改前：</p>
+<pre><code class="language-sql">END;
+
+-- 调用示例：
+GO
+EXEC 查询指定年龄学生 @年龄 = 20;
+</code></pre>
+<p>修改后：</p>
+<pre><code class="language-sql">END;
+GO
+
+-- 调用示例：
+EXEC 查询指定年龄学生 @年龄 = 20;
+</code></pre>
+<p><strong>2. WHERE子句补分号</strong></p>
+<p><code>WHERE 学生.所在系 = @系名</code> → <code>WHERE 学生.所在系 = @系名;</code></p>
+<p><strong>3. CREATE LOGIN后加GO，USE后加GO</strong></p>
+<pre><code class="language-sql">CREATE LOGIN u1 WITH PASSWORD = '123456', CHECK_POLICY = OFF;
+CREATE LOGIN u2 WITH PASSWORD = '123456', CHECK_POLICY = OFF;
+CREATE LOGIN u3 WITH PASSWORD = '123456', CHECK_POLICY = OFF;
+GO
+
+USE StudentsXXXX;
+GO
+
+CREATE USER u1 FOR LOGIN u1;
+</code></pre>
+<p><strong>4. GRANT前补USE StudentsXXXX + GO</strong></p>
+<pre><code class="language-sql">USE StudentsXXXX;
+GO
+
+GRANT SELECT ON 课程 TO u1;
+GRANT SELECT ON 选课 TO u1;
+GRANT INSERT ON 课程 TO u2;
+GO
+</code></pre>
+<h3>第二轮：两个小细节</h3>
+<p>第一轮改完后审查，又发现两个可优化的地方：</p>
+<p><strong>1. 存储过程内部语句补分号</strong></p>
+<pre><code class="language-sql">PRINT N'年龄错误';   -- 补分号
+WHERE 年龄 = @年龄;   -- 补分号
+</code></pre>
+<p><strong>2. 四.5节点USE后加GO</strong></p>
+<pre><code class="language-sql">USE StudentsXXXX;
+GO  -- 新增
+
+GRANT CREATE TABLE TO u3;
+GRANT ALTER ON SCHEMA::dbo TO u3;
+GO
+</code></pre>
+<h2>技术原理</h2>
+<p>很多人不知道：.docx文件本质上是一个ZIP压缩包，里面是一堆XML文件。所以可以直接解压→改XML→打包回去，完全不需要Word。</p>
+<p><strong>解压：</strong></p>
+<pre><code class="language-bash">python unpack.py 报告.docx unpacked/
+</code></pre>
+<p>解压后得到<code>word/document.xml</code>等15个XML文件。</p>
+<p><strong>编辑XML：</strong> 直接对document.xml做字符串替换：</p>
+<pre><code class="language-xml">&lt;!-- 补分号：修改 &lt;w:t&gt; 标签内容 --&gt;
+&lt;w:t&gt;WHERE 学生.所在系 = @系名;&lt;/w:t&gt;
+
+&lt;!-- 插GO段：构造新的 &lt;w:p&gt; 段落元素 --&gt;
+&lt;w:p&gt;
+  &lt;w:r&gt;&lt;w:t&gt;GO&lt;/w:t&gt;&lt;/w:r&gt;
+&lt;/w:p&gt;
+</code></pre>
+<p><strong>打包：</strong></p>
+<pre><code class="language-bash">python pack.py unpacked/ 报告.docx
+</code></pre>
+<p>必须是ZIP_DEFLATED压缩，否则Word打不开。验证无误后直接发回微信。</p>
+<h2>最终效果</h2>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQL逻辑正确</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>GO批处理规范</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>触发器集合写法</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>权限管理完整</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>分号/格式细节</td>
+<td>通过</td>
+</tr>
+<tr>
+<td>结论说明严谨</td>
+<td>通过</td>
+</tr>
+</tbody>
+</table>
+<p>最终评价：这版作业逻辑正确、SQL规范、说明合理，可以提交。</p>
+<h2>工具链</h2>
+<p>整个流程依赖三个核心工具：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>角色</th>
+<th>具体职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Claude Code CLI</strong></td>
+<td>AI引擎</td>
+<td>分析XML → 定位SQL问题 → 生成修正方案 → 执行Python打包</td>
+</tr>
+<tr>
+<td><strong>unpack.py / pack.py</strong></td>
+<td>文件转换</td>
+<td>.docx ↔ XML互转，ZIP_DEFLATED压缩</td>
+</tr>
+<tr>
+<td><strong>cc-connect</strong></td>
+<td>传输桥梁</td>
+<td>手机↔微信双向文件传输</td>
+</tr>
+</tbody>
+</table>
+<h2>小结</h2>
+<p>这次体验证明了在手机上用AI完成文档精细修改完全可行：</p>
+<ul>
+<li>.docx = ZIP + XML，直接编辑比打开Word更快</li>
+<li>多轮迭代修正，每轮都有明确的验收标准</li>
+<li>全程手机完成，从修改到发送一气呵成</li>
+<li>以后实验报告、作业文档都可以这么改</li>
+</ul>
+<p>试想一下这个流程：老师在微信上发来一份实验报告模板，你在手机上用Claude Code直接打开、修改、打包、发回——整个过程不超过十分钟。不需要传到电脑、不需要打开Office、不需要来回切换设备。这就是AI CLI工具在移动端的真正价值所在。</p>
+<p>适用场景：实验报告、课程作业、社团文档、实习周报——凡是格式规范化的.docx文档修改，都可以用这套流程解决。</p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Scenario</h2>
+<p>Completed a full document editing workflow entirely on mobile: received a database lab report that needed formatting fixes, used Claude Code to edit .docx XML directly through two rounds of iteration, reaching submission standard.</p>
+<h3>The .docx Secret</h3>
+<p>A .docx file is essentially a ZIP archive containing XML files. Unzip → edit XML → rezip. No Word needed.</p>
+<h3>Workflow</h3>
+<ol>
+<li><code>python unpack.py report.docx unpacked/</code></li>
+<li>Edit <code>word/document.xml</code> — fix SQL formatting (GO placement, missing semicolons, USE/GO pairs)</li>
+<li><code>python pack.py unpacked/ report.docx</code></li>
+<li>Send back via cc-connect</li>
+</ol>
+<h3>Toolchain</h3>
+<ul>
+<li><strong>Claude Code CLI</strong>: Analyzes XML, identifies SQL issues, generates fixes</li>
+<li><strong>Python scripts</strong>: unpack.py / pack.py for .docx ↔ XML conversion</li>
+<li><strong>cc-connect</strong>: Bridges phone and WeChat for file transfer</li>
+</ul>
+<h3>Verdict</h3>
+<p>Mobile AI document editing is completely viable. The entire flow — receive, edit, package, send — takes under 10 minutes without ever opening Word.</p>
+<p>Applicable to: lab reports, course assignments, club documents, internship reports — any standardized .docx formatting task.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

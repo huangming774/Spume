@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code + DeepSeek + 千问VL：零成本为国产大模型装上&quot;眼睛</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">Claude Code + DeepSeek + 千问VL：零成本为国产大模型装上&quot;眼睛</span><span class="i18n-en" style="display:none">Claude Code + DeepSeek + Qwen VL — Zero-Cost Vision for Chinese LLMs</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-10</span>
+      <span>2200 <span data-i18n="metaWords">字</span></span>
+      <span>644 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>9 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>写在前面</h2>
+<p>一句话总结：Claude Code接入DeepSeek V4 Pro后，编程能力爆表但不会看图。通过一个100行的vision.js脚本+阿里云百炼千问VL模型，不花一分钱就能补上这个短板。</p>
+<p>这套方案已经在我自己的电脑上跑通了——截图发过去，AI自动识别，全程无需手动敲命令。</p>
+<h2>一、背景：为什么需要"眼睛"？</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接入DeepSeek</td>
+<td>Claude Code通过自定义API Base URL，接入DeepSeek V4 Pro</td>
+</tr>
+<tr>
+<td>发现盲区</td>
+<td>截图发过去AI一脸懵——DeepSeek是纯文本模型，不具备视觉能力</td>
+</tr>
+<tr>
+<td>补上眼睛</td>
+<td>千问VL当"翻译官"：图片→文字→交给DeepSeek，新用户100万Token免费</td>
+</tr>
+</tbody>
+</table>
+<h2>二、方案原理</h2>
+<p>核心思路：图片不进DeepSeek，而是绕道千问VL先转成文字，再把文字交给DeepSeek处理。整个过程对用户透明——你只管发图，AI自动处理。</p>
+<p>流程：用户发图片 → Claude Code → CLAUDE.md触发规则 → vision.js脚本 → 读取图片Base64 → 千问VL模型API → 返回文字描述 → DeepSeek V4 Pro分析回复</p>
+<h2>三、完整配置步骤</h2>
+<h3>步骤1：获取千问API Key</h3>
+<ol>
+<li>打开阿里云百炼控制台</li>
+<li>登录阿里云账号（没有就先注册）</li>
+<li>在控制台找到API Key管理，创建一个新Key</li>
+<li>复制生成的Key</li>
+</ol>
+<p>新用户赠送100万Token免费额度，有效期90天。日常看图每次消耗约500-1000 Token，够用上千次。</p>
+<h3>步骤2：克隆vision.js脚本</h3>
+<p>教程来源：GitHub开源项目 <a href="https://github.com/asuojun/claude-vision-skill">asuojun/claude-vision-skill</a></p>
+<pre><code class="language-bash">git clone https://github.com/asuojun/claude-vision-skill.git D:/deepseek-vision
+cd D:/deepseek-vision
+npm install dotenv
+</code></pre>
+<h3>步骤3：配置API Key和模型</h3>
+<p>打开<code>D:/deepseek-vision/.env</code>，填写：</p>
+<pre><code class="language-env">DASHSCOPE_API_KEY=你的真实Key
+</code></pre>
+<p><code>vision.js</code>中的模型已预设为<code>qwen-vl-max</code>（性价比最高的VL模型）：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>输入价格</th>
+<th>输出价格</th>
+<th>定位</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>qwen-vl-max</strong></td>
+<td>1.6元/百万Token</td>
+<td>4元/百万Token</td>
+<td>纯视觉理解，日常看图首选</td>
+</tr>
+<tr>
+<td>qwen3.5-omni-plus</td>
+<td>~0.8元/百万Token</td>
+<td>~4.8元/百万Token</td>
+<td>全模态（视觉+音频）</td>
+</tr>
+</tbody>
+</table>
+<h3>步骤4：配置CLAUDE.md</h3>
+<p>在项目根目录创建或修改CLAUDE.md，告诉Claude Code何时调用vision.js：</p>
+<pre><code class="language-markdown"># 识图能力
+
+你的底层模型不具备原生识图能力。遇到图片时，不要用Read工具，改用vision.js：
+
+node /d/deepseek-vision/vision.js &quot;&lt;图片路径&gt;&quot; &quot;用中文描述这张图片&quot;
+</code></pre>
+<p>注意：vision.js的路径要写绝对路径，否则Claude Code可能找不到。</p>
+<h3>步骤5：测试</h3>
+<p>发一张截图给Claude Code，它应该自动执行：</p>
+<pre><code class="language-bash">node /d/deepseek-vision/vision.js &quot;D:/截图专用/xxx.png&quot; &quot;用中文描述这张图片&quot;
+</code></pre>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png" alt="千问VL识图测试结果" style="max-width:80%;"></p>
+<h2>四、成本分析</h2>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>月费</th>
+<th>识图能力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本方案：DeepSeek + 千问VL</td>
+<td><strong>0元</strong></td>
+<td>有</td>
+</tr>
+<tr>
+<td>Claude Pro订阅</td>
+<td>$20/月</td>
+<td>原生</td>
+</tr>
+<tr>
+<td>ChatGPT Plus</td>
+<td>$20/月</td>
+<td>原生</td>
+</tr>
+</tbody>
+</table>
+<p>你现在拥有的是一套零成本、全功能的AI编程+识图方案，对大学生来说性价比拉满。</p>
+<h2>五、常见问题</h2>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>解答</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vision.js报"Incorrect API key"</td>
+<td><code>dotenv</code>包未安装，运行 <code>npm install dotenv</code></td>
+</tr>
+<tr>
+<td>图片路径有空格？</td>
+<td>用双引号包裹路径</td>
+</tr>
+<tr>
+<td>网络图片能用吗？</td>
+<td>支持，使用 <code>--url</code> 参数</td>
+</tr>
+<tr>
+<td>能换其他vision模型？</td>
+<td>修改 <code>.env</code> 和 <code>vision.js</code> 中的 <code>BASE_URL</code> 与 <code>MODEL</code></td>
+</tr>
+</tbody>
+</table>
+<h2>结语</h2>
+<p>通过一个100行的vision.js脚本，我们把千问VL模型变成了DeepSeek的"眼睛"。整个过程不需要改Claude Code源码，不需要付费订阅，真正做到了零成本、零部署、零门槛。</p>
+<p>这套方案的精髓在于——各取所长：DeepSeek负责思考，千问VL负责"看"，Claude Code负责调度。国产大模型+国产视觉模型+国际顶级工具链，三者配合得恰到好处。</p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Zero-Cost Vision for DeepSeek in Claude Code</h2>
+<p>DeepSeek V4 Pro is powerful but can't see images. A 100-line vision.js script + Alibaba's Qwen VL model solves this for free.</p>
+<h3>How It Works</h3>
+<p>Images bypass DeepSeek entirely — Qwen VL converts them to text descriptions first, which DeepSeek then processes. Transparent to the user.</p>
+<h3>Setup</h3>
+<ol>
+<li>Get a free Qwen API key from Alibaba Bailian (1M free tokens)</li>
+<li>Clone <a href="https://github.com/asuojun/claude-vision-skill">asuojun/claude-vision-skill</a></li>
+<li>Configure .env with your API key</li>
+<li>Add vision.js trigger rules to CLAUDE.md</li>
+</ol>
+<h3>Cost Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Solution</th>
+<th>Monthly Cost</th>
+<th>Vision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DeepSeek + Qwen VL</td>
+<td>$0</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Claude Pro</td>
+<td>$20/mo</td>
+<td>Native</td>
+</tr>
+<tr>
+<td>ChatGPT Plus</td>
+<td>$20/mo</td>
+<td>Native</td>
+</tr>
+</tbody>
+</table>
+<h3>Key Insight</h3>
+<p>Each component does what it does best: DeepSeek thinks, Qwen VL sees, Claude Code orchestrates. Chinese LLM + Chinese vision model + top-tier international toolchain — perfectly complementary.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

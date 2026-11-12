@@ -1,0 +1,15 @@
+[Unit]
+Description=Taozhiyy transparent AI healthcheck scheduler
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/taozhiyy/ai-healthcheck.env
+ExecStart=/usr/bin/python3 /opt/taozhiyy-tools/ai_healthcheck.py run-day
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

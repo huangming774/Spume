@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Taozhiyy pull-based deployment periodically
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=taozhiyy-pull-deploy.service
+
+[Install]
+WantedBy=timers.target

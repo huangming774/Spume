@@ -1,0 +1,290 @@
+import { createIcons, Aperture, Box, LayoutGrid, Search, Scan, Plus, Minus, Orbit, ArrowUpRight, ArrowLeft, ArrowRight, Sparkle, Sparkles, Sun, House, ChevronDown, X, SearchX, ExternalLink, CodeXml, BookOpen, FileText, Copy, Play } from 'lucide';
+import { projects, filterProjects, projectPage } from './catalog.js';
+import { renderProjectDetail, escapeHTML as e } from './detail.js';
+import { GALLERY_THEME_STORAGE, resolveGalleryTheme } from './gallery-themes.js';
+
+const icons = { Aperture, Box, LayoutGrid, Search, Scan, Plus, Minus, Orbit, ArrowUpRight, ArrowLeft, ArrowRight, Sparkle, Sparkles, Sun, House, ChevronDown, X, SearchX, ExternalLink, CodeXml, BookOpen, FileText, Copy, Play };
+
+export function mountProjectGallery(mountRoot = document) {
+  const $ = selector => mountRoot.querySelector(selector);
+  const iconize = () => createIcons({ icons, attrs: { 'aria-hidden': 'true' }, root: mountRoot });
+  const activeElement = () => {
+    if (mountRoot instanceof Document) return document.activeElement;
+    if (mountRoot.activeElement !== undefined) return mountRoot.activeElement;
+    const focused = document.activeElement;
+    return focused && mountRoot.contains(focused) ? focused : null;
+  };
+  const themeNode = mountRoot instanceof Document
+    ? document.documentElement
+    : (mountRoot.host || document.documentElement);
+  const ac = new AbortController();
+  const on = (target, type, handler, options = {}) => {
+    target.addEventListener(type, handler, { ...options, signal: ac.signal });
+  };
+
+  let scene = null;
+  let selected = projects[0];
+  let view = 'scene';
+  let query = '';
+  let visible = projects;
+  let listPage = 0;
+  let sceneItems = projects.slice(0, 6);
+  let noticeTimer;
+  let sceneFailed = false;
+  let opener = null;
+  let detailProject = null;
+  let sectionObserver;
+  let readerOverflow = document.body.style.overflow;
+  let catalogueScroll = 0;
+  let browseAfterReader = false;
+  let disposed = false;
+  const dialog = $('#project-dialog');
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  const previousThemeColor = themeMeta?.getAttribute('content') ?? '';
+  let galleryTheme = 'cosmos';
+  try { galleryTheme = resolveGalleryTheme(localStorage.getItem(GALLERY_THEME_STORAGE)); } catch { /* Use the default without storage. */ }
+  const previewURL = new URL(location.href);
+  if (previewURL.searchParams.has('theme')) {
+    galleryTheme = resolveGalleryTheme(previewURL.searchParams.get('theme'));
+    previewURL.searchParams.delete('theme');
+    history.replaceState(history.state, '', previewURL);
+  }
+  function applyGalleryTheme(value, persist = true) {
+    galleryTheme = resolveGalleryTheme(value);
+    if (themeNode) themeNode.dataset.galleryTheme = galleryTheme;
+    themeMeta?.setAttribute('content', galleryTheme === 'silver' ? '#eef1f3' : '#08090e');
+    mountRoot.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === galleryTheme)));
+    scene?.setTheme(galleryTheme);
+    if (persist) try { localStorage.setItem(GALLERY_THEME_STORAGE, galleryTheme); } catch { /* Theme controls also work without storage. */ }
+  }
+  applyGalleryTheme(galleryTheme, false);
+  on(mountRoot, 'click', event => {
+    const button = event.target.closest?.('[data-theme-choice]');
+    if (button) applyGalleryTheme(button.dataset.themeChoice);
+  });
+  if (import.meta.env.PROD) $('.preview-badge')?.remove();
+  $('#scene-view span').textContent = '星空';
+  $('.intro .eyebrow').innerHTML = '<span class="accent-rule"></span>AN ATLAS OF IDEAS';
+  $('.intro p').textContent = '让作品与灵感，在这里交汇。';
+  const actualProjectCount = projects.filter(project => !project.isGuide).length;
+  $('.collection-filters').innerHTML = `<span class="collection-count">PROJECT INDEX / ${String(actualProjectCount).padStart(2,'0')} + GUIDE</span>`;
+  $('.collection-filters').removeAttribute('role');
+  $('.collection-filters').setAttribute('aria-label', `${actualProjectCount} 个项目与板块介绍`);
+  $('.exhibit-meta > span').textContent = 'EXPLORE THE UNKNOWN';
+  $('.exhibit-meta small').textContent = 'PROJECTS / SOURCES';
+  $('#reset-camera').title = '星空全景';
+  $('#reset-camera').setAttribute('aria-label', '星空全景');
+  $('#project-grid').insertAdjacentHTML('afterend', '<nav id="list-pager" class="pager" aria-label="目录分页"><button id="list-prev" class="icon-button" aria-label="上一页" title="上一页"><i data-lucide="arrow-left"></i></button><span></span><button id="list-next" class="icon-button" aria-label="下一页" title="下一页"><i data-lucide="arrow-right"></i></button></nav>');
+  $('.footer-label').innerHTML = '<span id="space-range" aria-live="polite"></span>';
+  $('#gallery-canvas').tabIndex = 0;
+  $('#gallery-canvas').setAttribute('aria-label','项目星空，可滚动或拖动浏览，方向键移动，点击项目查看');
+  function updatePager(bucket) {
+    $('#list-prev').disabled = bucket.page === 0;
+    $('#list-next').disabled = bucket.page >= bucket.pages - 1;
+    $('#list-pager span').textContent = `${String(bucket.pages ? bucket.page + 1 : 0).padStart(2, '0')} / ${String(bucket.pages).padStart(2, '0')}`;
+    $('#list-pager').hidden = bucket.pages <= 1;
+  }
+
+  function notify(text) {
+    $('#notice').textContent = text;
+    $('#notice').classList.add('visible');
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => $('#notice').classList.remove('visible'), 4000);
+  }
+  function renderSelection() {
+    const focusedProject = activeElement()?.closest?.('.dock-item')?.dataset.project;
+    const number = String(projects.indexOf(selected) + 1).padStart(2, '0');
+    if($('#selected-info').dataset.selection!==selected.id){
+      $('#selected-info').innerHTML = `<span class="selected-number">${number}</span><div class="selected-content"><div class="selected-meta">${e(selected.category)} / ${e(selected.author)}</div><h2>${e(selected.title)}</h2><p>${e(selected.summary)}</p></div>`;
+      $('#selected-info').dataset.selection=selected.id;
+    }
+    $('.exhibit-meta strong').innerHTML = `${number} <i>/</i> ${String(projects.length).padStart(2, '0')}`;
+    $('#open-project span').textContent = selected.isGuide ? '查看介绍' : '查看项目';
+    const dock=$('#project-dock');
+    const existing=new Map([...dock.children].map(button=>[button.dataset.project,button]));
+    const needed=new Set(sceneItems.map(p=>p.id));
+    for(const button of [...dock.children])if(!needed.has(button.dataset.project))button.remove();
+    sceneItems.forEach((p,index)=>{
+      let button=existing.get(p.id);
+      if(!button){
+        button=document.createElement('button');button.className='dock-item';button.dataset.project=p.id;
+        button.title=p.title;button.setAttribute('aria-label',`查看${p.title}`);
+        button.innerHTML=`<img src="${e(p.preview||p.cover)}" alt="" width="96" height="60" />`;
+      }
+      button.setAttribute('aria-pressed',String(p.id===selected.id));
+      if(dock.children[index]!==button)dock.insertBefore(button,dock.children[index]||null);
+    });
+    if (focusedProject) [...$('#project-dock').children].find(button => button.dataset.project === focusedProject)?.focus({ preventScroll: true });
+  }
+  function select(id, focus = true) {
+    const project = projects.find(p => p.id === id);
+    if (!project) return;
+    selected = project;
+    scene?.focus(id, focus);
+    renderSelection();
+  }
+  function renderCatalogue() {
+    visible = filterProjects(projects, query);
+    $('#result-count').textContent = `${visible.length} 项内容`;
+    $('#empty-state').hidden = visible.length > 0;
+    const bucket = projectPage(visible, listPage, 12); listPage = bucket.page;
+    updatePager(bucket);
+    $('#project-grid').innerHTML = bucket.items.map(p => `<button class="project-card" data-detail="${e(p.id)}" aria-label="查看${e(p.title)}详情"><img class="card-cover" src="${e(p.cover)}" alt="${e(p.title)}${p.isGuide ? '页面实景' : '官方页面或演示截图'}" width="960" height="600" loading="lazy" /><span class="card-copy"><span class="card-meta">${e(p.category)}</span><h2>${e(p.title)}</h2><p>${e(p.summary)}</p><span class="card-bottom"><span>${e(p.author)}</span><i data-lucide="arrow-up-right"></i></span></span></button>`).join('');
+    if (visible.length && !visible.some(p => p.id === selected.id)) select(visible[0].id, false);
+    scene?.setProjects(visible);
+    scene?.focus(selected.id,false);
+    renderSelection(); iconize();
+  }
+  function setView(next) {
+    if (next === 'scene' && sceneFailed) { notify('当前设备无法启动 3D，项目目录仍可正常浏览。'); return; }
+    view = next;
+    $('#app').classList.toggle('list-mode', view === 'list');
+    $('#catalogue').hidden = view !== 'list';
+    $('#scene-view').setAttribute('aria-pressed', String(view === 'scene'));
+    $('#list-view').setAttribute('aria-pressed', String(view === 'list'));
+    if (view === 'scene') { query = ''; $('#project-search').value = ''; renderCatalogue(); }
+    scene?.setPaused(view !== 'scene' || dialog.open);
+  }
+  function openDetail(id) {
+    const p = projects.find(project => project.id === id);
+    if (!p) return;
+    opener = activeElement();
+    detailProject = p;
+    catalogueScroll = $('#catalogue').scrollTop;
+    readerOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    $('#project-detail').innerHTML = renderProjectDetail(p);
+    $('.reader-toolbar-title > span').textContent = p.isGuide ? '/ ABOUT THIS SPACE' : '/ PROJECT FILE';
+    $('#reader-back span').textContent = view === 'list' ? '返回目录' : '返回星空';
+    iconize(); dialog.showModal(); dialog.scrollTop = 0;
+    $('#reader-back').focus({preventScroll:true}); scene?.setPaused(true);
+    sectionObserver?.disconnect();
+    sectionObserver = new IntersectionObserver(entries => {
+      const current = entries.find(entry => entry.isIntersecting);
+      if (current) markReaderSection(current.target.id);
+    }, {root:dialog, rootMargin:'-24% 0px -55% 0px'});
+    dialog.querySelectorAll('.detail-section').forEach(section => sectionObserver.observe(section));
+  }
+  function markReaderSection(id) {
+    dialog.querySelectorAll('[data-reader-link]').forEach(link => {
+      if (link.hash === `#${id}`) link.setAttribute('aria-current','location');
+      else link.removeAttribute('aria-current');
+    });
+    $('#reader-section-select').value = id;
+  }
+  function jumpReaderSection(id) {
+    const section = dialog.querySelector(`#${CSS.escape(id)}`);
+    if (!section?.classList.contains('detail-section')) return;
+    section.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    markReaderSection(id);
+  }
+  on($('#close-dialog'), 'click', () => dialog.close());
+  on($('#reader-back'), 'click', () => dialog.close());
+  on(dialog, 'click', event => {
+    const rect = dialog.getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
+  });
+  on(dialog, 'close', () => {
+    sectionObserver?.disconnect();
+    dialog.querySelector('video')?.pause();
+    document.body.style.overflow = readerOverflow;
+    if (browseAfterReader) {
+      browseAfterReader = false;
+      query = ''; listPage = 0; $('#project-search').value = '';
+      renderCatalogue(); setView('list'); $('#catalogue').scrollTop = 0;
+      $('#project-search').focus({preventScroll:true});
+      return;
+    }
+    if (view === 'list') $('#catalogue').scrollTop = catalogueScroll;
+    scene?.setPaused(view !== 'scene');
+    if (opener?.isConnected) opener.focus({preventScroll:true});
+  });
+  on(dialog, 'click', async event => {
+    const button = event.target.closest('[data-copy-section]');
+    if (!button || !detailProject) return;
+    try { await navigator.clipboard.writeText(detailProject.sections[Number(button.dataset.copySection)][2]); button.title = '已复制'; button.setAttribute('aria-label','已复制'); }
+    catch { button.title = '复制失败，请选择文本复制'; }
+  });
+  on(dialog, 'click', event => {
+    const link = event.target.closest('.detail-toc a');
+    if (link) { event.preventDefault(); jumpReaderSection(link.hash.slice(1)); }
+  });
+  on(dialog, 'change', event => {
+    if (event.target.id === 'reader-section-select') jumpReaderSection(event.target.value);
+  });
+  on($('#open-project'), 'click', () => openDetail(selected.id));
+  on(dialog, 'click', event => {
+    if (!event.target.closest('[data-guide-browse]')) return;
+    browseAfterReader = true;
+    dialog.close();
+  });
+  on($('#project-dock'), 'click', event => { const button = event.target.closest('[data-project]'); if (button) select(button.dataset.project); });
+  on($('#project-grid'), 'click', event => { const button = event.target.closest('[data-detail]'); if (button) openDetail(button.dataset.detail); });
+  on($('#scene-view'), 'click', () => setView('scene'));
+  on($('#list-view'), 'click', () => setView('list'));
+  on($('#search-launch'), 'click', () => { setView('list'); $('#project-search').focus(); });
+  on($('#project-search'), 'input', event => { query = event.target.value; listPage = 0; renderCatalogue(); });
+  for (const [name, direction] of [['prev', -1], ['next', 1]]) {
+    on($(`#list-${name}`), 'click', () => { listPage += direction; renderCatalogue(); $('#catalogue').scrollTop = 0; });
+  }
+  on($('#clear-search'), 'click', () => { query = ''; listPage = 0; $('#project-search').value = ''; renderCatalogue(); });
+  on($('#reset-camera'), 'click', () => scene?.overview());
+  on($('#zoom-in'), 'click', () => scene?.zoom(1));
+  on($('#zoom-out'), 'click', () => scene?.zoom(-1));
+  function syncOrbitButton(active) {
+    const button = $('#orbit-toggle');
+    button.setAttribute('aria-pressed', String(active));
+    const label = active ? '暂停动态' : '开启动态';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+  on($('#orbit-toggle'), 'click', () => {
+    const state = $('#orbit-toggle').getAttribute('aria-pressed') !== 'true';
+    const active = scene?.orbit(state) ?? false;
+    syncOrbitButton(active);
+    if (state && !active && window.matchMedia('(prefers-reduced-motion: reduce)').matches) notify('已遵循设备的减少动态效果设置。');
+  });
+  on(window, 'keydown', e => { if (e.key === 'Escape' && !dialog.open && view === 'scene') scene?.overview(); });
+  function failScene() { sceneFailed = true; setView('list'); scene?.setPaused(true); notify('3D 暂不可用，已打开项目目录。'); }
+  on(window, 'gallery-context-lost', failScene);
+  renderSelection(); renderCatalogue(); iconize();
+  function onBrowse(items,start,total,id) {
+    sceneItems = items;
+    const project = projects.find(p=>p.id===id);
+    if (project) selected=project;
+    $('#space-range').textContent = `${String(total ? start+1 : 0).padStart(2,'0')}–${String(start+items.length).padStart(2,'0')} / ${String(total).padStart(2,'0')}`;
+    renderSelection();
+  }
+  const unmount = () => {
+    if (disposed) return;
+    disposed = true;
+    if (dialog?.open) dialog.close();
+    ac.abort();
+    clearTimeout(noticeTimer);
+    sectionObserver?.disconnect();
+    scene?.dispose();
+    scene = null;
+    document.body.style.overflow = readerOverflow;
+    if (themeNode?.dataset) {
+      delete themeNode.dataset.sceneReady;
+      delete themeNode.dataset.galleryTheme;
+    }
+    if (themeMeta) themeMeta.setAttribute('content', previousThemeColor);
+    delete window.__galleryDebug;
+  };
+  (async () => {
+    try {
+      const { createGallery } = await import('./scene.js');
+      if (disposed) return;
+      scene = await createGallery($('#gallery-canvas'), visible, id => select(id), onBrowse);
+      if (disposed) { scene.dispose(); scene = null; return; }
+      scene.setTheme(galleryTheme);
+      scene.focus(selected.id, false);
+      syncOrbitButton(scene.orbit(true));
+      scene.setPaused(view !== 'scene' || dialog.open);
+      window.__galleryDebug = () => ({ ...scene.debug(), view, selected: selected.id, query, visible: visible.map(p => p.id) });
+      if (themeNode) themeNode.dataset.sceneReady = 'true';
+    } catch (error) { console.error(error); if (!disposed) failScene(); }
+  })();
+  return unmount;
+}

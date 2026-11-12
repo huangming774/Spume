@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node tools/vercel-build.mjs",
+  "outputDirectory": "out",
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/((?!api|ai-assistant).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>练习报告 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media (min-width: 880px) {
+    .layout { grid-template-columns: 360px 1fr; align-items: start; }
+    .summary-card { position: sticky; top: 88px; }
+  }
+  .summary-card {
+    border-radius: 28px; padding: 28px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    width: 100%; margin-top: 18px;
+  }
+  .stat-tile {
+    border-radius: 14px; padding: 12px;
+    background: rgba(255,255,255,.5);
+    border: 1px solid rgba(255,255,255,.7);
+  }
+  .stat-tile .label { font-size: 11px; letter-spacing: .1em; color: var(--on-surface-variant); text-transform: uppercase; }
+  .stat-tile .val   { font-size: 18px; font-weight:600; margin-top: 2px; }
+
+  .review-item {
+    border-radius: 18px;
+    padding: 16px 18px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .review-item .badge {
+    width: 28px; height: 28px; border-radius: 9999px;
+    display: inline-flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+  }
+  .review-item .badge.ok  { background:#ecfbf0; color:#3c4a42; border:1px solid #bbcac0; }
+  .review-item .badge.bad { background:#ffdad6; color:#93000a; border:1px solid #ba1a1a; }
+  .review-item .body { flex: 1; min-width: 0; }
+  .review-item h4 { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .review-item .ans { font-size: 13px; color: var(--on-surface-variant); margin-top: 6px; line-height: 1.55; }
+  .review-item .ans strong { color: var(--on-surface); }
+  .review-item .ans .strike { color: var(--error); text-decoration: line-through; }
+</style>
+</head>
+<body>
+
+<main class="page">
+  <div style="text-align:center;margin:8px 0 24px">
+    <span class="chip chip-blue" id="deck-tag">载入中…</span>
+    <h1 class="page-title" style="margin-top:14px">练习报告</h1>
+    <p class="page-sub" id="when">—</p>
+  </div>
+
+  <div class="layout">
+    <section class="glass holo-edge summary-card" id="summary"></section>
+
+    <section>
+      <div style="display:flex;align-items:end;justify-content:space-between;margin:0 4px 12px">
+        <h3 style="margin:0;font-size:18px;font-weight:600">题目复盘</h3>
+        <span id="items-count" style="font-size:13px;color:var(--on-surface-variant)"></span>
+      </div>
+      <div id="review-list" style="display:flex;flex-direction:column;gap:10px"></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import { Store, fmtDate } from './assets/store.js';
+import { mountShell, qs } from './assets/shell.js';
+mountShell('review', { requireAuth: false });
+
+const sessionId = qs('sessionId');
+
+(async () => {
+  if (!sessionId) { location.href = 'index.html'; return; }
+  const s = await Store.getSession(sessionId);
+  if (!s) { location.href = 'index.html'; return; }
+  const deck = await Store.getDeck(s.deckId);
+  const byCard = new Map(deck.cards.map(c => [c.id, c]));
+
+  // header
+  document.getElementById('deck-tag').innerHTML =
+    `<span class="material-symbols-outlined" style="font-size:14px">style</span> ${esc(deck.title)} · ${s.mode === 'deep' ? 'Deep' : 'Quick'} Practice`;
+  document.getElementById('when').textContent = fmtDate(s.finishedAt);
+
+  // summary
+  const total   = s.items.length;
+  const correct = s.items.filter(it => it.correct).length;
+  const ms      = (s.finishedAt - s.startedAt);
+  const acc     = Math.round(correct / total * 100);
+  const offset  = 283 - (283 * correct / total);
+  document.getElementById('summary').innerHTML = `
+    <h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:.04em">Session Mastery</h2>
+    <div class="score-ring" style="margin-top:18px">
+      <svg viewBox="0 0 100 100" width="192" height="192" style="transform:rotate(-90deg)">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#87CEEB"/>
+            <stop offset="100%" stop-color="#FFB6C1"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(0,0,0,.05)" stroke-width="6"/>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="url(#g)" stroke-width="6"
+                stroke-dasharray="283" stroke-dashoffset="${offset}" stroke-linecap="round"
+                style="transition:stroke-dashoffset 1s ease-out"/>
+      </svg>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <span class="num">${correct}<span style="font-size:18px;color:var(--outline-variant);font-weight:500">/${total}</span></span>
+        <span class="label">SCORE</span>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat-tile"><div class="label">正确率</div><div class="val">${acc}%</div></div>
+      <div class="stat-tile"><div class="label">用时</div><div class="val">${fmtDuration(ms)}</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:18px">
+      ${correct < total ? `
+        <button id="btn-retry-wrong" class="btn btn-primary" style="width:100%">
+          <span class="material-symbols-outlined" style="font-size:18px">target</span>
+          再练错题 (${total - correct})
+        </button>` : ''}
+      <button id="btn-retry-all" class="btn btn-ghost" style="width:100%">
+        <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
+        重练这一组
+      </button>
+      <a class="btn btn-ghost" style="width:100%" href="index.html">
+        <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+        回到卡片库
+      </a>
+    </div>
+  `;
+
+  // retry buttons
+  document.getElementById('btn-retry-all').onclick = () =>
+    location.href = `practice.html?deckId=${s.deckId}&mode=${s.mode}`;
+  const wrongIds = s.items.filter(it => !it.correct).map(it => it.cardId).join(',');
+  const retryWrong = document.getElementById('btn-retry-wrong');
+  if (retryWrong) retryWrong.onclick = () =>
+    location.href = `practice.html?deckId=${s.deckId}&mode=${s.mode}&cards=${wrongIds}`;
+
+  // review list
+  document.getElementById('items-count').textContent = `${total} 题`;
+  const list = document.getElementById('review-list');
+  list.innerHTML = '';
+  s.items.forEach(it => {
+    const c = byCard.get(it.cardId);
+    if (!c) return;
+    const right = c.options.find(o => o.correct).text;
+    const div = document.createElement('div');
+    div.className = 'glass holo-edge review-item';
+    div.innerHTML = `
+      <div class="badge ${it.correct?'ok':'bad'}">
+        <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">
+          ${it.correct ? 'check' : 'close'}
+        </span>
+      </div>
+      <div class="body">
+        <h4>${esc(c.prompt)}</h4>
+        <div class="ans">
+          ${it.correct
+            ? `<strong>你的答案：</strong>${esc(it.picked)}`
+            : `<strong>你答：</strong><span class="strike">${esc(it.picked)}</span><br><strong>正解：</strong>${esc(right)}`}
+          ${c.hint ? `<div style="margin-top:6px;font-size:12px;opacity:.85;">💡 ${esc(c.hint)}</div>` : ''}
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+})();
+
+function fmtDuration(ms) {
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60), ss = s % 60;
+  return `${m}:${String(ss).padStart(2,'0')}`;
+}
+function esc(s='') { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

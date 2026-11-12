@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reimu主题博客搭建笔记——Hexo新主题从零到部署</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">Reimu主题博客搭建笔记——Hexo新主题从零到部署</span><span class="i18n-en" style="display:none">Building a Blog with Reimu Theme — Hexo Theme Migration Guide</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-10</span>
+      <span>3800 <span data-i18n="metaWords">字</span></span>
+      <span>628 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>15 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><p>本文记录了从零搭建一个全新Hexo博客的完整过程——使用拔剑Sketon开发的博丽灵梦风格Reimu主题，从初始化项目、配置主题、文章迁移、标签适配，到Vercel部署上线的全部踩坑记录。如果你也想换个新主题，这篇文章应该能帮你省不少时间。</p>
+<h2>为什么换主题？</h2>
+<p>Butterfly是一套非常成熟的Hexo主题，功能齐全。但在浏览D-Sketon（拔剑Sketon）的博客时，被Reimu主题的简洁东方风设计吸引：</p>
+<table>
+<thead>
+<tr>
+<th>亮点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视觉风格</td>
+<td>灵梦主题配色 + 太极图标动画</td>
+</tr>
+<tr>
+<td>交互体验</td>
+<td>AOS滚动动画 + PJAX无刷新加载</td>
+</tr>
+<tr>
+<td>内置功能</td>
+<td>照片墙、标签页、友链卡片、热力图</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>暗色模式、响应式布局、多语言支持</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>比Butterfly更轻量，风格更现代</td>
+</tr>
+</tbody>
+</table>
+<h2>搭建过程</h2>
+<h3>1. 初始化项目</h3>
+<p>在D盘新建blog1目录：</p>
+<pre><code class="language-bash">cd D:/blog1
+npx hexo init .
+npm install hexo-theme-reimu
+</code></pre>
+<p><code>_config.yml</code>中设置<code>theme: reimu</code>，同时配置站点信息：</p>
+<pre><code class="language-yaml">title: 桃之夭夭の花园
+author: 桃之夭夭
+language: zh-CN
+</code></pre>
+<p>Reimu的配置文件是<code>_config.reimu.yml</code>（不是Butterfly的<code>_config.butterfly.yml</code>）。配置项包括导航菜单、打字机副标题、社交链接、侧边栏、i18n等。</p>
+<h3>2. 核心配置</h3>
+<p>从原博客复制了头像、社交链接等信息，重点配置了以下部分：</p>
+<p><strong>打字机副标题：</strong></p>
+<pre><code class="language-yaml">subtitle:
+  typing:
+    enable: true
+    strings:
+      - 学无止境，持之以恒
+      - 千里之行，始于足下
+    loop: true
+</code></pre>
+<p><strong>社交链接（GitHub + B站 + 邮箱）：</strong></p>
+<pre><code class="language-yaml">social:
+  github: https://github.com/bistutzyy
+  bilibili: https://space.bilibili.com/1061280173
+  email: mailto:173236231@qq.com
+</code></pre>
+<p><strong>侧边栏：</strong> 只保留个人信息和标签云，去掉了分类、归档、最新文章。</p>
+<p><strong>导航菜单：</strong> 首页、归档、关于、友链四个入口。</p>
+<h3>3. 文章迁移</h3>
+<p>从原博客复制了14篇文章。但这里遇到了第一个大问题——Butterfly标签和Reimu标签互不兼容。</p>
+<h3>4. 关于页与友链页</h3>
+<p><strong>关于页</strong>写入了个人介绍和GitHub贡献表：<br>
+- 个人简介 + 博客介绍<br>
+- GitHub贡献热力图（使用ghchart.rshah.org服务）<br>
+- 建站日期、技术栈</p>
+<p><strong>友链页</strong>加入原博客bistutzyy.github.io作为友链，命名为「桃之夭夭第一章」。</p>
+<h3>5. 部署到Vercel</h3>
+<p>在GitHub新建仓库<code>bistutzyy/blog1-reimu</code>，推送代码。然后在Vercel导入该仓库。</p>
+<p>Vercel默认自动识别Hexo项目，构建命令为<code>hexo generate</code>，输出目录为<code>public</code>。但需要注意：</p>
+<table>
+<thead>
+<tr>
+<th>注意事项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>配置文件</td>
+<td>需创建 <code>vercel.json</code></td>
+</tr>
+<tr>
+<td>package-lock.json</td>
+<td>Windows版在Vercel Linux环境可能冲突，建议 <code>.gitignore</code> 忽略</td>
+</tr>
+<tr>
+<td>Node版本</td>
+<td>需在 <code>package.json</code> 中设置 <code>"engines": { "node": "24.x" }</code></td>
+</tr>
+</tbody>
+</table>
+<h2>遇到的问题与解决</h2>
+<h3>问题一：Butterfly标签完全不兼容</h3>
+<p><strong>现象：</strong> 复制过来的文章大量使用note、span、folding等Butterfly标签，生成时报<code>unknown block tag</code>错误。</p>
+<p><strong>原因：</strong> Reimu有自己的标签体系（alertBlockquote、details、gallery、tabs等），和Butterfly完全不兼容。</p>
+<p><strong>解决：</strong> 批量替换标签：</p>
+<table>
+<thead>
+<tr>
+<th>Butterfly</th>
+<th>Reimu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>note</td>
+<td>alertBlockquote</td>
+</tr>
+<tr>
+<td>folding</td>
+<td>details</td>
+</tr>
+<tr>
+<td>span/p</td>
+<td><code>&lt;span class="c-color"&gt;</code></td>
+</tr>
+<tr>
+<td>label</td>
+<td>badge（需自定义）</td>
+</tr>
+<tr>
+<td>tabs</td>
+<td>tabs（Reimu原生，语法相同）</td>
+</tr>
+<tr>
+<td>gallery</td>
+<td>gallery（需重写）</td>
+</tr>
+</tbody>
+</table>
+<p>对于Reimu没有的标签，在项目的<code>scripts/</code>目录下创建自定义标签脚本。所有自定义标签最后合并到<code>scripts/tags.js</code>。</p>
+<h3>问题二：照片墙JS代码泄漏到页面</h3>
+<p><strong>现象：</strong> Vercel部署后，文章标题下方出现大段JavaScript代码文本。</p>
+<p><strong>原因：</strong> Reimu原版gallery标签会生成内联<code>&lt;script&gt;</code>实现photoWall效果。在Vercel构建环境中，这些内联JS被错误暴露为可见文本。</p>
+<p><strong>解决：</strong> 将gallery标签重写为纯CSS瀑布流，使用<code>columns</code>实现真瀑布流，每张图保持原始比例，不裁切。</p>
+<h3>问题三：轮播图在Reimu中完全无法使用</h3>
+<p><strong>现象：</strong> Butterfly的carousel标签依赖<code>carousel-touch.js</code>和<code>transform-style: preserve-3d</code>，与Reimu的CSS布局冲突，3D旋转失效。</p>
+<p><strong>尝试过程：</strong></p>
+<table>
+<thead>
+<tr>
+<th>尝试</th>
+<th>方案</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一</td>
+<td>保留 carousel-touch.js，修复3D变换</td>
+<td>图片大小不一，旋转方向错乱</td>
+</tr>
+<tr>
+<td>二</td>
+<td>纯CSS scroll-snap滑动画廊</td>
+<td>图片过大，毫无新意</td>
+</tr>
+<tr>
+<td>三</td>
+<td>自定义CSS展示型轮播，淡入淡出</td>
+<td>竖屏图片显示不全，人脸被裁</td>
+</tr>
+</tbody>
+</table>
+<p><strong>最终方案：</strong> 放弃轮播图，改用gallery瀑布流直接展示所有图片。</p>
+<p>轮播图是Butterfly和Reimu之间最深层的架构冲突——Butterfly的3D carousel依赖特定的CSS transform环境和外部JS，而Reimu的布局完全不兼容。与其勉强修复，不如使用主题原生的gallery。</p>
+<h3>问题四：中英双语切换始终无法生效</h3>
+<p><strong>现象：</strong> 配置<code>language: [zh-CN, en]</code>并在<code>source/en/_posts/</code>下放置英文翻译，切换语言后文章正文仍是中文。</p>
+<p><strong>原因（核心）：</strong> 经过反复测试（Hexo 7.3.0、8.1.2、安装<code>hexo-generator-i18n</code>插件），确认Hexo不会自动扫描<code>source/en/_posts/</code>目录。<code>source/en/</code>只对页面（about、friend）生效，Post不受支持。</p>
+<p>这是本次搭建中耗时最长（超过3小时）、尝试方案最多（4种）、最终也未能完美解决的问题。核心原因是Hexo框架本身不提供文章级多语言目录扫描，而Vercel又限制了运行时对<code>node_modules</code>的修改。</p>
+<h3>问题五：Vercel构建反复失败</h3>
+<p><strong>现象：</strong> 推送代码后Vercel构建持续报错<code>Nunjucks Error: unknown block tag</code>，且每次错误都不同。</p>
+<p><strong>原因链：</strong><br>
+1. 项目<code>scripts/</code>目录在清理过程中被误删，导致自定义标签丢失<br>
+2. <code>hexo-butterfly-tag-plugins-plus</code>在Node 24 + Vercel环境存在兼容问题<br>
+3. 文章中的标签语法示例被Hexo的Nunjucks解析器当作真实标签处理</p>
+<p><strong>解决步骤：</strong><br>
+1. 将所有自定义标签合并到<code>scripts/tags.js</code>中统一管理<br>
+2. 保留<code>hexo-butterfly-tag-plugins-plus</code>依赖<br>
+3. 文章中涉及标签语法的部分全部用文字描述替代，避免被Nunjucks误解析<br>
+4. 在<code>package.json</code>中设置<code>engines.node: "24.x"</code><br>
+5. 创建<code>vercel.json</code>指定构建命令和输出目录</p>
+<p>这个问题的根本教训是：<strong>绝对不要在Hexo文章正文中直接写tag语法</strong>。Hexo的Nunjucks解析器在Markdown渲染前运行，代码块和行内代码都挡不住它。</p>
+<h3>问题六：封面图与轮播图的后续处理</h3>
+<p><strong>封面图问题：</strong> Reimu的post.ejs会自动给没有cover字段的文章分配随机封面或使用主题banner。</p>
+<p><strong>解决：</strong> 用CSS暴力方案：<code>.post-cover { display: none }</code>。文章顶部banner设置cover为空值。</p>
+<p><strong>轮播图：</strong> 用gallery瀑布流替代，彻底移除了Butterfly carousel的所有依赖。</p>
+<h2>自定义标签实现</h2>
+<p>Reimu缺少的标签，在项目的<code>scripts/tags.js</code>中自定义。关键规则：Hexo会优先加载项目<code>scripts/</code>目录下的脚本，加载顺序晚于主题脚本。因此项目级标签可以覆盖同名主题标签。</p>
+<p><strong>badge标签（替代Butterfly的label）、timeline标签（自定义实现）、blockquote标签（带作者署名）。</strong></p>
+<p>配套CSS在<code>source/css/tag-styles.css</code>中定义，并通过reimu的<code>injector.head_begin</code>注入。</p>
+<h2>最终成果</h2>
+<p>经过一整天的折腾，Reimu主题博客成功上线：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>详情</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>地址</td>
+<td><a href="https://blog1-reimu.vercel.app">blog1-reimu.vercel.app</a></td>
+</tr>
+<tr>
+<td>主题</td>
+<td>hexo-theme-reimu v1.12.4</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>Vercel（GitHub推送自动构建）</td>
+</tr>
+<tr>
+<td>文章</td>
+<td>14篇（从原博客完整迁移）</td>
+</tr>
+<tr>
+<td>标签体系</td>
+<td>混合使用Reimu原生 + 自定义 + tag-plugins-plus</td>
+</tr>
+<tr>
+<td>侧边栏</td>
+<td>个人信息 + 标签云</td>
+</tr>
+<tr>
+<td>友链</td>
+<td>链接到原Butterfly博客</td>
+</tr>
+</tbody>
+</table>
+<h2>技术总结</h2>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>版本</td>
+<td>Hexo 7.3.0 + Reimu 1.12.4</td>
+</tr>
+<tr>
+<td>自定义标签</td>
+<td>放在项目 <code>scripts/</code> 目录，勿改 <code>node_modules/</code></td>
+</tr>
+<tr>
+<td>Vercel</td>
+<td>Node 24.x + <code>vercel.json</code>，<code>node_modules</code> 修改不持久</td>
+</tr>
+<tr>
+<td>标签优先级</td>
+<td>Reimu原生 &gt; 自定义 &gt; tag-plugins-plus</td>
+</tr>
+<tr>
+<td>避坑</td>
+<td>文章正文禁写标签语法，Nunjucks会误解析</td>
+</tr>
+<tr>
+<td>Gallery</td>
+<td>纯CSS替代photoWall，避免内联JS泄漏</td>
+</tr>
+<tr>
+<td>i18n</td>
+<td>文章级切换受限于Hexo框架，页面级可用</td>
+</tr>
+</tbody>
+</table>
+<h2>致谢与参考</h2>
+<p>感谢D-Sketon（拔剑Sketon）开发的Reimu主题！</p>
+<p><strong>相关链接：</strong><br>
+- 主题仓库：<a href="https://github.com/D-Sketon/hexo-theme-reimu">D-Sketon/hexo-theme-reimu</a><br>
+- 作者博客：<a href="https://d-sketon.github.io/">d-sketon.github.io</a><br>
+- 使用指南：<a href="https://d-sketon.github.io/20230707/hexo-theme-reimu-guide/">hexo-theme-reimu食用指南</a><br>
+- 博客仓库：<a href="https://github.com/bistutzyy/blog1-reimu">bistutzyy/blog1-reimu</a></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Why Switch Themes?</h2>
+<p>While browsing D-Sketon's blog, I was drawn to the Reimu theme's clean Eastern aesthetic — Reimu color scheme, yin-yang icon animation, AOS scroll effects, PJAX loading, photo walls, and dark mode.</p>
+<h2>Setup Process</h2>
+<h3>Initialize</h3>
+<pre><code class="language-bash">cd D:/blog1
+npx hexo init .
+npm install hexo-theme-reimu
+</code></pre>
+<p>Configure <code>_config.yml</code> with <code>theme: reimu</code> and use <code>_config.reimu.yml</code> for theme settings.</p>
+<h3>Migration Issues</h3>
+<p><strong>Butterfly tags are completely incompatible with Reimu.</strong> Had to batch-replace: note → alertBlockquote, folding → details, span → CSS classes, label → custom badge tag.</p>
+<p><strong>Photo wall JS leaked</strong> — rewrote gallery tag with pure CSS columns waterfall.</p>
+<p><strong>Carousel completely broken</strong> — 3D carousel dependencies conflict with Reimu's CSS. Gave up and used gallery instead.</p>
+<p><strong>i18n article switching never worked</strong> — Hexo doesn't scan <code>source/en/_posts/</code> for posts. This is a framework limitation. Spent 3+ hours on this, eventually gave up and kept the blog monolingual.</p>
+<p><strong>Vercel builds kept failing</strong> — Nunjucks was parsing tag syntax examples in article text as real tags. Lesson: never write raw tag syntax in Hexo post content.</p>
+<h3>Final Result</h3>
+<p>Successfully deployed at <a href="https://blog1-reimu.vercel.app">blog1-reimu.vercel.app</a> with 14 articles migrated, custom tag scripts, and CSS gallery fallback.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

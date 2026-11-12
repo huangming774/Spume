@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>AI QuizCard · 卡片库</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .category-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px 12px;
+    margin: 0 -4px 18px;
+    scrollbar-width: none;
+  }
+  .category-bar::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(255,255,255,.6);
+    border: 1px solid rgba(255,255,255,.9);
+    color: var(--on-surface-variant);
+    transition: all .2s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cat-chip:hover { background: rgba(255,255,255,.9); }
+  .cat-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    font-weight: 600;
+  }
+  .cat-chip .count {
+    font-size: 11px; opacity: .7;
+    background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 9999px;
+  }
+  .cat-chip.active .count { background: rgba(255,255,255,.2); opacity: 1; }
+</style>
+</head>
+<body>
+
+<main class="page">
+  <div style="display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+    <div>
+      <span class="chip chip-blue">
+        <span class="material-symbols-outlined" style="font-size:14px;">style</span>
+        Card Library
+      </span>
+      <h1 class="page-title" style="margin-top:8px">卡片库</h1>
+      <p class="page-sub" id="summary">载入中…</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="btn-export" title="导出为 JSON">
+        <span class="material-symbols-outlined" style="font-size:18px">download</span>导出
+      </button>
+      <label class="btn btn-ghost" style="cursor:pointer" title="导入 JSON 备份">
+        <span class="material-symbols-outlined" style="font-size:18px">upload</span>导入
+        <input id="file-import" type="file" accept="application/json" style="display:none">
+      </label>
+      <a class="btn btn-primary" href="practice-setup.html">
+        <span class="material-symbols-outlined" style="font-size:18px">play_arrow</span>开始练习
+      </a>
+      <a class="btn btn-primary" href="create.html" style="background:var(--tertiary)">
+        <span class="material-symbols-outlined" style="font-size:18px">auto_awesome</span>AI 建卡
+      </a>
+    </div>
+  </div>
+
+  <!-- Category filter -->
+  <div class="category-bar" id="cat-bar"></div>
+
+  <div id="deck-grid" class="deck-grid"></div>
+
+  <div id="empty" class="empty hidden glass holo-edge" style="border-radius:24px;margin-top:20px">
+    <span class="material-symbols-outlined">inventory_2</span>
+    <p style="font-size:15px;margin:0 0 12px">还没有卡片集，建一个开始吧。</p>
+    <a class="btn btn-primary" href="create.html">
+      <span class="material-symbols-outlined" style="font-size:18px">auto_awesome</span>AI 智能建卡
+    </a>
+  </div>
+
+  <div id="filtered-empty" class="empty hidden">
+    <span class="material-symbols-outlined">filter_alt_off</span>
+    <p style="font-size:14px">这个分类下还没有卡片集。</p>
+  </div>
+</main>
+
+<script type="module">
+import { Store, fmtDate, fmtDateTime } from './assets/store.js';
+import { mountShell, toast } from './assets/shell.js';
+mountShell('library', { requireAuth: false });
+
+const grid     = document.getElementById('deck-grid');
+const summary  = document.getElementById('summary');
+const empty    = document.getElementById('empty');
+const fEmpty   = document.getElementById('filtered-empty');
+const catBar   = document.getElementById('cat-bar');
+
+let allDecks = [];
+let activeCat = localStorage.getItem('libCat') || 'all';
+
+async function render() {
+  allDecks = await Store.listDecks();
+  if (!allDecks.length) {
+    empty.classList.remove('hidden');
+    fEmpty.classList.add('hidden');
+    grid.innerHTML = '';
+    catBar.innerHTML = '';
+    summary.textContent = '还没有卡片集';
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const totalCards = allDecks.reduce((a, d) => a + d.cardCount, 0);
+  summary.textContent = `共 ${allDecks.length} 个卡片集 · ${totalCards} 张卡片`;
+
+  renderCategories();
+  renderGrid();
+}
+
+function renderCategories() {
+  const subjects = {};
+  allDecks.forEach(d => { subjects[d.subject] = (subjects[d.subject]||0)+1; });
+  const list = Object.keys(subjects).sort();
+
+  catBar.innerHTML = '';
+  const all = makeChip('all', '全部', allDecks.length, '🗂');
+  catBar.appendChild(all);
+  list.forEach(s => catBar.appendChild(makeChip(s, s, subjects[s], emojiFor(s))));
+}
+function makeChip(key, label, count, icon) {
+  const b = document.createElement('button');
+  b.className = 'cat-chip' + (activeCat === key ? ' active' : '');
+  b.innerHTML = `<span>${icon}</span><span>${label}</span><span class="count">${count}</span>`;
+  b.addEventListener('click', () => {
+    activeCat = key;
+    localStorage.setItem('libCat', key);
+    catBar.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    b.classList.add('active');
+    renderGrid();
+  });
+  return b;
+}
+function emojiFor(s) {
+  return ({'英语':'🇬🇧','数学':'∑','物理':'⚛️','化学':'🧪','生物学':'🧬','历史':'📜','地理':'🌍','政治':'⚖️','语文':'📖','编程':'💻','法律':'⚖️','医学':'⚕️','通用':'📌'})[s] || '📚';
+}
+
+function renderGrid() {
+  const decks = activeCat === 'all' ? allDecks : allDecks.filter(d => d.subject === activeCat);
+  grid.innerHTML = '';
+  if (!decks.length) {
+    fEmpty.classList.remove('hidden');
+    return;
+  }
+  fEmpty.classList.add('hidden');
+
+  decks.forEach(deck => {
+    const color = colorForSubject(deck.subject);
+    const card = document.createElement('article');
+    card.className = 'glass holo-edge deck-card';
+    const scheduleStr = deck.scheduledAt
+      ? `<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--primary);font-weight:500"><span class="material-symbols-outlined" style="font-size:13px">schedule</span>计划：${fmtDateTime(deck.scheduledAt)}</div>`
+      : '';
+
+    card.innerHTML = `
+      <div class="meta">
+        <span class="chip" style="background:${color.bg};color:${color.fg};border-color:rgba(255,255,255,.6)">${emojiFor(deck.subject)} ${deck.subject}</span>
+        <span>${deck.cardCount} 题</span>
+      </div>
+      <h3>${esc(deck.title)}</h3>
+      <p class="desc">${esc(deck.desc || '—')}</p>
+      ${scheduleStr}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <div class="nebula-bar" style="flex:1"><i style="width:${deck.mastery||0}%"></i></div>
+        <span style="font-size:11px;font-weight:600;color:var(--primary)">${deck.mastery||0}%</span>
+      </div>
+      <div class="footer">
+        <span style="opacity:.7;text-transform:none;letter-spacing:0;font-weight:500">上次：${fmtDate(deck.lastPracticed)}</span>
+        <a href="practice-setup.html?deckId=${deck.id}" style="display:inline-flex;align-items:center;gap:4px;font-weight:600">
+          开始练习
+          <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+        </a>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <a class="btn btn-ghost" style="flex:1;padding:8px 12px;font-size:12px" href="create.html?deckId=${deck.id}">
+          <span class="material-symbols-outlined" style="font-size:14px">edit</span>编辑
+        </a>
+        <button class="btn btn-ghost" style="flex:0 0 auto;padding:8px 12px;font-size:12px;color:var(--error)"
+                data-delete="${deck.id}" data-title="${esc(deck.title)}">
+          <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.delete;
+      if (!confirm(`确定删除卡片集 "${btn.dataset.title}"？此操作不可恢复。`)) return;
+      await Store.deleteDeck(id);
+      toast('已删除', 'delete');
+      render();
+    });
+  });
+}
+
+function colorForSubject(s) {
+  const map = {
+    '生物学': { bg:'rgba(236,251,240,.7)', fg:'#3c4a42' },
+    '英语':   { bg:'rgba(240,249,255,.7)', fg:'#3f484d' },
+    '物理':   { bg:'rgba(234,220,225,.7)', fg:'#4e4448' },
+    '数学':   { bg:'rgba(255,240,200,.7)', fg:'#5a4a1a' },
+    '化学':   { bg:'rgba(220,240,250,.7)', fg:'#2a4858' },
+    '历史':   { bg:'rgba(245,235,220,.7)', fg:'#5a4a30' },
+    '编程':   { bg:'rgba(225,225,240,.7)', fg:'#383852' },
+  };
+  return map[s] || { bg:'rgba(255,255,255,.6)', fg:'var(--on-surface-variant)' };
+}
+function esc(s='') { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// export / import
+document.getElementById('btn-export').addEventListener('click', async () => {
+  const txt = await Store.exportJSON();
+  const blob = new Blob([txt], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `quizcard-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('已导出', 'download_done');
+});
+document.getElementById('file-import').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const txt = await f.text();
+  try {
+    await Store.importJSON(txt);
+    toast('已导入', 'task_alt');
+    render();
+  } catch (err) { toast('文件格式错误', 'error'); }
+});
+
+render();
+</script>
+</body>
+</html>

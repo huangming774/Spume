@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>登录 / 注册 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  body { display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-shell {
+    width: 100%;
+    max-width: 420px;
+    padding: 36px 30px 28px;
+    border-radius: 32px;
+    margin: 0 auto;
+  }
+  .brand {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .brand .logo {
+    width: 64px; height: 64px;
+    margin: 0 auto 14px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 30px;
+    box-shadow: 0 12px 30px rgba(87,96,101,.3);
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 22px; font-weight: 700; letter-spacing: -.01em;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* Tab 切换 */
+  .tabs {
+    display: flex;
+    background: rgba(0,0,0,.04);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 22px;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 9px;
+    font-size: 14px; font-weight: 600;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tabs button.active {
+    background: #fff;
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+
+  .input-block { margin-bottom: 14px; }
+  .input-block label {
+    display: block;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--on-surface-variant); margin-bottom: 6px;
+  }
+  .input-block input {
+    width: 100%;
+    height: 48px; padding: 0 16px;
+    border: 1px solid var(--outline-variant);
+    border-radius: 14px;
+    font-size: 15px; outline: none;
+    background: rgba(255,255,255,.7);
+    transition: border-color .2s, background .2s, box-shadow .2s;
+    box-sizing: border-box;
+  }
+  .input-block input:focus {
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(87,96,101,.08);
+  }
+
+  /* 密码框带显示眼睛 */
+  .input-pw { position: relative; }
+  .input-pw input { padding-right: 44px; }
+  .input-pw .eye {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    border-radius: 9999px;
+  }
+  .input-pw .eye:hover { background: rgba(0,0,0,.04); }
+
+  /* 验证码：输入 + 发送按钮一行 */
+  .code-row { display: flex; gap: 8px; align-items: stretch; }
+  .code-row input { flex: 1; }
+  .code-row .send-btn {
+    flex-shrink: 0;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    min-width: 116px;
+  }
+  .code-row .send-btn:hover:not(:disabled) { background: #43484c; }
+  .code-row .send-btn:disabled {
+    background: var(--outline-variant);
+    color: var(--on-surface-variant);
+    cursor: not-allowed;
+  }
+
+  .submit-btn {
+    width: 100%;
+    height: 50px;
+    border-radius: 14px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background .2s, transform .15s;
+  }
+  .submit-btn:hover:not(:disabled) { background: #43484c; }
+  .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .submit-btn:active:not(:disabled) { transform: scale(.98); }
+
+  /* demo 验证码展示框 */
+  .demo-banner {
+    margin: 16px 0 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(240,249,255,.85), rgba(236,251,240,.7));
+    border: 1px dashed var(--primary);
+    font-size: 12px;
+    color: var(--on-surface);
+    display: none;
+  }
+  .demo-banner.show { display: block; animation: pop .3s ease-out; }
+  @keyframes pop { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform:none; } }
+  .demo-banner .title {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--primary); margin-bottom: 4px;
+  }
+  .demo-banner .code {
+    font-size: 28px; font-weight: 700; letter-spacing: .4em;
+    font-family: ui-monospace, monospace;
+    color: var(--primary);
+    margin: 4px 0;
+  }
+  .demo-banner .note { color: var(--on-surface-variant); font-size: 11px; }
+
+  .err {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,218,214,.5);
+    color: var(--on-error-container);
+    font-size: 13px;
+    display: none;
+  }
+  .err.show { display: block; }
+
+  .form-foot {
+    text-align: center;
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    margin-top: 16px;
+  }
+  .form-foot a {
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .agreement {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 11px; color: var(--on-surface-variant); line-height: 1.6;
+  }
+  .agreement a { color: var(--primary); text-decoration: underline; }
+
+  .pw-hint {
+    font-size: 11px;
+    color: var(--on-surface-variant);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-shell glass holo-edge">
+  <div class="brand">
+    <div class="logo">
+      <span class="material-symbols-outlined" style="font-size:32px">style</span>
+    </div>
+    <h1>AI QuizCard</h1>
+  </div>
+
+  <!-- Tab 切换 -->
+  <div class="tabs">
+    <button data-tab="login"    class="active">登录</button>
+    <button data-tab="register">注册</button>
+  </div>
+
+  <!-- ====== 登录表单 ====== -->
+  <form id="form-login" autocomplete="on" onsubmit="return false">
+    <div class="input-block">
+      <label>邮箱</label>
+      <input id="l-email" type="email" placeholder="you@example.com" autocomplete="username" />
+    </div>
+    <div class="input-block input-pw">
+      <label>密码</label>
+      <input id="l-password" type="password" placeholder="输入密码" autocomplete="current-password" />
+      <span class="eye" data-target="l-password">
+        <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+      </span>
+    </div>
+    <button class="submit-btn" id="btn-login">登录</button>
+    <div class="err" id="err-login"></div>
+    <div class="form-foot">
+      还没账号？<a id="goto-register">立即注册 →</a>
+    </div>
+  </form>
+
+  <!-- ====== 注册表单 ====== -->
+  <form id="form-register" autocomplete="on" style="display:none" onsubmit="return false">
+    <div class="input-block">
+      <label>邮箱</label>
+      <input id="r-email" type="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="input-block input-pw">
+      <label>设置密码</label>
+      <input id="r-password" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+      <span class="eye" data-target="r-password">
+        <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+      </span>
+      <div class="pw-hint">密码至少 6 位，建议字母数字混合</div>
+    </div>
+    <div class="input-block">
+      <label>邮箱验证码</label>
+      <div class="code-row">
+        <input id="r-code" type="text" inputmode="numeric" maxlength="4" placeholder="4 位数字" />
+        <button class="send-btn" id="btn-send-code" type="button">发送验证码</button>
+      </div>
+    </div>
+    <div class="input-block">
+      <label>昵称（可选）</label>
+      <input id="r-nickname" type="text" placeholder="留空就用邮箱前缀" maxlength="20" />
+    </div>
+    <button class="submit-btn" id="btn-register">完成注册并登录</button>
+    <div class="err" id="err-register"></div>
+    <div class="form-foot">
+      已有账号？<a id="goto-login">回到登录 →</a>
+    </div>
+  </form>
+
+  <!-- demo 验证码框 -->
+  <div class="demo-banner" id="demo-banner">
+    <div class="title">📮 演示模式 · 验证码已"发送"</div>
+    <div class="code" id="demo-code">— — — —</div>
+    <div class="note">本地版无真实邮箱服务，验证码直接显示在这里复制即可（5 分钟有效）。接真后端后这框会消失。</div>
+  </div>
+
+  <div class="agreement">
+    使用本应用即表示同意 <a href="#">用户协议</a> 与 <a href="#">隐私政策</a>。<br>
+    本地版数据存在你的浏览器，清除浏览器数据会丢失。
+  </div>
+</div>
+
+<script type="module">
+import { Auth } from './assets/auth.js';
+
+// 已登录直接跳走
+if (Auth.isLoggedIn()) {
+  const next = new URLSearchParams(location.search).get('next') || 'index.html';
+  location.replace(decodeURIComponent(next));
+}
+
+const formLogin    = document.getElementById('form-login');
+const formRegister = document.getElementById('form-register');
+const tabs         = document.querySelectorAll('.tabs button');
+const demoBanner   = document.getElementById('demo-banner');
+const demoCode     = document.getElementById('demo-code');
+
+// Tab 切换
+function switchTab(tab) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  formLogin.style.display    = tab === 'login'    ? '' : 'none';
+  formRegister.style.display = tab === 'register' ? '' : 'none';
+  demoBanner.classList.remove('show');
+  hideErrors();
+}
+tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+document.getElementById('goto-register').addEventListener('click', () => switchTab('register'));
+document.getElementById('goto-login').addEventListener('click',    () => switchTab('login'));
+
+// 密码显示/隐藏
+document.querySelectorAll('.eye').forEach(eye => {
+  eye.addEventListener('click', () => {
+    const inp = document.getElementById(eye.dataset.target);
+    const icon = eye.querySelector('.material-symbols-outlined');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      icon.textContent = 'visibility_off';
+    } else {
+      inp.type = 'password';
+      icon.textContent = 'visibility';
+    }
+  });
+});
+
+// ====== 登录 ======
+document.getElementById('btn-login').addEventListener('click', async () => {
+  hideErrors();
+  const email = document.getElementById('l-email').value.trim();
+  const pw    = document.getElementById('l-password').value;
+  const btn   = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    await Auth.login(email, pw);
+    redirectToNext();
+  } catch (e) {
+    showError('err-login', e.message || '登录失败');
+    btn.disabled = false; btn.textContent = '登录';
+  }
+});
+// 回车提交
+['l-email', 'l-password'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-login').click();
+  });
+});
+
+// ====== 注册 · 发送验证码 ======
+let cooldownTimer = null;
+const btnSendCode = document.getElementById('btn-send-code');
+btnSendCode.addEventListener('click', async () => {
+  hideErrors();
+  const email = document.getElementById('r-email').value.trim();
+  if (!email) return showError('err-register', '请先填邮箱');
+  btnSendCode.disabled = true; btnSendCode.textContent = '发送中…';
+  try {
+    const result = await Auth.sendCode(email);
+    if (result.demo) {
+      demoBanner.classList.add('show');
+      demoCode.textContent = result.code.split('').join(' ');
+    }
+    // 60s 倒计时
+    let sec = 60;
+    const tick = () => {
+      if (sec <= 0) {
+        btnSendCode.disabled = false;
+        btnSendCode.textContent = '重新发送';
+        clearInterval(cooldownTimer);
+        return;
+      }
+      btnSendCode.textContent = `${sec}s 后重发`;
+      sec--;
+    };
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+    // 自动 focus 到验证码框
+    document.getElementById('r-code').focus();
+  } catch (e) {
+    btnSendCode.disabled = false; btnSendCode.textContent = '发送验证码';
+    showError('err-register', e.message || '发送失败');
+  }
+});
+
+// ====== 注册提交 ======
+document.getElementById('btn-register').addEventListener('click', async () => {
+  hideErrors();
+  const email = document.getElementById('r-email').value.trim();
+  const pw    = document.getElementById('r-password').value;
+  const code  = document.getElementById('r-code').value.trim();
+  const nick  = document.getElementById('r-nickname').value.trim();
+  const btn   = document.getElementById('btn-register');
+  btn.disabled = true; btn.textContent = '注册中…';
+  try {
+    await Auth.register(email, pw, code, nick);
+    redirectToNext();
+  } catch (e) {
+    showError('err-register', e.message || '注册失败');
+    btn.disabled = false; btn.textContent = '完成注册并登录';
+  }
+});
+// 验证码框只允许数字
+document.getElementById('r-code').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0,4);
+});
+// 注册表单回车
+['r-email','r-password','r-code','r-nickname'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      // 邮箱填了但还没点发码，回车在邮箱框 = 发码；其他框 = 提交
+      if (id === 'r-email' && !btnSendCode.disabled) btnSendCode.click();
+      else document.getElementById('btn-register').click();
+    }
+  });
+});
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideErrors() {
+  document.querySelectorAll('.err').forEach(e => e.classList.remove('show'));
+}
+function redirectToNext() {
+  const next = new URLSearchParams(location.search).get('next') || 'index.html';
+  location.replace(decodeURIComponent(next));
+}
+</script>
+</body>
+</html>

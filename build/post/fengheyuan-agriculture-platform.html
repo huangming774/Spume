@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>丰禾源——线上线下结合的农业教育平台</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">丰禾源——线上线下结合的农业教育平台</span><span class="i18n-en" style="display:none">Fengheyuan — An Online-Offline Agricultural Education Platform</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-09</span>
+      <span>1500 <span data-i18n="metaWords">字</span></span>
+      <span>386 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>6 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>项目背景</h2>
+<p>随着农业现代化的推进，对农业从业者的知识和技能要求日益提高。然而，传统的农业教育已经无法满足广大农民及农业爱好者的学习需求。线上教育资源分散，缺乏针对农业领域系统且深度结合实践的平台；线下的农业培训又难以全面覆盖，并且成本较高。在此背景下，构建一个线上线下结合的农业教育平台显得尤为重要。</p>
+<h2>市场痛点</h2>
+<p>当前农业领域存在诸多信息不对称的问题。某菜农到外地参观学习种植技术时，看到有人种了上百公顷连片冬瓜，了解到其种植效益非常可观，回来就承包了10亩地种植冬瓜，在技术不到位、经验不足的情况下，首批冬瓜一公斤只卖几分钱，拉一车冬瓜到市场销售才卖300多元，除去车费所剩无几。当地还有很多冬瓜种植大户，几乎都血本无归——<strong>盲目种植，比葫芦画瓢，是普遍现象。</strong></p>
+<p>调查数据显示：多数农民购买种子或农药时并不关注品牌，主要依靠周围人推荐或市场占比，而市场上的产品品质却良莠不齐。对于大面积种植作物的家庭，70%以上会采用机械化种植，大部分选择外租大型农具来完成耕作。</p>
+<p>更值得关注的是粮食产后损失：</p>
+<table>
+<thead>
+<tr>
+<th>数据项</th>
+<th>数值</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>粮食产后总损失率</td>
+<td>11.39%</td>
+<td>中国农业大学 武拉平教授团队</td>
+</tr>
+<tr>
+<td>三种主粮收获平均损失率</td>
+<td>4.09%</td>
+<td>水稻、玉米、小麦</td>
+</tr>
+<tr>
+<td>大面积种植机械化率</td>
+<td>70%以上</td>
+<td>实地调查数据</td>
+</tr>
+</tbody>
+</table>
+<h2>解决方案</h2>
+<p>项目打造了一个线上线下结合的农业教育平台——<strong>丰禾源</strong>。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-09_18-45-20.png" alt="丰禾源项目" style="max-width:80%;"></p>
+<p><strong>线上方面</strong>，平台根据学员的基础、需求和学习进度，为其定制个性化的学习路径。利用电子信息技术整合农业高校、科研机构、企业等多方面资源，建设涵盖种植、养殖、农业机械等多领域的课程库，课程形式包括视频教程、图文资料、在线直播讲座等。平台还采用短视频、方言等接地气的方式进行教学，让中老年农户更容易接受和理解。</p>
+<p><strong>线下方面</strong>，团队深入走访调查不同地区农户面临的主要难题，联系各地专家传授知识，并积极向线上反馈，使平台体系更加完整。目前团队已经调查了多家农户的主要困难并为他们提供了科学指导，也与多名种植能手取得联系，积极整理各类资料。</p>
+<h3>技术架构</h3>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>技术</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>关系型数据库</td>
+<td>MySQL、Oracle</td>
+<td>用户、课程、教师、财务等结构化数据</td>
+</tr>
+<tr>
+<td>非关系型数据库</td>
+<td>MongoDB、Redis</td>
+<td>用户笔记、讨论内容、热门数据缓存</td>
+</tr>
+<tr>
+<td>支撑平台</td>
+<td>互联网+ / 电子商务</td>
+<td>平台运行与业务支撑</td>
+</tr>
+</tbody>
+</table>
+<p>相比于其他辅助农业的平台，丰禾源的服务面更广，产品收录采用用户上传方式，让用户之间可以互相分享经验、发现问题。采用分类方式，更便于搜索和寻找替代产品。在行业中更贴近农民生活，测评以各地区常见产品为主。</p>
+<h2>创新意义</h2>
+<table>
+<thead>
+<tr>
+<th>创新点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>灵活学习</td>
+<td>年轻人线上自学，年长者线下实操，真正做到惠及全民</td>
+</tr>
+<tr>
+<td>覆盖全国</td>
+<td>线上线下联合教学覆盖全国，消耗小、成果高</td>
+</tr>
+<tr>
+<td>多样化需求</td>
+<td>分模块分类建设，快速定位所需内容，农业与其他行业跨界结合</td>
+</tr>
+<tr>
+<td>方言+普通话</td>
+<td>双版本教学，不同地区、不同年龄无障碍获取知识</td>
+</tr>
+<tr>
+<td>便捷高效</td>
+<td>大型机械、特定区域农作物通过线上平台介绍更高效</td>
+</tr>
+</tbody>
+</table>
+<h2>社会价值</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>价值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>中老年群体</td>
+<td>持续学习空间：新型灌溉、绿色防控等现代农业技术，分享农耕智慧</td>
+</tr>
+<tr>
+<td>农业文化传承</td>
+<td>中老年人是传统农业文化的重要承载者，通过分享传播让更多人了解</td>
+</tr>
+<tr>
+<td>城乡交流</td>
+<td>城市居民了解农业生产、增强农产品认知；农村了解城市需求，提升食品安全意识</td>
+</tr>
+</tbody>
+</table>
+<h2>发展前景</h2>
+<table>
+<thead>
+<tr>
+<th>方向</th>
+<th>具体举措</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>科技融合</td>
+<td>农业教育平台将现代科技知识有效传授给农民</td>
+</tr>
+<tr>
+<td>信息对称</td>
+<td>信息化手段实时分析产品走向和市场需求，减少损失</td>
+</tr>
+<tr>
+<td>分层学习</td>
+<td>整合资源搭建全国农业科教云平台，线上+线下结合</td>
+</tr>
+<tr>
+<td>贴近民生</td>
+<td>多地走访调查，从基础出发提供实用知识和技能培训</td>
+</tr>
+<tr>
+<td>创新方式</td>
+<td>短视频、方言教学使中老年人喜闻乐见</td>
+</tr>
+<tr>
+<td>政府合作</td>
+<td>积极联系地方乡镇政府，多形式推广提高影响力</td>
+</tr>
+</tbody>
+</table>
+<h2>实践过程</h2>
+<p>团队前往农村深入探索问题，发现农村人们大多以种植作物为主要收入来源，但对农作物生长只有经验上的了解，难以适应现代农业的快速发展。</p>
+<p>农民往往会选择杂交品种以获得更优质的果实，却不知如何选择更优的种子；选择一种农药灭虫后一旦停用就无法抑制害虫反弹——诸如此类的信息差问题让农民深受困扰。</p>
+<p>在确立目标后，团队开始对市面上可购买的农作物种子等进行测评，收集用户反馈，发现作物产量与质量与农具的使用密切相关。在此基础上，除原有农作物测评外，还加入了农具教学视频等内容，不断提升平台实用性。</p>
+<h2>写在最后</h2>
+<p>丰禾源项目以"互联网+"信息技术和电子商务为手段，致力于扩大农民学习技能的途径，解决当前农业教育面临的诸多问题。通过创新的模式和丰富的内容，为农业从业者带来积极影响，助力实现农业现代化与乡村振兴。</p>
+<hr>
+<p><em>本文内容整理自"挑战杯"中国大学生创业计划竞赛参赛材料。</em></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Project Background</h2>
+<p>As agriculture modernizes, the knowledge and skills required of practitioners are increasing. However, traditional agricultural education can no longer meet the learning needs of farmers and enthusiasts alike. We built Fengheyuan — a hybrid online-offline agricultural education platform.</p>
+<h2>Market Pain Points</h2>
+<p>Information asymmetry is rampant in agriculture. Farmers often copy others' planting choices blindly without understanding local conditions or techniques, leading to devastating losses. Research shows post-harvest grain loss rates reach 11.39% for rural households in China.</p>
+<h2>Solution</h2>
+<p><strong>Online</strong>: Personalized learning paths, video courses, live lectures, and short-form video content delivered in local dialects for accessibility.</p>
+<p><strong>Offline</strong>: Field investigations, expert consultations, and feedback loops between online and offline components.</p>
+<h3>Tech Architecture</h3>
+<ul>
+<li>Relational databases for user/course/financial data</li>
+<li>NoSQL for notes, discussions, and caching</li>
+<li>"Internet Plus" information technology as the backbone</li>
+</ul>
+<h2>Innovation</h2>
+<ul>
+<li>Flexible learning modes for all ages</li>
+<li>Nationwide coverage at low cost</li>
+<li>Modular design for diverse needs</li>
+<li>Dialect and Mandarin dual versions</li>
+<li>Efficient online introduction of large machinery</li>
+</ul>
+<h2>Social Value</h2>
+<p>This platform provides elderly farmers with continuous learning opportunities, preserves traditional agricultural culture, and bridges urban-rural communication around food safety awareness.</p>
+<h2>Field Practice</h2>
+<p>The team conducted village investigations, discovering that most farmers rely purely on experience. They began evaluating commercially available seeds and tools, adding instructional videos based on user feedback.</p>
+<h2>Conclusion</h2>
+<p>Fengheyuan leverages "Internet Plus" technology to expand farmers' access to agricultural knowledge, contributing to agricultural modernization and rural revitalization.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

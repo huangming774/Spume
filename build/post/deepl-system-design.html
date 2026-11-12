@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>软件工程概论实验——DeepL翻译平台系统分析与设计</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">软件工程概论实验——DeepL翻译平台系统分析与设计</span><span class="i18n-en" style="display:none">Software Engineering Lab — DeepL Translation Platform System Analysis &amp; Design</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-15</span>
+      <span>3200 <span data-i18n="metaWords">字</span></span>
+      <span>256 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>12 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>实验概述</h2>
+<p>本实验是《软件工程概论》课程的综合性实验——系统分析与设计，总计8学时。通过选定DeepL语言翻译平台作为分析对象，运用面向对象的软件工程思想，完成从需求分析到详细设计的完整过程。</p>
+<h3>实验目的</h3>
+<ol>
+<li>理解并掌握面向对象的系统分析方法，包括用例建模、领域建模等技术</li>
+<li>理解并掌握面向对象的系统设计方法，包括架构设计、模块设计、数据库设计等</li>
+<li>掌握ProcessOn、EA、Visio等CASE工具建立系统分析与设计的软件模型</li>
+<li>理解需求分析和设计在软件开发过程中的核心地位和作用</li>
+<li>了解书写软件需求规格说明书和软件设计说明书的相关规范</li>
+</ol>
+<h2>实验对象：DeepL翻译平台</h2>
+<p>DeepL是一款基于深度学习神经网络技术（Transformer架构）的高质量在线翻译服务，支持数十种语言互译，并提供文档翻译、网页翻译、API服务、写作辅助（DeepL Write）等多种功能。</p>
+<p>核心功能介绍：</p>
+<ul>
+<li><strong>文本翻译</strong>：支持用户输入文本，选择源语言和目标语言（支持自动语言检测），实现在线实时翻译</li>
+<li><strong>文档翻译</strong>：支持上传PDF、DOCX、PPTX等格式文档，保持原始格式进行全文翻译</li>
+<li><strong>API服务</strong>：为开发者提供RESTful API接口，支持将DeepL翻译能力集成到第三方应用程序中</li>
+<li><strong>词汇表管理</strong>：允许用户创建和管理自定义术语词汇表，确保特定术语的翻译一致性</li>
+<li><strong>DeepL Write</strong>：提供AI写作辅助功能，帮助用户改进语法、措辞和风格</li>
+</ul>
+<h2>系统分析——用例建模</h2>
+<h3>参与者识别</h3>
+<table>
+<thead>
+<tr>
+<th>参与者</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通用户(Visitor)</td>
+<td>主要参与者</td>
+<td>未登录访客，可使用基本翻译功能，有字符限制</td>
+</tr>
+<tr>
+<td>注册用户(Registered User)</td>
+<td>主要参与者</td>
+<td>已登录用户，可使用翻译历史、词汇表等功能</td>
+</tr>
+<tr>
+<td>付费订阅用户(Subscriber)</td>
+<td>主要参与者</td>
+<td>DeepL Pro用户，享有无限翻译、API访问等高级功能</td>
+</tr>
+<tr>
+<td>团队管理员(Team Admin)</td>
+<td>主要参与者</td>
+<td>管理团队订阅、成员权限和翻译记忆库</td>
+</tr>
+<tr>
+<td>第三方开发者(Developer)</td>
+<td>主要参与者</td>
+<td>通过API集成DeepL翻译服务的开发人员</td>
+</tr>
+<tr>
+<td>系统管理员(Admin)</td>
+<td>次要参与者</td>
+<td>负责系统运维、监控、用户管理</td>
+</tr>
+<tr>
+<td>支付系统(Payment System)</td>
+<td>外部系统</td>
+<td>处理订阅支付的外部支付网关</td>
+</tr>
+</tbody>
+</table>
+<h3>核心用例</h3>
+<p>顶层用例包含11个核心用例：</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>用例名称</th>
+<th>编号</th>
+<th>用例名称</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UC01</td>
+<td>文本翻译</td>
+<td>UC07</td>
+<td>用户注册与登录</td>
+</tr>
+<tr>
+<td>UC02</td>
+<td>文档翻译</td>
+<td>UC08</td>
+<td>订阅管理</td>
+</tr>
+<tr>
+<td>UC03</td>
+<td>网页翻译</td>
+<td>UC09</td>
+<td>翻译历史管理</td>
+</tr>
+<tr>
+<td>UC04</td>
+<td>API调用</td>
+<td>UC10</td>
+<td>团队管理</td>
+</tr>
+<tr>
+<td>UC05</td>
+<td>词汇表管理</td>
+<td>UC11</td>
+<td>系统管理</td>
+</tr>
+<tr>
+<td>UC06</td>
+<td>写作辅助</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-use-case-diagram.png" alt="DeepL翻译平台顶层用例图" style="max-width:80%;"></p>
+<p><strong>UC01文本翻译用例：</strong></p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用例编号</td>
+<td>UC01</td>
+</tr>
+<tr>
+<td>参与者</td>
+<td>普通用户、注册用户、订阅用户</td>
+</tr>
+<tr>
+<td>前置条件</td>
+<td>用户已访问DeepL翻译页面</td>
+</tr>
+<tr>
+<td>后置条件</td>
+<td>系统返回翻译结果，记录翻译历史</td>
+</tr>
+<tr>
+<td>基本事件流</td>
+<td>输入文本→自动检测源语言→选择目标语言→调用翻译引擎→显示结果→可复制/朗读/替换同义词</td>
+</tr>
+<tr>
+<td>异常事件流</td>
+<td>文本超过字符限制→提示注册或升级；翻译引擎服务异常→提示稍后重试</td>
+</tr>
+<tr>
+<td>优先级</td>
+<td>高（核心功能）</td>
+</tr>
+</tbody>
+</table>
+<h2>系统功能结构设计</h2>
+<p>系统分为6个一级功能模块：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-function-structure.jpg" alt="系统功能层次结构图" style="max-width:80%;"></p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>定位</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>文本翻译模块</strong></td>
+<td>核心</td>
+<td>接收文本输入，通过神经网络引擎实时翻译，支持多语言互译</td>
+</tr>
+<tr>
+<td><strong>文档翻译模块</strong></td>
+<td>重要</td>
+<td>处理上传的PDF/DOCX/PPTX文档，保持原始排版格式</td>
+</tr>
+<tr>
+<td><strong>写作辅助模块</strong></td>
+<td>DeepL Write</td>
+<td>基于AI进行语法检查、措辞优化和风格调整</td>
+</tr>
+<tr>
+<td><strong>用户服务模块</strong></td>
+<td>基础</td>
+<td>用户全生命周期管理：注册、登录、订阅、历史、词汇表</td>
+</tr>
+<tr>
+<td><strong>API服务模块</strong></td>
+<td>开放能力</td>
+<td>为第三方开发者提供标准化RESTful API接口</td>
+</tr>
+<tr>
+<td><strong>系统管理模块</strong></td>
+<td>运维支撑</td>
+<td>后台管理：用户审核、运行监控、日志收集、数据分析</td>
+</tr>
+</tbody>
+</table>
+<h2>系统模块结构设计</h2>
+<h3>分层架构设计</h3>
+<p>DeepL翻译平台采用分层架构（Layered Architecture）设计模式，系统自上而下分为四层：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-layered-architecture.png" alt="系统分层架构图" style="max-width:80%;"></p>
+<h3>核心实体类</h3>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-class-diagram.png" alt="系统核心设计类图" style="max-width:80%;"></p>
+<table>
+<thead>
+<tr>
+<th>实体类</th>
+<th>属性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User</strong></td>
+<td>userId, username, email, passwordHash, subscriptionType</td>
+</tr>
+<tr>
+<td><strong>Translation</strong></td>
+<td>translationId, userId, sourceText, translatedText, sourceLang, targetLang</td>
+</tr>
+<tr>
+<td><strong>Glossary</strong></td>
+<td>glossaryId, userId, name, sourceLang, targetLang, entries[]</td>
+</tr>
+<tr>
+<td><strong>Document</strong></td>
+<td>documentId, userId, originalFilename, fileSize, fileType, translatedFileUrl, status</td>
+</tr>
+<tr>
+<td><strong>Subscription</strong></td>
+<td>subscriptionId, userId, planType, startDate, endDate, status</td>
+</tr>
+<tr>
+<td><strong>ApiKey</strong></td>
+<td>apiKeyId, userId, keyValue, quotaLimit, quotaUsed, isActive</td>
+</tr>
+</tbody>
+</table>
+<h2>数据库结构设计</h2>
+<p>系统采用MySQL 8.0作为关系型数据库，使用Redis进行会话和缓存管理，使用对象存储（如AWS S3）存储文档文件。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-er-diagram.jpg" alt="数据库E-R图" style="max-width:80%;"></p>
+<h3>核心数据库表</h3>
+<p><strong>t_user（用户表）</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>约束</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>user_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>PK, AUTO_INCREMENT</td>
+<td>用户唯一标识</td>
+</tr>
+<tr>
+<td>username</td>
+<td>VARCHAR(50)</td>
+<td>NOT NULL, UNIQUE</td>
+<td>用户名</td>
+</tr>
+<tr>
+<td>email</td>
+<td>VARCHAR(255)</td>
+<td>NOT NULL, UNIQUE</td>
+<td>邮箱地址</td>
+</tr>
+<tr>
+<td>password_hash</td>
+<td>VARCHAR(255)</td>
+<td>NOT NULL</td>
+<td>bcrypt密码哈希</td>
+</tr>
+<tr>
+<td>subscription_type</td>
+<td>ENUM</td>
+<td>NOT NULL</td>
+<td>free/starter/advanced/ultimate</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>DATETIME</td>
+<td>NOT NULL</td>
+<td>创建时间</td>
+</tr>
+</tbody>
+</table>
+<p><strong>t_translation（翻译记录表）</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>约束</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>translation_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>PK</td>
+<td>翻译记录ID</td>
+</tr>
+<tr>
+<td>user_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>FK→t_user</td>
+<td>用户ID</td>
+</tr>
+<tr>
+<td>source_text</td>
+<td>TEXT</td>
+<td>NOT NULL</td>
+<td>源语言文本</td>
+</tr>
+<tr>
+<td>translated_text</td>
+<td>TEXT</td>
+<td>NOT NULL</td>
+<td>翻译后文本</td>
+</tr>
+<tr>
+<td>source_lang</td>
+<td>VARCHAR(10)</td>
+<td>NOT NULL</td>
+<td>源语言代码</td>
+</tr>
+<tr>
+<td>target_lang</td>
+<td>VARCHAR(10)</td>
+<td>NOT NULL</td>
+<td>目标语言代码</td>
+</tr>
+<tr>
+<td>char_count</td>
+<td>INT UNSIGNED</td>
+<td>NOT NULL</td>
+<td>源文本字符数</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>DATETIME</td>
+<td>NOT NULL</td>
+<td>翻译时间</td>
+</tr>
+</tbody>
+</table>
+<p><strong>t_glossary（词汇表）</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>约束</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>glossary_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>PK</td>
+<td>词汇表ID</td>
+</tr>
+<tr>
+<td>user_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>FK→t_user</td>
+<td>所属用户</td>
+</tr>
+<tr>
+<td>name</td>
+<td>VARCHAR(200)</td>
+<td>NOT NULL</td>
+<td>词汇表名称</td>
+</tr>
+<tr>
+<td>source_lang</td>
+<td>VARCHAR(10)</td>
+<td>NOT NULL</td>
+<td>源语言</td>
+</tr>
+<tr>
+<td>target_lang</td>
+<td>VARCHAR(10)</td>
+<td>NOT NULL</td>
+<td>目标语言</td>
+</tr>
+</tbody>
+</table>
+<p><strong>t_subscription（订阅表）</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>约束</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>subscription_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>PK</td>
+<td>订阅ID</td>
+</tr>
+<tr>
+<td>user_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>FK→t_user, UNIQUE</td>
+<td>用户ID</td>
+</tr>
+<tr>
+<td>plan_type</td>
+<td>ENUM</td>
+<td>NOT NULL</td>
+<td>starter/advanced/ultimate/team</td>
+</tr>
+<tr>
+<td>billing_cycle</td>
+<td>ENUM</td>
+<td>NOT NULL</td>
+<td>monthly/annual</td>
+</tr>
+<tr>
+<td>start_date</td>
+<td>DATE</td>
+<td>NOT NULL</td>
+<td>开始日期</td>
+</tr>
+<tr>
+<td>end_date</td>
+<td>DATE</td>
+<td>NOT NULL</td>
+<td>结束日期</td>
+</tr>
+<tr>
+<td>auto_renew</td>
+<td>BOOLEAN</td>
+<td>DEFAULT TRUE</td>
+<td>自动续费</td>
+</tr>
+</tbody>
+</table>
+<p><strong>t_api_key（API密钥表）</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>约束</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>api_key_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>PK</td>
+<td>密钥ID</td>
+</tr>
+<tr>
+<td>user_id</td>
+<td>BIGINT UNSIGNED</td>
+<td>FK→t_user</td>
+<td>所属用户</td>
+</tr>
+<tr>
+<td>key_value</td>
+<td>VARCHAR(64)</td>
+<td>NOT NULL, UNIQUE</td>
+<td>加密存储</td>
+</tr>
+<tr>
+<td>monthly_quota</td>
+<td>BIGINT UNSIGNED</td>
+<td>NOT NULL</td>
+<td>月配额</td>
+</tr>
+<tr>
+<td>quota_used</td>
+<td>BIGINT UNSIGNED</td>
+<td>DEFAULT 0</td>
+<td>已使用配额</td>
+</tr>
+</tbody>
+</table>
+<h2>软件过程模型选择</h2>
+<p>本系统开发拟采用增量模型（Incremental Model）结合敏捷开发实践（Scrum框架）的混合过程模型。</p>
+<h3>增量划分方案</h3>
+<table>
+<thead>
+<tr>
+<th>增量</th>
+<th>交付内容</th>
+<th>周期</th>
+<th>核心功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>增量1</td>
+<td>MVP文本翻译核心</td>
+<td>8周</td>
+<td>基础翻译、语言检测、Web前端</td>
+</tr>
+<tr>
+<td>增量2</td>
+<td>用户系统与文档翻译</td>
+<td>6周</td>
+<td>注册/登录、文档翻译、翻译历史</td>
+</tr>
+<tr>
+<td>增量3</td>
+<td>API服务与词汇表</td>
+<td>6周</td>
+<td>RESTful API、API密钥、词汇表</td>
+</tr>
+<tr>
+<td>增量4</td>
+<td>付费订阅与团队管理</td>
+<td>6周</td>
+<td>订阅计划、支付集成、团队管理</td>
+</tr>
+<tr>
+<td>增量5</td>
+<td>DeepL Write</td>
+<td>6周</td>
+<td>AI写作辅助、语法检查、风格切换</td>
+</tr>
+<tr>
+<td>增量6</td>
+<td>性能优化与扩展</td>
+<td>4周</td>
+<td>性能优化、CDN、多区域支持</td>
+</tr>
+</tbody>
+</table>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-gantt-chart.png" alt="增量开发计划甘特图" style="max-width:80%;"></p>
+<h2>系统规模估算</h2>
+<h3>代码行技术（LOC）估算</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>预计LOC</th>
+<th>开发语言</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文本翻译核心引擎</td>
+<td>25,000-35,000</td>
+<td>Python/C++</td>
+</tr>
+<tr>
+<td>Web前端界面(React)</td>
+<td>15,000-22,000</td>
+<td>TypeScript/JSX</td>
+</tr>
+<tr>
+<td>用户服务模块</td>
+<td>8,000-12,000</td>
+<td>Java/Python</td>
+</tr>
+<tr>
+<td>文档翻译模块</td>
+<td>10,000-15,000</td>
+<td>Python</td>
+</tr>
+<tr>
+<td>API网关服务</td>
+<td>6,000-10,000</td>
+<td>Java/Go</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>约140,000 LOC</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>根据COCOMO II模型，预计总人月约280人月。若团队规模为15人，开发周期约18-19个月。</p>
+<h3>功能点技术（FP）估算</h3>
+<p>UFP = 193 FP（未调整功能点）<br>
+TCF = 0.65 + 0.01 × DI ≈ 1.18<br>
+FP = UFP × TCF = 193 × 1.18 ≈ 228 FP</p>
+<h2>实验总结与体会</h2>
+<p>通过本次实验，我对软件工程中系统分析与设计的方法和技术有了更深入的理解：</p>
+<ul>
+<li><strong>系统分析是软件开发的基石</strong>——只有充分理解用户需求、梳理业务流程、明确功能边界，才能为后续设计奠定坚实基础</li>
+<li><strong>面向对象方法的优势</strong>——通过用例图、类图、活动图、顺序图等UML模型，能够从不同视角全面描述系统</li>
+<li><strong>分层架构的设计思想</strong>——将系统分为表现层、业务逻辑层、服务层和数据访问层，有效实现了关注点分离</li>
+<li><strong>数据库设计的关键性</strong>——数据库结构设计直接影响到系统的性能和可扩展性</li>
+<li><strong>过程模型对项目的影响</strong>——DeepL这类AI驱动产品适合增量模型，可以快速验证核心价值</li>
+<li><strong>规模估算的实践意义</strong>——软件规模估算既是科学也是艺术，实际项目中应综合运用多种方法</li>
+</ul>
+<hr>
+<p><em>本文为《软件工程概论》课程实验的实验报告。</em></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Software Engineering Lab — DeepL System Analysis &amp; Design</h2>
+<p>A comprehensive OO system analysis and design of the DeepL translation platform, totaling 8 class hours.</p>
+<h3>Key Components</h3>
+<p><strong>Use Case Modeling</strong>: 11 core use cases including text translation, document translation, API access, glossary management, and DeepL Write. Identified 7 actor types from Visitor to System Admin.</p>
+<p><strong>Functional Architecture</strong>: 6 major modules — Text Translation (core), Document Translation, Writing Assistant (DeepL Write), User Services, API Services, and System Management.</p>
+<p><strong>Layered Architecture</strong>: Presentation → Business Logic → Service → Data Access, following the Dependency Inversion Principle.</p>
+<p><strong>Database Design</strong>: MySQL 8.0 + Redis, 5 core tables (t_user, t_translation, t_glossary, t_subscription, t_api_key) with full E-R modeling.</p>
+<p><strong>Process Model</strong>: Incremental model with Scrum, 6 increments over ~32 weeks.</p>
+<p><strong>Size Estimation</strong>: ~140,000 LOC (COCOMO II) and ~228 FP (Function Point). Estimated 280 person-months with a 15-person team.</p>
+<h3>Key Takeaways</h3>
+<p>System analysis is the foundation of software development. OO methods and UML provide multi-perspective system description. Layered architecture achieves separation of concerns. Database design directly impacts performance and scalability.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

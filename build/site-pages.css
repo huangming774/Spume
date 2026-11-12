@@ -1,0 +1,3469 @@
+﻿/* 子页主体共用样式 — 桃之夭夭の创作屋 */
+
+@import url("https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap");
+
+.page-main-inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.page-lead {
+  color: #9a96a8;
+  font-size: 13px;
+  margin: -32px 0 32px;
+  letter-spacing: 0.4px;
+  line-height: 1.6;
+}
+.page-title {
+  font-size: 28px;
+  font-weight: 300;
+  color: #4a4a5a;
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+}
+
+/* ---------- 说说（随机皮肤池） ---------- */
+.moments-feed {
+  --mg-blue: 186, 206, 255;
+  --mg-pink: 255, 218, 225;
+  --mg-mint: 190, 232, 225;
+  --mg-lav: 245, 230, 255;
+  --mg-ink: #3a3844;
+  --mg-ink-soft: #5c5a68;
+  --mg-date: #787682;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-width: 640px;
+  width: 100%;
+}
+.moment {
+  --moment-tilt: 0deg;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  padding: 24px 26px 24px 28px;
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(252, 253, 255, 0.88) 45%,
+    rgba(255, 252, 253, 0.84) 100%
+  );
+  border: 1px solid rgba(var(--mg-blue), 0.18);
+  overflow: hidden;
+  transform: rotate(var(--moment-tilt));
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
+  animation: momentIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.moment:nth-child(1) { animation-delay: 0.04s; }
+.moment:nth-child(2) { animation-delay: 0.1s; }
+.moment:nth-child(3) { animation-delay: 0.16s; }
+.moment:nth-child(4) { animation-delay: 0.22s; }
+.moment:nth-child(5) { animation-delay: 0.28s; }
+@keyframes momentIn {
+  from {
+    opacity: 0;
+    transform: rotate(var(--moment-tilt)) translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--moment-tilt)) translateY(0) scale(1);
+  }
+}
+.moment:hover {
+  transform: rotate(var(--moment-tilt)) translateY(-5px) scale(1.012);
+  box-shadow: 0 20px 50px rgba(140, 155, 190, 0.18);
+  z-index: 1;
+}
+.moment-date {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  color: var(--mg-date);
+  margin-bottom: 10px;
+  letter-spacing: 0.8px;
+  font-variant-numeric: tabular-nums;
+}
+.moment-title {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6e6680;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+}
+.moment-body {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  color: var(--mg-ink);
+  line-height: 1.88;
+}
+.moment-body .i18n-en {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: var(--mg-ink-soft);
+  letter-spacing: 0.2px;
+}
+
+/* 说说正文：统一马善政诗意字体模版 */
+.moments-feed .moment-body .i18n-zh {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "STKaiti", "KaiTi", cursive;
+  font-size: 20px;
+  line-height: 1.95;
+  letter-spacing: 0.5px;
+  color: #4a4456;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.moments-feed .moment-title .i18n-zh {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "STKaiti", "KaiTi", cursive;
+  font-size: 16px;
+  letter-spacing: 0.6px;
+  color: #524a5e;
+}
+.moments-feed .moment-title {
+  color: #524a5e;
+}
+.moments-feed .moment-skin--journal .moment-body,
+.moments-feed .moment-skin--journal .moment-body .i18n-zh {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "STKaiti", "KaiTi", cursive;
+}
+
+/* 读心术那条：与页面底色调和 + 艺术字 */
+.moment--poetic,
+.moment-skin--mist {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.78) 0%,
+    rgba(var(--mg-blue), 0.12) 38%,
+    rgba(var(--mg-pink), 0.14) 72%,
+    rgba(var(--mg-mint), 0.1) 100%
+  );
+  border: 1px solid rgba(var(--mg-blue), 0.22);
+  box-shadow:
+    0 10px 36px rgba(var(--mg-blue), 0.1),
+    0 4px 16px rgba(var(--mg-pink), 0.08);
+}
+.moment--poetic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 12% 88%, rgba(var(--mg-mint), 0.2), transparent 65%),
+    radial-gradient(ellipse 55% 45% at 92% 12%, rgba(var(--mg-lav), 0.22), transparent 60%);
+  pointer-events: none;
+}
+.moment--poetic .moment-date {
+  color: #6e6878;
+}
+.moment--poetic .moment-body .i18n-zh {
+  font-size: 22px;
+}
+.moment--poetic .moment-body .i18n-en {
+  font-size: 12px;
+  color: #6e6a78;
+}
+
+/* 皮肤：极光描边 */
+.moment-skin--aurora {
+  border: none;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 32px rgba(130, 150, 220, 0.12);
+}
+.moment-skin--aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--mg-pink), 0.9),
+    rgba(155, 143, 212, 0.85),
+    rgba(123, 147, 219, 0.85),
+    rgba(var(--mg-mint), 0.9),
+    rgba(240, 184, 208, 0.85)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.moment-skin--aurora::after {
+  content: "";
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  top: -40px;
+  right: -30px;
+  background: radial-gradient(circle, rgba(200, 160, 255, 0.2), transparent 70%);
+  pointer-events: none;
+}
+
+/* 樱花 */
+.moment-skin--sakura {
+  background: linear-gradient(145deg, #fff9fb 0%, #fff 55%, #fef6fa 100%);
+  border-color: rgba(240, 180, 200, 0.35);
+}
+.moment-skin--sakura::before {
+  content: "✿";
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  font-size: 28px;
+  opacity: 0.12;
+  color: #e8a0b8;
+  pointer-events: none;
+}
+.moment-skin--sakura .moment-date { color: #d4a0b0; }
+
+/* 电影票 */
+.moment-skin--ticket {
+  border-radius: 4px 18px 18px 4px;
+  background: linear-gradient(90deg, #faf8ff 0%, #fff 18%, #fff 100%);
+  border: 1px dashed rgba(160, 150, 200, 0.45);
+  padding-left: 36px;
+}
+.moment-skin--ticket::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: repeating-linear-gradient(
+    180deg,
+    #c8b8e8 0,
+    #c8b8e8 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  border-radius: 2px;
+}
+.moment-skin--ticket::after {
+  content: "TICKET";
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: rgba(150, 140, 190, 0.35);
+  font-weight: 700;
+}
+
+/* 信封 */
+.moment-skin--envelope {
+  padding-top: 32px;
+  background: linear-gradient(180deg, #f3eef8 0 28px, #fff 28px 100%);
+  border-color: rgba(200, 185, 230, 0.4);
+}
+.moment-skin--envelope::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(180deg, transparent 50%, rgba(220, 210, 245, 0.35) 50%);
+  clip-path: polygon(0 0, 50% 100%, 100% 0);
+  pointer-events: none;
+}
+
+/* 水彩 */
+.moment-skin--watercolor {
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+}
+.moment-skin--watercolor::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 50% 40% at 15% 30%, rgba(255, 200, 220, 0.35), transparent),
+    radial-gradient(ellipse 45% 50% at 85% 70%, rgba(180, 210, 255, 0.32), transparent),
+    radial-gradient(ellipse 40% 35% at 60% 20%, rgba(200, 245, 230, 0.28), transparent);
+  pointer-events: none;
+}
+
+/* 星尘（浅色） */
+.moment-skin--starry {
+  background: linear-gradient(165deg, #f8f9ff 0%, #fff 45%, #faf8ff 100%);
+}
+.moment-skin--starry::after {
+  content: "· ✦ · ✦ ·";
+  position: absolute;
+  bottom: 10px;
+  right: 14px;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: rgba(140, 150, 200, 0.28);
+  pointer-events: none;
+}
+
+/* 糖果条纹 */
+.moment-skin--candy {
+  border: none;
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      rgba(255, 220, 235, 0.35) 0 8px,
+      rgba(220, 235, 255, 0.35) 8px 16px
+    ),
+    rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+/* 手账 */
+.moment-skin--journal {
+  background: #fffef8;
+  border-color: rgba(220, 200, 180, 0.35);
+  padding-left: 42px;
+  box-shadow: 0 6px 24px rgba(200, 180, 150, 0.1);
+}
+.moment-skin--journal::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(230, 120, 120, 0.35);
+}
+.moment-skin--journal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    rgba(200, 195, 185, 0.12) 27px,
+    rgba(200, 195, 185, 0.12) 28px
+  );
+  pointer-events: none;
+  opacity: 0.7;
+}
+.moment-skin--journal .moment-body {
+  font-family: "KaiTi", "STKaiti", "Microsoft YaHei", serif;
+}
+
+/* 海浪 */
+.moment-skin--wave {
+  border: none;
+  background: #fff;
+  padding-bottom: 30px;
+}
+.moment-skin--wave::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22px;
+  background: linear-gradient(180deg, transparent, rgba(140, 200, 230, 0.15));
+  clip-path: ellipse(55% 100% at 50% 100%);
+  pointer-events: none;
+}
+
+/* 霜花 */
+.moment-skin--frost {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(200, 220, 245, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 12px 40px rgba(180, 200, 230, 0.15);
+}
+.moment-skin--frost::before {
+  content: "❄";
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 22px;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* 日落 */
+.moment-skin--sunset {
+  background: linear-gradient(135deg, #fff8f2 0%, #fff 40%, #fff5f8 100%);
+  border-color: rgba(255, 190, 160, 0.35);
+}
+.moment-skin--sunset::before {
+  content: "";
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  bottom: -20px;
+  left: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 150, 0.25), transparent 70%);
+  pointer-events: none;
+}
+.moment-skin--sunset .moment-body { color: #5a4a48; }
+
+/* 薄荷 */
+.moment-skin--mint {
+  background: linear-gradient(120deg, #f4fdf9 0%, #fff 50%, #f6fcff 100%);
+  border-left: 4px solid #8ed4c8;
+  border-radius: 4px 18px 18px 18px;
+}
+
+/* 丝带 */
+.moment-skin--ribbon::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: linear-gradient(180deg, #c880c0, #9b8fd4, #7b93db);
+  border-radius: 5px 0 0 5px;
+  z-index: 0;
+}
+
+/* 邮票 */
+.moment-skin--stamp {
+  border-style: dashed;
+  border-color: rgba(190, 175, 220, 0.55);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 5px,
+      rgba(200, 185, 235, 0.06) 5px,
+      rgba(200, 185, 235, 0.06) 10px
+    ),
+    rgba(255, 255, 255, 0.82);
+}
+.moment-skin--stamp::after {
+  content: "POST";
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(200, 130, 170, 0.3);
+  border: 2px solid rgba(200, 130, 170, 0.35);
+  padding: 3px 8px;
+  border-radius: 4px;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+
+/* 拍立得 */
+/* 毛玻璃 */
+.moment-skin--glass {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 10px 40px rgba(170, 185, 210, 0.14);
+}
+
+/* 霓虹 */
+.moment-skin--neon {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(190, 170, 255, 0.4);
+  box-shadow:
+    0 0 28px rgba(200, 160, 255, 0.2),
+    0 0 56px rgba(123, 147, 219, 0.1),
+    inset 0 0 30px rgba(255, 255, 255, 0.4);
+}
+.moment-skin--neon .moment-body {
+  font-weight: 500;
+  letter-spacing: 0.35px;
+  text-shadow: 0 0 24px rgba(200, 180, 255, 0.35);
+}
+
+/* ---------- 归档时间轴 ---------- */
+.archive-timeline {
+  position: relative;
+  padding-left: 28px;
+}
+.archive-timeline::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(210, 218, 232, 0.75), rgba(225, 230, 240, 0.35));
+  box-shadow: 0 0 12px rgba(190, 198, 215, 0.2);
+}
+.timeline-year {
+  font-size: 22px;
+  font-weight: 300;
+  color: #5a5a6a;
+  margin: 28px 0 16px;
+  letter-spacing: 3px;
+  position: relative;
+}
+.timeline-year:first-child { margin-top: 0; }
+.timeline-year span {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(190, 196, 210, 0.12);
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 6px;
+  padding-left: 8px;
+}
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -22px;
+  top: 14px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fff, #eef1f7);
+  border: 2px solid rgba(200, 208, 222, 0.75);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
+.timeline-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+}
+.timeline-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 12px 36px rgba(160, 170, 190, 0.12);
+  border-color: rgba(200, 210, 228, 0.45);
+}
+.timeline-card .row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.timeline-date {
+  font-size: 12px;
+  color: #787682;
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-title {
+  flex: 1;
+  font-size: 15px;
+  color: #2e2e38;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.timeline-tag {
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(200, 210, 230, 0.18);
+  color: #6a7a9a;
+  align-self: flex-start;
+}
+
+/* ---------- 文章列表（无封面） ---------- */
+.article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.article-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.article-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(130, 120, 170, 0.15);
+}
+.article-card h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #3a3a4a;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.article-card .excerpt {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  font-size: 11px;
+  color: #bbb;
+}
+.article-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---------- Hexo 风格卡片（相册 / 说说） ---------- */
+.page-hexo .page-main-inner {
+  max-width: 720px;
+}
+.hexo-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.06);
+  padding: 28px 32px 32px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.hexo-card-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 22px;
+  letter-spacing: 0.3px;
+}
+.album-cover-wrap {
+  position: relative;
+  margin: 0 0 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  line-height: 0;
+}
+.album-cover {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eef2f8, #f8ecee);
+}
+.album-cover-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.5px;
+}
+.album-caption {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+.hexo-cut-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 28px 0 24px;
+  position: relative;
+}
+.hexo-cut-line {
+  flex: 1;
+  height: 0;
+  border-top: 2px dashed #9ec5e8;
+}
+.hexo-cut-icon {
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+  font-size: 14px;
+  color: #6eb0e0;
+  background: #fff;
+  padding: 0 6px;
+  line-height: 1;
+}
+.hexo-comments-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #444;
+  margin: 0 0 14px;
+}
+.hexo-comments-icon {
+  font-size: 16px;
+  opacity: 0.85;
+}
+.hexo-guest-fields {
+  display: flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafafa;
+}
+.hexo-guest-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid #e8e8e8;
+}
+.hexo-guest-field:last-child {
+  border-right: none;
+}
+.hexo-guest-field span {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  padding: 8px 6px 0;
+}
+.hexo-guest-field input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: #555;
+  text-align: center;
+  padding: 6px 10px 10px;
+  font-family: inherit;
+  width: 100%;
+}
+.hexo-guest-field input::placeholder {
+  color: #ccc;
+}
+@media (max-width: 600px) {
+  .hexo-card {
+    padding: 20px 18px 24px;
+  }
+  .hexo-guest-fields {
+    flex-direction: column;
+  }
+  .hexo-guest-field {
+    border-right: none;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .hexo-guest-field:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ---------- 照片墙（旧拼贴，保留类名兼容） ---------- */
+.gallery-hub {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+}
+.gallery-cat-card {
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  padding: 28px 22px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.gallery-cat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.5), transparent 55%);
+  pointer-events: none;
+}
+.gallery-cat-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 20px 50px rgba(150, 160, 180, 0.14);
+}
+.gallery-cat-card .emoji {
+  font-size: 40px;
+  margin-bottom: 10px;
+  display: block;
+}
+.gallery-cat-card .name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #4a4a5a;
+}
+.gallery-cat-card .hint {
+  font-size: 11px;
+  color: #bbb;
+  margin-top: 6px;
+}
+.gallery-detail {
+  display: none;
+}
+.gallery-detail.open {
+  display: block;
+}
+.gallery-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.gallery-breadcrumb button {
+  border: none;
+  background: rgba(160, 150, 200, 0.2);
+  color: #666;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.gallery-breadcrumb button:hover {
+  background: rgba(160, 150, 200, 0.35);
+}
+.gallery-subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.gallery-subtab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gallery-subtab.on {
+  background: linear-gradient(135deg, #9b8fd4, #c880c0);
+  color: #fff;
+  border-color: transparent;
+}
+.gallery-mosaic {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.gallery-cell {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ece8f4, #ddd6ee);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.gallery-cell:nth-child(3n + 2) {
+  grid-row: span 2;
+  aspect-ratio: auto;
+}
+.gallery-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.25));
+}
+
+/* ---------- 友链 ---------- */
+.links-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.links-panel {
+  padding: 24px 26px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 30px rgba(130, 120, 160, 0.08);
+}
+.links-panel h2 {
+  font-size: 15px;
+  color: #4a4a5a;
+  margin-bottom: 14px;
+  letter-spacing: 1px;
+}
+.links-panel p,
+.links-panel li {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.85;
+  margin-bottom: 8px;
+}
+.links-panel code {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #666;
+}
+.links-panel ul {
+  padding-left: 18px;
+  margin: 10px 0;
+}
+.links-friends-title {
+  font-size: 18px;
+  font-weight: 300;
+  color: #5a5a6a;
+  margin: 8px 0 16px;
+  letter-spacing: 3px;
+}
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+.links-friend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.links-friend:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(150, 160, 180, 0.12);
+}
+.links-friend img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.links-friend .n {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3a3a4a;
+}
+.links-friend .d {
+  font-size: 11px;
+  color: #bbb;
+  margin-top: 3px;
+}
+
+/* ---------- 留言墙（旧版已停用，页面使用末尾“桃夭花笺”重制样式） ---------- */
+@media not all {
+.msg-wall-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.msg-wall-header {
+  margin-bottom: 28px;
+  text-align: center;
+}
+.msg-wall-header .page-title {
+  margin-bottom: 10px;
+  letter-spacing: 6px;
+}
+.msg-art-display {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  font-size: clamp(2.4rem, 6vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  background: linear-gradient(120deg, #6b5a9e 0%, #9b6eb8 35%, #c88eb8 65%, #7a9ee8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(155, 130, 220, 0.35));
+}
+.msg-art-lead {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: clamp(1.15rem, 3.2vw, 1.45rem);
+  letter-spacing: 5px;
+  color: #7a6a98;
+  text-shadow: 0 0 20px rgba(186, 170, 255, 0.35);
+}
+.msg-wall-lead {
+  font-size: 14px;
+  color: #6e6a78;
+  letter-spacing: 2px;
+  line-height: 1.6;
+}
+.msg-wall-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 14px;
+  font-size: 11px;
+  color: #9a96a8;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(186, 206, 255, 0.25);
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+.msg-wall-note::before {
+  content: "✦";
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* 留言板主容器 — 浅色琉璃，与全站统一 */
+.msg-board {
+  position: relative;
+  border-radius: 22px;
+  padding: 28px 26px 30px;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(252, 250, 255, 0.88) 55%,
+    rgba(248, 252, 255, 0.86) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(186, 170, 255, 0.14) inset,
+    0 20px 56px rgba(130, 110, 170, 0.1),
+    0 0 40px rgba(220, 200, 255, 0.12);
+}
+.msg-board::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(232, 190, 220, 0.5),
+    rgba(186, 206, 255, 0.45),
+    rgba(200, 220, 255, 0.5)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+.msg-board > * {
+  position: relative;
+  z-index: 1;
+}
+.msg-board-compose-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(186, 170, 255, 0.2);
+}
+.msg-board-seal {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.98);
+  background: linear-gradient(145deg, #c8a0e0 0%, #9888d0 50%, #7898e8 100%);
+  box-shadow:
+    0 0 20px rgba(186, 170, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.msg-board-compose-title {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: clamp(1.65rem, 4.5vw, 2rem);
+  font-weight: 400;
+  letter-spacing: 4px;
+  margin: 0 0 6px;
+  background: linear-gradient(110deg, #5a4888, #8b68b8, #6888d0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.msg-board-compose-sub {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 12px;
+  color: #8a80a0;
+  letter-spacing: 0.5px;
+  margin: 0;
+  line-height: 1.55;
+}
+.msg-board .msg-form-fields input,
+.msg-board .msg-form-fields textarea {
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  border-color: rgba(186, 170, 255, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+}
+.msg-board .msg-form-fields input:focus,
+.msg-board .msg-form-fields textarea:focus {
+  border-color: rgba(155, 143, 212, 0.55);
+  box-shadow: 0 0 0 3px rgba(186, 170, 255, 0.18);
+}
+.msg-board .msg-form-actions {
+  margin-top: 6px;
+}
+.msg-board-note {
+  margin-top: 14px;
+  font-size: 11px;
+  color: #a8a0b8;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+.msg-board-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 26px 0 22px;
+}
+.msg-board-divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(155, 143, 212, 0.4) 30%,
+    rgba(186, 206, 255, 0.35) 70%,
+    transparent
+  );
+}
+.msg-board-divider-dot {
+  font-size: 10px;
+  color: #b8a8d8;
+  text-shadow: 0 0 12px rgba(186, 170, 255, 0.5);
+}
+.msg-board-feed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+}
+.msg-board-count {
+  font-size: 11px;
+  color: #9a90b0;
+  letter-spacing: 0.5px;
+}
+.msg-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.msg-compose {
+  margin-bottom: 0;
+  max-width: 520px;
+}
+.msg-compose--hero,
+.msg-compose--dream {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 12px 0 8px;
+}
+.msg-compose--dream::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  width: min(96vw, 620px);
+  height: 380px;
+  background:
+    radial-gradient(ellipse 70% 65% at 50% 40%, rgba(186, 170, 255, 0.4), transparent 68%),
+    radial-gradient(ellipse 50% 48% at 18% 62%, rgba(255, 200, 230, 0.28), transparent 66%),
+    radial-gradient(ellipse 48% 44% at 85% 55%, rgba(170, 220, 255, 0.24), transparent 64%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(6px);
+  animation: msgDreamPulse 10s ease-in-out infinite alternate;
+}
+.msg-hero-glow {
+  display: none;
+}
+.msg-hero-glow--legacy {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%);
+  width: min(96vw, 620px);
+  height: 380px;
+  background:
+    radial-gradient(ellipse 70% 65% at 50% 40%, rgba(186, 170, 255, 0.45), transparent 68%),
+    radial-gradient(ellipse 50% 48% at 18% 62%, rgba(255, 200, 230, 0.32), transparent 66%),
+    radial-gradient(ellipse 48% 44% at 85% 55%, rgba(170, 220, 255, 0.28), transparent 64%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(6px);
+  animation: msgDreamPulse 10s ease-in-out infinite alternate;
+}
+@keyframes msgDreamPulse {
+  0% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+/* 梦幻留言板 — 琉璃面板 */
+.msg-dream-compose,
+.msg-env-shell--dream {
+  --dream-violet: #9b8fd4;
+  --dream-pink: #e8a8d8;
+  --dream-blue: #a8c8f0;
+  --dream-glass: rgba(255, 255, 255, 0.72);
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 32px 18px 40px;
+}
+.msg-dream-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.msg-dream-aurora,
+.msg-env-aurora {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(
+      125deg,
+      rgba(186, 170, 255, 0.35) 0%,
+      rgba(255, 200, 230, 0.28) 35%,
+      rgba(170, 220, 255, 0.32) 70%,
+      rgba(220, 190, 255, 0.25) 100%
+    );
+  filter: blur(28px);
+  animation: msgAuroraShift 14s ease-in-out infinite alternate;
+}
+@keyframes msgAuroraShift {
+  0% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.08) rotate(3deg);
+    opacity: 1;
+  }
+}
+.msg-dream-sparkles,
+.msg-env-sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(2px 2px at 28% 68%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 45% 18%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 62% 42%, rgba(255, 240, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 78% 28%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 88% 72%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1.5px 1.5px at 35% 38%, rgba(200, 220, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 55% 82%, rgba(255, 220, 255, 0.85), transparent);
+  animation: msgSparkleTwinkle 4s ease-in-out infinite alternate;
+}
+@keyframes msgSparkleTwinkle {
+  0% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.msg-dream-orbit,
+.msg-env-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -48%);
+  width: min(100%, 540px);
+  height: 380px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 0 40px rgba(186, 170, 255, 0.25),
+    0 0 80px rgba(255, 200, 230, 0.15),
+    inset 0 0 60px rgba(255, 255, 255, 0.12);
+  animation: msgOrbitSpin 24s linear infinite;
+}
+.msg-dream-orbit::before,
+.msg-env-orbit::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(186, 170, 255, 0.6),
+    rgba(255, 200, 230, 0.5),
+    rgba(170, 220, 255, 0.55),
+    rgba(220, 190, 255, 0.5),
+    rgba(186, 170, 255, 0.6)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.75;
+}
+@keyframes msgOrbitSpin {
+  to {
+    transform: translate(-50%, -48%) rotate(360deg);
+  }
+}
+.msg-env-pocket,
+.msg-env-flap,
+.msg-env-petals,
+.msg-env-edge {
+  display: none;
+}
+.msg-dream-panel,
+.msg-env-paper--dream,
+.msg-env-shell--dream .msg-env-paper,
+.msg-dream-compose .msg-dream-panel {
+  position: relative;
+  z-index: 5;
+  margin: 0 auto;
+  width: calc(100% - 36px);
+  max-width: 480px;
+  padding: 30px 28px 28px;
+  min-height: 340px;
+  border-radius: 22px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(248, 244, 255, 0.82) 45%,
+    rgba(240, 248, 255, 0.78) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 0 0 1px rgba(186, 170, 255, 0.12) inset,
+    0 24px 64px rgba(120, 100, 180, 0.18),
+    0 0 48px rgba(200, 180, 255, 0.22);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease;
+  animation: msgPaperFloat 7s ease-in-out infinite;
+}
+@keyframes msgPaperFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.msg-dream-compose:hover .msg-dream-panel,
+.msg-env-shell--dream:hover .msg-env-paper {
+  animation: none;
+  transform: translateY(-8px) scale(1.01);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
+    0 32px 80px rgba(120, 100, 180, 0.24),
+    0 0 64px rgba(220, 190, 255, 0.35);
+}
+.msg-dream-panel::before,
+.msg-env-paper--dream::before,
+.msg-env-shell--dream .msg-env-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(186, 170, 255, 0.55),
+    rgba(255, 200, 230, 0.45),
+    rgba(170, 220, 255, 0.5)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.msg-dream-panel::after,
+.msg-env-paper--dream::after,
+.msg-env-shell--dream .msg-env-paper::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 60%;
+  height: 80%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.5), transparent 70%);
+  pointer-events: none;
+  transform: rotate(-15deg);
+}
+.msg-dream-panel-head,
+.msg-env-paper-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(186, 170, 255, 0.22);
+}
+.msg-dream-panel-intro,
+.msg-env-paper-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.msg-dream-title,
+.msg-env-art-title {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: clamp(1.9rem, 5vw, 2.35rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 5px;
+  margin: 0 0 8px;
+  background: linear-gradient(110deg, #5a4888 0%, #8b68b8 40%, #c080c0 75%, #6888d0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 12px rgba(186, 170, 255, 0.4));
+}
+.msg-dream-sub,
+.msg-env-art-sub {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 12px;
+  color: #8a80a8;
+  letter-spacing: 0.8px;
+  line-height: 1.55;
+  margin: 0;
+}
+.msg-dream-badge,
+.msg-env-crystal,
+.msg-env-seal {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(220, 200, 255, 0.5) 40%, transparent 70%),
+    radial-gradient(circle at 50% 55%, #c8a8e8 0%, #9880d8 45%, #6870c8 100%);
+  box-shadow:
+    0 0 24px rgba(186, 170, 255, 0.55),
+    0 0 48px rgba(255, 200, 230, 0.25),
+    inset 0 0 20px rgba(255, 255, 255, 0.35);
+  animation: msgCrystalGlow 3s ease-in-out infinite alternate;
+}
+@keyframes msgCrystalGlow {
+  0% {
+    box-shadow:
+      0 0 20px rgba(186, 170, 255, 0.45),
+      0 0 40px rgba(255, 200, 230, 0.2),
+      inset 0 0 16px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    box-shadow:
+      0 0 32px rgba(186, 170, 255, 0.65),
+      0 0 56px rgba(255, 200, 230, 0.35),
+      inset 0 0 24px rgba(255, 255, 255, 0.45);
+  }
+}
+.msg-dream-badge::before,
+.msg-env-crystal::before,
+.msg-env-seal::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.msg-dream-badge-char,
+.msg-env-crystal-char,
+.msg-env-seal-char {
+  position: relative;
+  z-index: 1;
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+  line-height: 1;
+}
+.msg-art-label {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #7a70a0;
+  margin-bottom: 4px;
+  display: block;
+}
+.msg-art-section {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: clamp(1.35rem, 3.5vw, 1.65rem);
+  letter-spacing: 4px;
+  background: linear-gradient(100deg, #6a5a98, #9b78c0, #78a0e0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px rgba(186, 170, 255, 0.3));
+}
+.msg-btn-art {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 17px;
+  letter-spacing: 4px;
+  padding: 12px 34px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a888e0 0%, #c898d8 40%, #88b0f0 100%);
+  box-shadow:
+    0 8px 28px rgba(140, 120, 200, 0.35),
+    0 0 24px rgba(200, 180, 255, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  position: relative;
+  overflow: hidden;
+}
+.msg-btn-art::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: msgBtnShimmer 3.5s ease-in-out infinite;
+}
+@keyframes msgBtnShimmer {
+  0% {
+    left: -100%;
+  }
+  55%,
+  100% {
+    left: 140%;
+  }
+}
+.msg-btn-art:hover {
+  background: linear-gradient(135deg, #b898f0 0%, #d8a8e8 40%, #98c0ff 100%);
+  box-shadow:
+    0 10px 36px rgba(140, 120, 200, 0.42),
+    0 0 32px rgba(220, 190, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.msg-compose--hero .msg-form-fields input,
+.msg-compose--hero .msg-form-fields textarea,
+.msg-compose--dream .msg-form-fields input,
+.msg-compose--dream .msg-form-fields textarea {
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  border-color: rgba(186, 170, 255, 0.28);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.msg-compose--hero .msg-form-fields input:focus,
+.msg-compose--hero .msg-form-fields textarea:focus,
+.msg-compose--dream .msg-form-fields input:focus,
+.msg-compose--dream .msg-form-fields textarea:focus {
+  border-color: rgba(155, 143, 212, 0.55);
+  box-shadow: 0 0 0 3px rgba(186, 170, 255, 0.2);
+}
+.msg-compose--hero .msg-form-fields input::placeholder,
+.msg-compose--hero .msg-form-fields textarea::placeholder,
+.msg-compose--dream .msg-form-fields input::placeholder,
+.msg-compose--dream .msg-form-fields textarea::placeholder {
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  color: #b8b0c0;
+  letter-spacing: 1px;
+}
+.msg-form-fields {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.msg-form-fields input,
+.msg-form-fields textarea {
+  width: 100%;
+  border: 1px solid rgba(186, 206, 255, 0.22);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 13px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5a5a68;
+  font-family: inherit;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.msg-form-fields input:focus,
+.msg-form-fields textarea:focus {
+  border-color: rgba(155, 143, 212, 0.55);
+  box-shadow: 0 0 0 3px rgba(186, 206, 255, 0.2);
+}
+.msg-form-fields textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.75;
+}
+.msg-dream-divider,
+.msg-fall-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+  margin: 28px auto 20px;
+  padding: 0 12px;
+}
+.msg-dream-divider-line,
+.msg-fall-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(155, 143, 212, 0.45) 20%,
+    rgba(186, 206, 255, 0.35) 80%,
+    transparent
+  );
+}
+.msg-dream-divider-star,
+.msg-fall-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c8a0e8, #a8c0f8);
+  box-shadow: 0 0 20px rgba(186, 170, 255, 0.55);
+  flex-shrink: 0;
+}
+.msg-dream-feed,
+.msg-letters--below {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 24px 36px;
+  border-radius: 24px;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(248, 244, 255, 0.58) 50%,
+    rgba(240, 248, 255, 0.52) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(186, 170, 255, 0.2);
+  box-shadow:
+    0 16px 48px rgba(120, 100, 180, 0.1),
+    0 0 40px rgba(200, 180, 255, 0.08);
+}
+.msg-form-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.msg-btn-submit {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 24px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #b8a8d8, #9b8fd4);
+  box-shadow: 0 6px 20px rgba(155, 143, 212, 0.35);
+  transition:
+    transform 0.2s,
+    filter 0.2s,
+    box-shadow 0.2s;
+}
+.msg-btn-submit:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 8px 26px rgba(155, 143, 212, 0.42);
+}
+
+.msg-dream-feed-head,
+.msg-letters-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(186, 170, 255, 0.22);
+}
+.msg-letters-title {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #4a4456;
+  letter-spacing: 2px;
+}
+.msg-dream-count,
+.msg-letters-count {
+  font-size: 11px;
+  color: #9a90b0;
+  letter-spacing: 0.5px;
+}
+.msg-dream-grid,
+.msg-letters--below .msg-envelope-grid,
+.msg-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+.msg-card,
+.msg-letter {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  padding: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(186, 170, 255, 0.16);
+  box-shadow: 0 6px 24px rgba(120, 100, 160, 0.08);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+  cursor: default;
+  overflow: hidden;
+}
+.msg-card-accent {
+  flex-shrink: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #d8a8e8, #a8b8f0);
+}
+.msg-card--v2 .msg-card-accent {
+  background: linear-gradient(180deg, #98d8c8, #88b8e8);
+}
+.msg-card--v3 .msg-card-accent {
+  background: linear-gradient(180deg, #d8a8c8, #8898e0);
+}
+.msg-card--v4 .msg-card-accent {
+  background: linear-gradient(180deg, #b898e8, #98a8f0);
+}
+.msg-card-inner {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px 16px;
+}
+.msg-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.msg-card-avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.96);
+  background: linear-gradient(145deg, #c0a0e0, #8898e0);
+  box-shadow: 0 2px 10px rgba(140, 120, 180, 0.25);
+}
+.msg-card--v2 .msg-card-avatar {
+  background: linear-gradient(145deg, #88d0c0, #68a8e0);
+}
+.msg-card--v3 .msg-card-avatar {
+  background: linear-gradient(145deg, #d0a0c8, #7888d8);
+}
+.msg-card--v4 .msg-card-avatar {
+  background: linear-gradient(145deg, #b090e0, #7098f0);
+}
+.msg-card-meta {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.msg-card-name {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #5a5268;
+}
+.msg-card-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #b0a8c0;
+  font-variant-numeric: tabular-nums;
+}
+.msg-card-banner,
+.msg-card-hud-head,
+.msg-card-foot,
+.msg-card-body,
+.msg-card-from-suffix,
+.msg-card-hud-icon {
+  display: none !important;
+}
+.msg-card-inner .msg-card-meta {
+  display: flex;
+}
+.msg-card-glow {
+  position: absolute;
+  top: -30%;
+  right: -20%;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45), transparent 68%);
+  pointer-events: none;
+}
+.msg-card:hover,
+.msg-letter:hover {
+  transform: translateY(-3px);
+  border-color: rgba(186, 170, 255, 0.32);
+  box-shadow:
+    0 12px 32px rgba(120, 100, 180, 0.12),
+    0 0 24px rgba(220, 190, 255, 0.1);
+}
+.msg-card-fold,
+.msg-letter-fold,
+.msg-card-stamp,
+.msg-letter-stamp {
+  display: none;
+}
+.msg-letter-meta {
+  display: none;
+}
+.msg-card-text,
+.msg-letter-text {
+  margin: 0;
+  font-size: 14px;
+  color: #4a4458;
+  line-height: 1.8;
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", "Microsoft YaHei", serif;
+  letter-spacing: 0.3px;
+}
+.msg-card--v1,
+.msg-letter--v1 {
+  box-shadow:
+    0 10px 36px rgba(140, 120, 200, 0.12),
+    inset 0 0 0 1px rgba(255, 200, 230, 0.2);
+}
+.msg-card--v2,
+.msg-letter--v2 {
+  box-shadow:
+    0 10px 36px rgba(120, 160, 220, 0.12),
+    inset 0 0 0 1px rgba(170, 220, 255, 0.22);
+}
+.msg-card--v3,
+.msg-letter--v3 {
+  box-shadow:
+    0 10px 36px rgba(180, 140, 200, 0.12),
+    inset 0 0 0 1px rgba(220, 190, 255, 0.22);
+}
+.msg-card--v4,
+.msg-letter--v4 {
+  box-shadow:
+    0 10px 36px rgba(160, 150, 210, 0.12),
+    inset 0 0 0 1px rgba(245, 230, 255, 0.28);
+}
+.msg-dream-feed .msg-card--seed,
+.msg-letters--below .msg-letter--seed {
+  transform: none;
+}
+.msg-dream-feed .msg-card--seed:hover,
+.msg-letters--below .msg-letter--seed:hover {
+  transform: translateY(-4px);
+}
+.msg-card--new,
+.msg-letter--new {
+  animation: msgCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes msgCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+}
+
+/* ---------- 艺术子页（归档 / 相册 / 友链，沿用说说皮肤） ---------- */
+.page-art .page-title--art {
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  letter-spacing: 4px;
+  background: linear-gradient(120deg, #4a4456 0%, #6e6680 45%, #5a6eb8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.page-art .page-lead {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  color: #6e6a78;
+}
+.page-art--neat .page-lead {
+  margin-top: -28px;
+}
+
+/* 整齐 + 艺术：保留说说皮肤，对齐布局、无倾斜 */
+.page-art--neat .moment {
+  --moment-tilt: 0deg;
+  width: 100%;
+  margin: 0;
+  border-radius: 16px !important;
+  padding: 16px 22px !important;
+  transform: none;
+  animation: momentInNeat 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-art--neat .moment:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 16px 42px rgba(140, 155, 190, 0.16);
+}
+@keyframes momentInNeat {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.page-art--neat .archive-timeline .moment:nth-child(2) { animation-delay: 0.04s; }
+.page-art--neat .archive-timeline .moment:nth-child(3) { animation-delay: 0.08s; }
+.page-art--neat .links-stack .moment:nth-child(1) { animation-delay: 0.04s; }
+.page-art--neat .links-stack .moment:nth-child(2) { animation-delay: 0.08s; }
+.page-art--neat .links-stack .moment:nth-child(4) { animation-delay: 0.12s; }
+.page-art--neat .links-stack .moment:nth-child(5) { animation-delay: 0.16s; }
+
+/* 归档 */
+.page-art--neat .archive-timeline {
+  max-width: 680px;
+}
+.page-art--neat .timeline-year {
+  margin: 24px 0 12px;
+}
+.page-art--neat .timeline-year span {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", cursive;
+  font-size: 19px;
+  letter-spacing: 2px;
+  color: #7a7288;
+  padding: 5px 16px;
+}
+.page-art--neat .archive-timeline::before {
+  left: 11px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(186, 206, 255, 0.5),
+    rgba(225, 230, 240, 0.35)
+  );
+}
+.page-art--neat .timeline-item {
+  margin-bottom: 8px;
+}
+.page-art--neat .timeline-item::before {
+  left: -21px;
+  top: 50%;
+  margin-top: -6px;
+  width: 10px;
+  height: 10px;
+  border-color: rgba(155, 143, 212, 0.55);
+}
+.page-art--neat .timeline-card.moment {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.page-art--neat .timeline-card.moment .row,
+.page-art--neat .links-panel.moment > *,
+.page-art--neat .links-friend.moment > * {
+  position: relative;
+  z-index: 1;
+}
+.page-art--neat .timeline-card .row {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.page-art--neat .timeline-date {
+  font-size: 11px;
+  color: #787682;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.page-art--neat .timeline-title {
+  font-size: 14px;
+  min-width: 0;
+}
+.page-art--neat .timeline-title .i18n-zh {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  color: #2e2e38;
+}
+.page-art--neat .timeline-tag {
+  justify-self: end;
+  background: rgba(186, 206, 255, 0.16);
+  color: #5a5868;
+  white-space: nowrap;
+}
+
+/* 相册：拍立得网格 */
+.gallery-feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 26px;
+  max-width: 880px;
+}
+.gallery-album-card.moment {
+  padding: 20px 20px 22px;
+  margin: 0;
+}
+.gallery-album-card.moment--poetic .gallery-album-caption .i18n-zh {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", cursive;
+  font-size: 18px;
+  color: #6b6378;
+  line-height: 1.7;
+}
+.gallery-album-card .album-cover-wrap {
+  margin: 0 0 14px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(140, 155, 190, 0.15);
+}
+.gallery-album-card.moment--poetic .album-cover-wrap {
+  transform: rotate(-0.6deg);
+}
+.gallery-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  border-radius: 12px;
+  font-size: 48px;
+  background: linear-gradient(145deg, #fff5f8 0%, #f4f8ff 100%);
+  margin-bottom: 12px;
+  opacity: 0.92;
+}
+.gallery-placeholder:empty::before {
+  content: attr(data-emoji);
+}
+.gallery-placeholder--mint {
+  background: linear-gradient(145deg, #f0fdf9 0%, #f6fcff 100%);
+}
+.gallery-album-caption {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  color: var(--mg-ink-soft, #8a8896);
+  line-height: 1.65;
+  margin: 0;
+  text-align: center;
+}
+.gallery-album-caption .i18n-zh {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+}
+
+/* 友链 */
+.page-art--neat .links-stack {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.page-art--neat .links-panel.moment {
+  padding: 20px 24px !important;
+}
+.page-art--neat .links-panel.moment h2 {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #6b6378;
+  margin-bottom: 12px;
+}
+.page-art--neat .links-panel.moment p,
+.page-art--neat .links-panel.moment li {
+  font-size: 13px;
+  line-height: 1.85;
+  color: #888;
+  margin-bottom: 6px;
+}
+.page-art--neat .links-panel.moment ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.page-art--neat .links-panel.moment code {
+  font-size: 11px;
+  background: rgba(186, 206, 255, 0.12);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.page-art--neat .links-friends-title--art {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", cursive;
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: #7a7288;
+  margin: 8px 0 4px;
+}
+.page-art--neat .links-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+.page-art--neat .links-friend.moment {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  min-height: 84px;
+}
+.page-art--neat .links-friend.moment .n {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a4a5a;
+}
+.page-art--neat .links-friend.moment .d {
+  font-size: 11px;
+  color: #aaa;
+}
+.page-art--neat .links-friend.moment .links-visit {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #9b8fd4;
+}
+.page-art--neat .links-friend.moment img {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 12px rgba(150, 160, 190, 0.15);
+}
+/* 皮肤装饰保留，内容区对齐 */
+.page-art--neat .moment-skin--mint {
+  border-left-width: 4px;
+  border-radius: 4px 16px 16px 16px !important;
+}
+.page-art--neat .moment-skin--stamp::after {
+  opacity: 0.22;
+  transform: rotate(-8deg);
+}
+
+@media (max-width: 768px) {
+  .page-art--neat .timeline-card .row {
+    grid-template-columns: 48px 1fr;
+    grid-template-rows: auto auto;
+    gap: 8px 12px;
+  }
+  .page-art--neat .timeline-tag {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .page-art--neat .links-grid {
+    grid-template-columns: 1fr;
+  }
+  .gallery-feed {
+    grid-template-columns: 1fr;
+  }
+  .msg-compose--hero,
+  .msg-compose--dream {
+    max-width: 100%;
+    padding: 4px 0 0;
+  }
+  .msg-dream-compose,
+  .msg-env-shell--dream {
+    padding: 20px 10px 32px;
+  }
+  .msg-dream-orbit,
+  .msg-env-orbit {
+    width: 100%;
+    height: 300px;
+  }
+  .msg-dream-panel,
+  .msg-env-paper--dream,
+  .msg-env-shell--dream .msg-env-paper {
+    width: calc(100% - 20px);
+    min-height: 300px;
+    padding: 24px 20px 22px;
+    animation: none;
+  }
+  .msg-dream-badge,
+  .msg-env-crystal,
+  .msg-env-seal {
+    width: 50px;
+    height: 50px;
+  }
+  .msg-dream-badge-char,
+  .msg-env-crystal-char,
+  .msg-env-seal-char {
+    font-size: 24px;
+  }
+  .msg-art-display {
+    letter-spacing: 4px;
+  }
+  .msg-dream-divider,
+  .msg-fall-divider {
+    margin: 20px auto 14px;
+  }
+  .msg-dream-feed,
+  .msg-letters--below {
+    padding: 22px 16px 28px;
+  }
+  .msg-dream-grid,
+  .msg-letters--below .msg-envelope-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-main-inner { padding: 0 4px; }
+  .gallery-cell:nth-child(3n + 2) { grid-row: span 1; aspect-ratio: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-compose--dream::before,
+  .msg-hero-glow,
+  .msg-dream-aurora,
+  .msg-dream-sparkles,
+  .msg-dream-orbit,
+  .msg-dream-panel,
+  .msg-env-aurora,
+  .msg-env-sparkles,
+  .msg-env-orbit,
+  .msg-env-paper--dream,
+  .msg-env-shell--dream .msg-env-paper,
+  .msg-dream-badge,
+  .msg-env-crystal,
+  .msg-env-seal,
+  .msg-btn-art::after {
+    animation: none !important;
+  }
+}
+
+/* ---------- 留言墙重制：桃夭花笺 ---------- */
+.msg-wall-page {
+  --msg-ink: #464251;
+  --msg-muted: #81798f;
+  --msg-blue: 186, 206, 255;
+  --msg-pink: 255, 218, 225;
+  --msg-mint: 190, 232, 225;
+  --msg-lav: 216, 200, 244;
+  max-width: 980px;
+  margin: 0 auto;
+  padding-bottom: 42px;
+}
+.msg-wall-header {
+  position: relative;
+  max-width: 620px;
+  margin: 4px auto 30px;
+  text-align: center;
+}
+.msg-wall-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #a49aae;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+.msg-wall-kicker::before,
+.msg-wall-kicker::after {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--msg-lav), 0.9));
+}
+.msg-wall-kicker::after {
+  background: linear-gradient(90deg, rgba(var(--msg-lav), 0.9), transparent);
+}
+.msg-wall-header .page-title {
+  margin: 0 0 12px;
+}
+.msg-art-display {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  font-size: clamp(2.7rem, 7vw, 4.8rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 8px;
+  background: linear-gradient(112deg, #685b8f 0%, #b67aa0 46%, #7f9ddf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 14px 26px rgba(175, 156, 205, 0.22));
+}
+.msg-art-lead,
+.msg-wall-lead {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  color: #756c83;
+  font-size: clamp(1rem, 2.3vw, 1.2rem);
+  line-height: 1.8;
+  letter-spacing: 3px;
+}
+.msg-garden-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(310px, 0.92fr) minmax(360px, 1.08fr);
+  gap: 26px;
+  align-items: start;
+  padding: 24px;
+  border-radius: 34px;
+  background:
+    radial-gradient(ellipse 62% 48% at 12% 8%, rgba(var(--msg-pink), 0.34), transparent 66%),
+    radial-gradient(ellipse 56% 46% at 92% 18%, rgba(var(--msg-blue), 0.28), transparent 64%),
+    radial-gradient(ellipse 54% 42% at 52% 108%, rgba(var(--msg-mint), 0.25), transparent 66%),
+    linear-gradient(145deg, rgba(255,255,255,0.74), rgba(255,252,254,0.62) 48%, rgba(248,252,255,0.64));
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 24px 70px rgba(143, 134, 170, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  isolation: isolate;
+}
+.msg-garden-board::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+  z-index: -1;
+}
+.msg-garden-board::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.24) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 20%, #000 0%, transparent 72%);
+  opacity: 0.36;
+  pointer-events: none;
+  z-index: -1;
+}
+.msg-garden-petal {
+  position: absolute;
+  width: 90px;
+  height: 54px;
+  border-radius: 70% 30% 72% 28%;
+  background: linear-gradient(135deg, rgba(255, 218, 225, 0.58), rgba(255, 255, 255, 0.22));
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 0;
+}
+.msg-garden-petal--one {
+  left: 7%;
+  top: 18px;
+  transform: rotate(-24deg);
+}
+.msg-garden-petal--two {
+  right: 9%;
+  top: 36%;
+  width: 70px;
+  height: 44px;
+  background: linear-gradient(135deg, rgba(var(--msg-blue), 0.46), rgba(255,255,255,0.18));
+  transform: rotate(24deg);
+}
+.msg-garden-petal--three {
+  left: 42%;
+  bottom: 18px;
+  width: 76px;
+  height: 46px;
+  background: linear-gradient(135deg, rgba(var(--msg-mint), 0.44), rgba(255,255,255,0.2));
+  transform: rotate(12deg);
+}
+.msg-compose-card,
+.msg-feed-panel {
+  position: relative;
+  z-index: 1;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 18px 54px rgba(126, 116, 150, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.75);
+}
+.msg-compose-card {
+  min-height: 540px;
+  padding: 30px 28px 26px;
+  overflow: hidden;
+}
+.msg-compose-card::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 112px;
+  bottom: 96px;
+  background: repeating-linear-gradient(transparent 0, transparent 34px, rgba(185, 175, 205, 0.14) 35px);
+  pointer-events: none;
+}
+.msg-compose-card::after {
+  content: "";
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  right: -58px;
+  bottom: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--msg-pink), 0.38), transparent 70%);
+  pointer-events: none;
+}
+.msg-compose-ornament {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  display: flex;
+  gap: 7px;
+}
+.msg-compose-ornament span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(194, 178, 214, 0.55);
+}
+.msg-compose-ornament span:nth-child(2) { background: rgba(232, 184, 204, 0.58); }
+.msg-compose-ornament span:nth-child(3) { background: rgba(170, 202, 226, 0.58); }
+.msg-compose-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 22px 0 26px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(184, 174, 204, 0.24);
+}
+.msg-compose-eyebrow,
+.msg-feed-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: #a79db1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.6px;
+}
+.msg-compose-title,
+.msg-art-section {
+  margin: 0;
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 4px;
+  color: #5b5369;
+}
+.msg-compose-title {
+  font-size: clamp(2rem, 4.8vw, 2.65rem);
+}
+.msg-art-section {
+  font-size: clamp(1.55rem, 3.4vw, 2rem);
+}
+.msg-compose-sub {
+  margin: 10px 0 0;
+  color: var(--msg-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  letter-spacing: 0.7px;
+}
+.msg-compose-seal {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 30px;
+  color: rgba(255,255,255,0.98);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255,255,255,0.52), transparent 34%),
+    linear-gradient(145deg, #d49ab3 0%, #a996d5 48%, #8aa9e4 100%);
+  box-shadow: 0 12px 28px rgba(155, 137, 190, 0.28);
+  transform: rotate(4deg);
+}
+.msg-form-fields {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.msg-field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #766d86;
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 14px;
+  letter-spacing: 1.4px;
+}
+.msg-form-fields input,
+.msg-form-fields textarea {
+  width: 100%;
+  border: 1px solid rgba(183, 174, 204, 0.28);
+  border-radius: 18px;
+  padding: 13px 16px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--msg-ink);
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", "Microsoft YaHei", serif;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.22s;
+}
+.msg-form-fields textarea {
+  min-height: 174px;
+  resize: vertical;
+  line-height: 1.8;
+}
+.msg-form-fields input::placeholder,
+.msg-form-fields textarea::placeholder {
+  color: #b6adbf;
+}
+.msg-form-fields input:focus,
+.msg-form-fields textarea:focus {
+  border-color: rgba(182, 146, 180, 0.55);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 0 4px rgba(255, 218, 225, 0.24),
+    inset 0 1px 0 rgba(255,255,255,0.82);
+}
+.msg-form-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+}
+.msg-board-note {
+  margin: 0;
+  color: #a198ad;
+  font-size: 11px;
+  line-height: 1.65;
+  letter-spacing: 0.4px;
+}
+.msg-btn-submit {
+  flex-shrink: 0;
+  min-height: 46px;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 28px 12px;
+  color: #fff;
+  cursor: pointer;
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 18px;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #d792ad 0%, #ad96d5 48%, #84a8e5 100%);
+  box-shadow:
+    0 12px 28px rgba(170, 136, 188, 0.34),
+    inset 0 1px 0 rgba(255,255,255,0.42);
+  transition: transform 0.22s, box-shadow 0.22s, filter 0.22s;
+}
+.msg-btn-submit:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 16px 34px rgba(170, 136, 188, 0.4),
+    inset 0 1px 0 rgba(255,255,255,0.48);
+}
+.msg-btn-submit:focus-visible {
+  outline: 3px solid rgba(132, 168, 229, 0.36);
+  outline-offset: 3px;
+}
+.msg-feed-panel {
+  padding: 26px;
+}
+.msg-feed-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(184, 174, 204, 0.24);
+}
+.msg-board-count {
+  flex-shrink: 0;
+  margin-top: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: #827790;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255,255,255,0.72);
+}
+.msg-card-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+.msg-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 1px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(var(--msg-pink),0.35), rgba(var(--msg-blue),0.34));
+  box-shadow: 0 14px 34px rgba(130, 122, 152, 0.1);
+  overflow: hidden;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
+}
+.msg-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 54% 80% at 96% 0%, rgba(255,255,255,0.62), transparent 62%),
+    linear-gradient(120deg, rgba(255,255,255,0.42), transparent 44%);
+  pointer-events: none;
+}
+.msg-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 46px rgba(130, 122, 152, 0.16);
+}
+.msg-card-inner {
+  position: relative;
+  min-width: 0;
+  padding: 18px 18px 18px 20px;
+  border-radius: 21px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.66)),
+    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(var(--msg-pink), 0.18), transparent 62%);
+}
+.msg-card-accent {
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 4px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, #d792ad, #9eb6e8);
+  z-index: 2;
+}
+.msg-card-stamp {
+  display: block;
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  color: rgba(187, 152, 178, 0.12);
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 52px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 1;
+}
+.msg-card-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.msg-card-avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  font-family: "Ma Shan Zheng", "KaiTi", serif;
+  font-size: 21px;
+  color: rgba(255,255,255,0.98);
+  background: linear-gradient(145deg, #d792ad, #9d97d7 48%, #83a9e2);
+  box-shadow: 0 8px 18px rgba(150, 134, 184, 0.24);
+  transform: rotate(-3deg);
+}
+.msg-card--v2 .msg-card-avatar,
+.msg-card--v2 .msg-card-accent {
+  background: linear-gradient(145deg, #8bcfbe, #81aee5);
+}
+.msg-card--v3 .msg-card-avatar,
+.msg-card--v3 .msg-card-accent {
+  background: linear-gradient(145deg, #d99ab8, #8d99dd);
+}
+.msg-card--v4 .msg-card-avatar,
+.msg-card--v4 .msg-card-accent {
+  background: linear-gradient(145deg, #b89dde, #83b8de);
+}
+.msg-card-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.msg-card-name {
+  color: #5a5066;
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 18px;
+  letter-spacing: 1.2px;
+}
+.msg-card-time {
+  margin-left: auto;
+  color: #aaa0b4;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.msg-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.msg-card-tag {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #91879c;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  background: rgba(255,255,255,0.56);
+  border: 1px solid rgba(255,255,255,0.68);
+}
+.msg-card-text {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: var(--msg-ink);
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", "Microsoft YaHei", serif;
+  font-size: 14px;
+  line-height: 1.86;
+  letter-spacing: 0.35px;
+}
+.msg-card--new {
+  animation: msgCardIn 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes msgCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 980px) {
+  .msg-garden-board {
+    grid-template-columns: 1fr;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .msg-compose-card {
+    min-height: 0;
+  }
+}
+@media (max-width: 768px) {
+  .msg-wall-page {
+    padding: 0 4px 34px;
+  }
+  .msg-art-display {
+    letter-spacing: 5px;
+  }
+  .msg-art-lead,
+  .msg-wall-lead {
+    letter-spacing: 1.6px;
+  }
+  .msg-garden-board {
+    padding: 14px;
+    border-radius: 26px;
+  }
+  .msg-compose-card,
+  .msg-feed-panel {
+    border-radius: 22px;
+    padding: 22px 18px;
+  }
+  .msg-compose-head,
+  .msg-feed-head,
+  .msg-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .msg-compose-seal {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+    opacity: 0.86;
+  }
+  .msg-btn-submit {
+    width: 100%;
+  }
+  .msg-board-count {
+    width: fit-content;
+    margin-top: 0;
+  }
+  .msg-card-head {
+    align-items: flex-start;
+  }
+  .msg-card-time {
+    white-space: normal;
+    text-align: right;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .msg-card--new {
+    animation: none !important;
+  }
+  .msg-card,
+  .msg-btn-submit {
+    transition: none !important;
+  }
+}
+
+/* ---------- 留言墙重制：评论区风格 ---------- */
+.msg-wall-page {
+  max-width: 760px;
+  padding-bottom: 44px;
+}
+.msg-wall-header {
+  max-width: none;
+  margin: 0 0 24px;
+  text-align: left;
+}
+.msg-wall-kicker {
+  margin-bottom: 10px;
+  color: #a8a4b2;
+  font-size: 10px;
+  letter-spacing: 2.4px;
+}
+.msg-wall-kicker::before,
+.msg-wall-kicker::after {
+  display: none;
+}
+.msg-art-display {
+  font-family: "ZCOOL XiaoWei", "STKaiti", "KaiTi", serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 2px;
+  color: #3f3b4b;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  filter: none;
+}
+.msg-art-lead,
+.msg-wall-lead {
+  margin-top: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #8b8795;
+  font-size: 13px;
+  line-height: 1.7;
+  letter-spacing: 0.4px;
+}
+.msg-garden-board {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.msg-garden-board::before,
+.msg-garden-board::after,
+.msg-garden-petal {
+  display: none;
+}
+.msg-compose-card,
+.msg-feed-panel {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(214, 218, 230, 0.72);
+  box-shadow: 0 12px 36px rgba(120, 128, 150, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.msg-compose-card {
+  min-height: 0;
+  padding: 20px;
+}
+.msg-compose-card::before,
+.msg-compose-card::after,
+.msg-compose-ornament {
+  display: none;
+}
+.msg-compose-head {
+  align-items: center;
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(216, 220, 232, 0.75);
+}
+.msg-compose-eyebrow,
+.msg-feed-eyebrow {
+  margin-bottom: 5px;
+  color: #a6a0b2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+.msg-compose-title,
+.msg-art-section {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #484354;
+}
+.msg-compose-title {
+  font-size: 17px;
+}
+.msg-art-section {
+  font-size: 18px;
+}
+.msg-compose-sub {
+  margin-top: 4px;
+  color: #96919f;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.msg-compose-seal {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 20px;
+  background: linear-gradient(145deg, #f3a9bf, #b9addd 52%, #9db8ee);
+  box-shadow: 0 8px 20px rgba(154, 150, 190, 0.18);
+  transform: none;
+}
+.msg-form-fields {
+  gap: 12px;
+}
+.msg-field-label {
+  margin-bottom: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #6f6a78;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.msg-form-fields input,
+.msg-form-fields textarea {
+  border-radius: 12px;
+  border-color: rgba(208, 212, 226, 0.92);
+  background: rgba(255, 255, 255, 0.86);
+  color: #403c48;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  box-shadow: none;
+}
+.msg-form-fields textarea {
+  min-height: 112px;
+}
+.msg-form-fields input:focus,
+.msg-form-fields textarea:focus {
+  border-color: rgba(157, 184, 238, 0.95);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(186, 206, 255, 0.22);
+}
+.msg-form-actions {
+  margin-top: 14px;
+}
+.msg-board-note {
+  color: #a09aa8;
+  font-size: 11px;
+}
+.msg-btn-submit {
+  min-height: 38px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #f0a5ba, #aeb7ec);
+  box-shadow: 0 8px 20px rgba(156, 166, 218, 0.24);
+}
+.msg-feed-panel {
+  padding: 20px;
+}
+.msg-feed-head {
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(216, 220, 232, 0.75);
+}
+.msg-board-count {
+  margin-top: 0;
+  padding: 5px 11px;
+  color: #8b8795;
+  font-size: 11px;
+  background: rgba(246, 247, 251, 0.86);
+  border: 1px solid rgba(216, 220, 232, 0.85);
+}
+.msg-card-list {
+  gap: 0;
+}
+.msg-card {
+  display: block;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(220, 224, 234, 0.76);
+  overflow: visible;
+}
+.msg-card:last-child {
+  border-bottom: none;
+}
+.msg-card::before,
+.msg-card-accent,
+.msg-card-stamp {
+  display: none;
+}
+.msg-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.msg-card-inner {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 18px 0;
+  border-radius: 0;
+  background: transparent;
+}
+.msg-card-head {
+  display: contents;
+}
+.msg-card-avatar {
+  grid-row: 1 / span 2;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 18px;
+  transform: none;
+  background: linear-gradient(145deg, #f0a5ba, #aeb7ec);
+  box-shadow: 0 6px 16px rgba(150, 154, 190, 0.2);
+}
+.msg-card-meta {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  flex-flow: row wrap;
+  gap: 6px 10px;
+}
+.msg-card-name {
+  color: #403c48;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.msg-card-time {
+  margin-left: 0;
+  color: #aaa5b2;
+  font-size: 11px;
+}
+.msg-card-tags {
+  display: inline-flex;
+  gap: 5px;
+}
+.msg-card-tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #8b8795;
+  font-size: 10px;
+  background: rgba(246, 247, 251, 0.86);
+  border: 1px solid rgba(220, 224, 234, 0.86);
+}
+.msg-card-text {
+  grid-column: 2;
+  margin: -4px 0 0;
+  color: #57525f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  letter-spacing: 0.1px;
+}
+.msg-card--new {
+  animation: msgCommentIn 0.28s ease-out both;
+}
+@keyframes msgCommentIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 768px) {
+  .msg-wall-page {
+    padding: 0 2px 34px;
+  }
+  .msg-art-display {
+    font-size: 26px;
+    letter-spacing: 1px;
+  }
+  .msg-compose-card,
+  .msg-feed-panel {
+    padding: 16px;
+  }
+  .msg-compose-head,
+  .msg-form-actions,
+  .msg-feed-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .msg-compose-seal {
+    display: none;
+  }
+  .msg-btn-submit {
+    width: 100%;
+  }
+}
+
+/* ---------- 文章详情（Markdown 生成） ---------- */
+.post-page { max-width: 720px; }
+.post-back {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: #7a8a9e;
+  text-decoration: none;
+}
+.post-back:hover { color: #5a6a7e; }
+.post-title {
+  font-size: 26px;
+  font-weight: 400;
+  color: #3a3a4a;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.post-meta { margin-bottom: 28px; }
+.post-body.prose {
+  color: #4a4a5a;
+  font-size: 15px;
+  line-height: 1.85;
+}
+.post-body.prose h2 {
+  font-size: 20px;
+  font-weight: 500;
+  margin: 28px 0 12px;
+  color: #3a3a4a;
+}
+.post-body.prose h3 {
+  font-size: 17px;
+  margin: 22px 0 10px;
+}
+.post-body.prose p { margin: 0 0 14px; }
+.post-body.prose ul,
+.post-body.prose ol { margin: 0 0 16px 1.2em; }
+.post-body.prose blockquote {
+  margin: 16px 0;
+  padding: 12px 18px;
+  border-left: 3px solid rgba(186, 206, 255, 0.6);
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 0 10px 10px 0;
+  color: #5a5a68;
+}
+/* 艺术字语录 */
+.post-body.prose .quote-art {
+  position: relative;
+  margin: 22px 0;
+  padding: 28px 30px;
+  border: none !important;
+  border-radius: 18px !important;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 2;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+}
+.post-body.prose .quote-art p { margin: 0 0 6px; }
+.post-body.prose .quote-art .attr { font-size: 13px; opacity: 0.55; margin-top: 12px; font-weight: 400; letter-spacing: 0; }
+/* 电蓝 */
+.post-body.prose .quote-art--electric {
+  background: linear-gradient(145deg, rgba(100,149,237,0.09) 0%, rgba(138,180,248,0.14) 40%, rgba(180,200,255,0.06) 100%);
+  border-left: 4px solid #6495ed !important;
+  color: #3a5090;
+  background-clip: padding-box;
+}
+/* 金橙 */
+.post-body.prose .quote-art--gold {
+  background: linear-gradient(145deg, rgba(232,184,73,0.1) 0%, rgba(255,210,120,0.15) 40%, rgba(255,235,180,0.07) 100%);
+  border-left: 4px solid #e8b849 !important;
+  color: #6b5020;
+}
+/* 深红 */
+.post-body.prose .quote-art--crimson {
+  background: linear-gradient(145deg, rgba(192,57,43,0.07) 0%, rgba(220,100,80,0.12) 40%, rgba(240,160,140,0.05) 100%);
+  border-left: 4px solid #c0392b !important;
+  color: #6b2820;
+}
+/* 琥珀 */
+.post-body.prose .quote-art--amber {
+  background: linear-gradient(145deg, rgba(212,168,67,0.09) 0%, rgba(240,190,80,0.14) 40%, rgba(250,220,140,0.06) 100%);
+  border-left: 4px solid #d4a843 !important;
+  color: #5a4020;
+}
+/* 玫瑰 */
+.post-body.prose .quote-art--rose {
+  background: linear-gradient(145deg, rgba(212,120,124,0.09) 0%, rgba(235,150,155,0.13) 40%, rgba(250,200,200,0.06) 100%);
+  border-left: 4px solid #d4787c !important;
+  color: #5a3035;
+}
+/* 珊瑚 */
+.post-body.prose .quote-art--coral {
+  background: linear-gradient(145deg, rgba(232,145,106,0.09) 0%, rgba(250,170,130,0.13) 40%, rgba(255,210,180,0.06) 100%);
+  border-left: 4px solid #e8916a !important;
+  color: #5a3828;
+}
+/* 靛蓝 */
+.post-body.prose .quote-art--indigo {
+  background: linear-gradient(145deg, rgba(107,125,179,0.09) 0%, rgba(130,150,200,0.13) 40%, rgba(180,195,225,0.06) 100%);
+  border-left: 4px solid #6b7db3 !important;
+  color: #3a4068;
+}
+/* 青绿 */
+.post-body.prose .quote-art--teal {
+  background: linear-gradient(145deg, rgba(91,154,139,0.09) 0%, rgba(120,180,165,0.13) 40%, rgba(170,215,200,0.06) 100%);
+  border-left: 4px solid #5b9a8b !important;
+  color: #2a5045;
+}
+/* 紫色 */
+.post-body.prose .quote-art--purple {
+  background: linear-gradient(145deg, rgba(150,120,182,0.09) 0%, rgba(175,150,200,0.13) 40%, rgba(210,195,225,0.06) 100%);
+  border-left: 4px solid #9678b6 !important;
+  color: #4a3860;
+}
+/* 粉色 */
+.post-body.prose .quote-art--pink {
+  background: linear-gradient(145deg, rgba(212,130,140,0.09) 0%, rgba(235,160,170,0.13) 40%, rgba(250,200,205,0.06) 100%);
+  border-left: 4px solid #d4828c !important;
+  color: #5a3038;
+}
+/* 水蓝 */
+.post-body.prose .quote-art--cyan {
+  background: linear-gradient(145deg, rgba(78,160,176,0.1) 0%, rgba(110,190,205,0.14) 40%, rgba(160,220,230,0.07) 100%);
+  border-left: 4px solid #4ea0b0 !important;
+  color: #1e4858;
+}
+.post-body.prose pre {
+  position: relative;
+  margin: 20px 0;
+  padding: 0;
+  background: #1e1e2e;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.13);
+}
+.post-body.prose pre::before {
+  content: "";
+  display: block;
+  height: 44px;
+  background: #2a2a3c;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
+.post-body.prose pre::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;
+  box-shadow: 26px 0 0 #febc2e, 52px 0 0 #28c840;
+  z-index: 1;
+}
+.code-copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 2;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: -apple-system, sans-serif;
+}
+.code-copy-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.25);
+}
+/* 输出结果块 - 简单白底边框 */
+.post-body.prose pre.code-output {
+  background: #fafbfc;
+  border: 1px solid #e0e4ea;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.post-body.prose pre.code-output::before {
+  display: none;
+}
+.post-body.prose pre.code-output::after {
+  display: none;
+}
+.post-body.prose pre.code-output code {
+  color: #4a4a5a;
+  font-size: 14px;
+}
+
+.post-body.prose pre code {
+  display: block;
+  padding: 14px 18px;
+  overflow-x: auto;
+  font-family: ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cdd6f4;
+  background: none;
+  border-radius: 0;
+}
+.post-body.prose :not(pre) > code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(186, 206, 255, 0.2);
+  color: #4a5a9a;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+.post-body.prose a {
+  color: #6a7ab8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.post-body.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 18px 0;
+  font-size: 14px;
+}
+.post-body.prose th,
+.post-body.prose td {
+  border: 1px solid #d8dce8;
+  padding: 9px 13px;
+  text-align: left;
+}
+.post-body.prose th {
+  background: rgba(186, 206, 255, 0.18);
+  font-weight: 600;
+  color: #3a3a4a;
+}
+.post-body.prose tr:nth-child(even) td {
+  background: rgba(248, 249, 252, 0.6);
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width:768px) {
+  .main img:not(.avatar img):not(.nav-icon img) { max-width:100% !important; height:auto; }
+  .main table { display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .photo-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px; }
+  .post-body.prose table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .post-body.prose th,.post-body.prose td {
+    padding: 6px 8px;
+  }
+  .post-body.prose pre {
+    margin: 14px 0;
+  }
+  .post-body.prose pre code {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+  .post-body.prose pre::before {
+    height: 28px;
+  }
+  .post-body.prose .quote-art {
+    padding: 16px 14px;
+    font-size: 15px;
+  }
+  .code-copy-btn {
+    top: 4px;
+    right: 6px;
+    font-size: 10px;
+    padding: 1px 8px;
+  }
+}
+@media (max-width:480px) {
+  .post-body.prose table {
+    font-size: 11px;
+  }
+  .post-body.prose th,.post-body.prose td {
+    padding: 4px 6px;
+  }
+  .post-body.prose .quote-art {
+    padding: 12px 10px;
+    font-size: 14px;
+  }
+}

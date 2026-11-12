@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MNIST手写数字识别实战：逻辑回归、SVM与CNN对比</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">MNIST手写数字识别实战：逻辑回归、SVM与CNN对比</span><span class="i18n-en" style="display:none">MNIST Handwritten Digit Recognition — Logistic Regression vs SVM vs CNN</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-09</span>
+      <span>3000 <span data-i18n="metaWords">字</span></span>
+      <span>896 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>12 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><p>MNIST是机器学习领域最经典的数据集之一，被称为"Hello World"级别的入门任务。本文将通过实战，使用三种不同的模型——逻辑回归、SVM和CNN——来完成手写数字识别，并从准确率、训练效率、泛化能力等多个维度进行对比分析。</p>
+<h2>实验环境</h2>
+<p>本实验使用Python语言，选用两个主流框架：</p>
+<table>
+<thead>
+<tr>
+<th>框架</th>
+<th>版本</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>scikit-learn</strong></td>
+<td>v1.8.0</td>
+<td>逻辑回归、SVM模型，提供分类/回归/聚类算法</td>
+</tr>
+<tr>
+<td><strong>TensorFlow/Keras</strong></td>
+<td>v2.21.0</td>
+<td>CNN卷积神经网络，Keras高级API快速搭建</td>
+</tr>
+</tbody>
+</table>
+<h2>数据准备</h2>
+<p>MNIST数据集包含70000张28×28像素的手写数字灰度图片，涵盖0~9共10个类别。实验中将前60000张作为训练集，后10000张作为测试集。</p>
+<p>对于逻辑回归和SVM模型，每张图片被展开为784维特征向量；对于CNN模型，保留原始的28×28×1灰度图像格式。所有像素值归一化到0~1范围。</p>
+<h2>模型一：逻辑回归</h2>
+<p>逻辑回归虽然名字带"回归"，实际上是一种经典的线性分类算法。本实验使用scikit-learn的<code>LogisticRegression</code>，参数设置：</p>
+<ul>
+<li><code>max_iter=100</code>：最大迭代次数</li>
+<li><code>solver='lbfgs'</code>：优化器</li>
+</ul>
+<pre><code class="language-python">from sklearn.linear_model import LogisticRegression
+
+logistic_model = LogisticRegression(max_iter=100, solver=&quot;lbfgs&quot;)
+logistic_model.fit(X_train, y_train)
+joblib.dump(logistic_model, &quot;models/logistic_regression_mnist.pkl&quot;)
+</code></pre>
+<p>训练耗时约<strong>8.50秒</strong>。</p>
+<h2>模型二：支持向量机（SVM）</h2>
+<p>支持向量机通过寻找最大化类别间隔的超平面来进行分类。使用<code>LinearSVC</code>构建线性SVM：</p>
+<pre><code class="language-python">from sklearn.svm import LinearSVC
+
+svm_model = LinearSVC(C=1.0, max_iter=3000)
+svm_model.fit(X_train, y_train)
+joblib.dump(svm_model, &quot;models/linear_svm_mnist.pkl&quot;)
+</code></pre>
+<p>训练耗时约<strong>38.50秒</strong>，明显比逻辑回归慢。</p>
+<h2>模型三：卷积神经网络（CNN）</h2>
+<p>CNN更适合图像任务，因为它能通过卷积层提取边缘、笔画、形状等局部特征。使用Keras Sequential模型：</p>
+<pre><code class="language-python">from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+
+cnn_model = Sequential([
+    Conv2D(32, kernel_size=(3, 3), activation=&quot;relu&quot;, input_shape=(28, 28, 1)),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(64, kernel_size=(3, 3), activation=&quot;relu&quot;),
+    MaxPooling2D(pool_size=(2, 2)),
+    Flatten(),
+    Dense(128, activation=&quot;relu&quot;),
+    Dropout(0.5),
+    Dense(10, activation=&quot;softmax&quot;)
+])
+
+cnn_model.compile(optimizer=&quot;adam&quot;, loss=&quot;categorical_crossentropy&quot;, metrics=[&quot;accuracy&quot;])
+cnn_model.fit(X_train, y_train_cat, epochs=5, batch_size=128, validation_split=0.1)
+cnn_model.save(&quot;models/cnn_mnist.keras&quot;)
+</code></pre>
+<p>训练耗时约<strong>34.61秒</strong>。</p>
+<h2>模型评估与对比</h2>
+<p>在MNIST测试集（10000张图片）上，使用Accuracy、Precision、Recall和F1-Score四个指标进行评估：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE3.png" alt="模型对比结果" style="max-width:80%;"></p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>Accuracy</th>
+<th>训练时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>逻辑回归</td>
+<td>92.57%</td>
+<td>8.50s</td>
+</tr>
+<tr>
+<td>SVM</td>
+<td>91.83%</td>
+<td>38.50s</td>
+</tr>
+<tr>
+<td><strong>CNN</strong></td>
+<td><strong>98.93%</strong></td>
+<td>34.61s</td>
+</tr>
+</tbody>
+</table>
+<p>三个模型在测试集上都达到了91%以上的准确率，说明MNIST是一个相对成熟的数据集。但CNN的各项指标接近0.99，明显优于两个传统模型。</p>
+<h2>混淆矩阵分析</h2>
+<p>混淆矩阵能直观展示模型在每个数字类别上的分类表现，对角线越亮说明识别越准确。</p>
+<p>从混淆矩阵可以看出，三个模型的大部分预测都集中在对角线上。</p>
+<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:20px 0;">
+  <div style="flex:1;min-width:280px;">
+    <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE4.png" alt="逻辑回归混淆矩阵" style="width:100%;border-radius:8px;">
+  </div>
+  <div style="flex:1;min-width:280px;">
+    <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE5.png" alt="SVM混淆矩阵" style="width:100%;border-radius:8px;">
+  </div>
+</div>
+<div style="max-width:66%;margin:20px auto 0;">
+  <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png" alt="CNN混淆矩阵" style="width:100%;border-radius:8px;">
+</div>
+
+<p>逻辑回归和SVM在数字4/9、5/6、7/3等形态相似的数字之间仍存在一定的误判。而CNN的混淆矩阵对角线更加集中，误分类数量明显更少。</p>
+<h2>自制手写数字测试</h2>
+<p>标准测试集表现好≠实际效果好。为了检验模型的真实泛化能力，我用画图工具手写了0~9共10张数字图片：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-37-05.png" alt="自制手写数字图片" style="max-width:80%;"></p>
+<h3>图片预处理</h3>
+<p>自制图片不能直接输入模型——它们是白底黑字的大画布，而MNIST是28×28的黑底白字灰度图。我设计了一套预处理流程：</p>
+<ol>
+<li>读取图片并转为灰度图</li>
+<li>自动寻找数字笔画区域，裁剪多余空白</li>
+<li>保持比例缩放到20×20以内</li>
+<li>居中放入28×28白色画布</li>
+<li>反色处理，使白底黑字接近MNIST的黑底白字</li>
+<li>像素值归一化到0~1</li>
+</ol>
+<p>核心预处理代码：</p>
+<pre><code class="language-python">def preprocess_image(image_path):
+    img = Image.open(image_path).convert(&quot;L&quot;)
+    arr = np.array(img)
+    mask = arr &lt; 250  # 找到数字区域
+
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+
+    # 裁剪数字区域
+    img = img.crop((cols[0], rows[0], cols[-1] + 1, rows[-1] + 1))
+    img.thumbnail((20, 20))  # 保持比例缩放
+
+    # 居中放入28×28画布
+    new_img = Image.new(&quot;L&quot;, (28, 28), color=255)
+    paste_left = (28 - img.width) // 2
+    paste_top = (28 - img.height) // 2
+    new_img.paste(img, (paste_left, paste_top))
+
+    # 反色 + 归一化
+    new_img = ImageOps.invert(new_img)
+    arr = np.array(new_img).astype(&quot;float32&quot;) / 255.0
+    return arr.reshape(1, -1)
+</code></pre>
+<h3>预测结果</h3>
+<p><strong>逻辑回归预测结果（6/10 = 60%）：</strong></p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-46.png" alt="逻辑回归自制图片预测" style="max-width:80%;"></p>
+<p><strong>SVM预测结果（6/10 = 60%）：</strong></p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-55.png" alt="SVM自制图片预测" style="max-width:80%;"></p>
+<p><strong>CNN预测结果（9/10 = 90%）：</strong></p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-46-06.png" alt="CNN自制图片预测" style="max-width:80%;"></p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>MNIST测试集</th>
+<th>自制图片</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>逻辑回归</td>
+<td>92.57%</td>
+<td>60.00%</td>
+</tr>
+<tr>
+<td>SVM</td>
+<td>91.83%</td>
+<td>60.00%</td>
+</tr>
+<tr>
+<td>CNN</td>
+<td>98.93%</td>
+<td><strong>90.00%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>标准测试集分数高不代表真实场景就一定好用。数据预处理、书写风格、笔画粗细等因素都会严重影响实际效果。</p>
+<h2>关键问题与思考</h2>
+<h3>1. 为什么CNN比逻辑回归和SVM强这么多？</h3>
+<p>逻辑回归和SVM需要把28×28图片"拍扁"成784个独立像素值，完全丢失了数字的笔画走向、边缘形状、局部结构等空间信息。CNN通过卷积核扫描整张图片，能自动学到"横线""竖线""弯曲"等低级特征，再逐层组合成"圆圈""交叉"等高级模式，因此对手写数字的识别能力更强。</p>
+<p>一句话总结：传统模型看的是像素点，CNN看的是形状和结构。图像识别本质上需要的是"理解形状"的能力，而非"记住像素"。</p>
+<h3>2. 训练数据不足怎么办？</h3>
+<ul>
+<li><strong>数据增强</strong>：旋转、平移、缩放、加噪声、改变笔画粗细</li>
+<li><strong>迁移学习</strong>：用预训练模型微调</li>
+<li><strong>收集更多真实数据</strong></li>
+</ul>
+<h3>3. 图片底色和方向有影响吗？</h3>
+<p>有很大影响。MNIST接近黑底白字，而实际拍照的图片往往是白底黑字。解决方法：训练阶段加入不同背景和角度的增强样本；预测阶段做灰度化、二值化、反色、倾斜校正等处理。</p>
+<h3>4. 如何从单数字识别升级到邮政编码识别？</h3>
+<p>这需要额外的处理步骤：先定位信封上的编码区域→图像去噪和校正→将连续数字分割成单个字符→逐字识别→组合结果。如果数字粘连严重，可以考虑用目标检测或CRNN序列识别模型。</p>
+<h2>总结</h2>
+<p>这次实验完整走通了机器学习项目的全流程：数据加载→预处理→模型构建→训练→评估→实际应用测试。几个核心收获：</p>
+<table>
+<thead>
+<tr>
+<th>收获</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型选择</td>
+<td>传统模型在MNIST上也不错，但CNN更适合图像任务</td>
+</tr>
+<tr>
+<td>测试≠真实</td>
+<td>91%的测试准确率在自制图片上可能只剩60%</td>
+</tr>
+<tr>
+<td>预处理是核心</td>
+<td>改进预处理方法后，识别效果有明显提升</td>
+</tr>
+<tr>
+<td>多指标评估</td>
+<td>不要只看Accuracy，Precision/Recall/F1-Score更全面</td>
+</tr>
+</tbody>
+</table>
+<p>完整代码已开源，欢迎交流讨论。</p>
+<hr>
+<p><em>本文基于个人实验整理，如有错误欢迎指正。</em></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>MNIST Handwritten Digit Recognition — Three Models Compared</h2>
+<p>MNIST is one of the most classic datasets in machine learning. This article compares three models — Logistic Regression, SVM, and CNN — on accuracy, training efficiency, and generalization.</p>
+<h3>Experimental Setup</h3>
+<ul>
+<li><strong>scikit-learn</strong> (v1.8.0) for Logistic Regression and SVM</li>
+<li><strong>TensorFlow/Keras</strong> (v2.21.0) for CNN</li>
+</ul>
+<h3>Results on MNIST Test Set</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Accuracy</th>
+<th>Training Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic Regression</td>
+<td>92.57%</td>
+<td>8.50s</td>
+</tr>
+<tr>
+<td>SVM</td>
+<td>91.83%</td>
+<td>38.50s</td>
+</tr>
+<tr>
+<td><strong>CNN</strong></td>
+<td><strong>98.93%</strong></td>
+<td>34.61s</td>
+</tr>
+</tbody>
+</table>
+<h3>Custom Handwritten Digit Test</h3>
+<p>To test real generalization, I drew 10 digits manually. After preprocessing (grayscale, crop, resize, center, invert, normalize):</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>MNIST Test</th>
+<th>Custom Images</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic Regression</td>
+<td>92.57%</td>
+<td>60.00%</td>
+</tr>
+<tr>
+<td>SVM</td>
+<td>91.83%</td>
+<td>60.00%</td>
+</tr>
+<tr>
+<td>CNN</td>
+<td>98.93%</td>
+<td><strong>90.00%</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>Why CNN Outperforms</h3>
+<p>Traditional models flatten images into 784 independent pixels, losing all spatial structure. CNN's convolutional kernels learn edges, strokes, and shapes hierarchically — understanding form, not just memorizing pixels.</p>
+<h3>Key Takeaways</h3>
+<ul>
+<li>Model selection matters — CNN is better suited for image tasks</li>
+<li>Test set scores aren't everything — 91% on MNIST can become 60% on real images</li>
+<li>Data preprocessing is a core competitive advantage</li>
+<li>Use multiple metrics beyond just accuracy</li>
+</ul></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

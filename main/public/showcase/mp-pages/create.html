@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>新建卡片</title>
+<style>
+  /* ===== reset & base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    background: #e8eaec;
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Plus Jakarta Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== phone canvas 375×812 ===== */
+  .phone {
+    width: 375px;
+    min-height: 812px;
+    background-color: #f7f9fb;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(255,235,240,0.5) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(230,245,255,0.5) 0%, transparent 40%);
+    color: #191c1e;
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* ===== status bar ===== */
+  .status-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #191c1e;
+    background: transparent;
+  }
+  .status-bar .time { font-weight: 700; font-size: 14px; }
+  .status-icons { display: flex; gap: 4px; font-size: 12px; }
+
+  /* ===== nav bar ===== */
+  .nav-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 0 16px;
+  }
+  .nav-bar .nav-back {
+    position: absolute;
+    left: 16px;
+    font-size: 20px;
+    color: #576065;
+    cursor: default;
+  }
+  .nav-bar .nav-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #191c1e;
+  }
+
+  /* ===== container ===== */
+  .container {
+    padding: 20px 16px 220px;
+  }
+
+  /* ===== header ===== */
+  .header { margin-bottom: 12px; }
+
+  /* ===== chip ===== */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 9999px;
+    background: rgba(236,251,240,0.6);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: #66746c;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .chip.chip-blue {
+    background: rgba(240,249,255,0.7);
+    color: #6a7378;
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.15px;
+    line-height: 1.2;
+    margin: 7px 0;
+  }
+  .page-sub {
+    font-size: 13px;
+    color: #43474a;
+    line-height: 1.5;
+  }
+
+  /* ===== glass ===== */
+  .glass {
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(255,255,255,0.9);
+    box-shadow:
+      0 2px 10px rgba(0,0,0,0.04),
+      0 10px 30px rgba(87,96,101,0.06);
+    border-radius: 16px;
+  }
+
+  /* ===== holographic edge ===== */
+  .holo-edge {
+    position: relative;
+  }
+  .holo-edge::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0)) padding-box,
+      linear-gradient(135deg, rgba(255,182,193,.4), rgba(135,206,235,.4) 50%, rgba(255,215,0,.3)) border-box;
+  }
+
+  /* ===== step ===== */
+  .step {
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .step-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 9999px;
+    background: #576065;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-num.done {
+    background: #ecfbf0;
+    color: #3c4a42;
+    border: 1px solid #bbcac0;
+  }
+  .step-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* ===== field ===== */
+  .field { margin-bottom: 14px; }
+  .field .label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.75px;
+    text-transform: uppercase;
+    color: #43474a;
+    margin-bottom: 7px;
+    display: block;
+  }
+
+  .input, .textarea {
+    background: rgba(255,255,255,0.85);
+    border: 1px solid #c4c7ca;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    line-height: 1.5;
+    width: 100%;
+    min-height: 44px;
+    color: #191c1e;
+    display: block;
+    font-family: inherit;
+    outline: none;
+  }
+  .textarea {
+    min-height: 80px;
+    line-height: 1.6;
+    resize: none;
+  }
+  .input:focus, .textarea:focus {
+    border-color: #576065;
+    background: #fff;
+  }
+  .input::placeholder, .textarea::placeholder { color: #9a9ea2; }
+
+  .picker-display {
+    color: #191c1e;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* ===== ai-paste textarea ===== */
+  .ai-paste {
+    width: 100%;
+    min-height: 140px;
+    border: 1px solid #c4c7ca;
+    background: rgba(255,255,255,0.85);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    color: #191c1e;
+  }
+  .ai-paste:focus {
+    border-color: #576065;
+    background: #fff;
+  }
+  .ai-paste::placeholder { color: #9a9ea2; }
+
+  /* ===== sample row ===== */
+  .sample-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .sample-chip {
+    padding: 7px 12px;
+    background: rgba(240,249,255,0.7);
+    color: #576065;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid rgba(240,249,255,1);
+    cursor: default;
+  }
+
+  /* ===== btn ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 18px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
+    border: none;
+    font-family: inherit;
+    cursor: default;
+  }
+  .btn-primary {
+    background: #576065;
+    color: #fff;
+  }
+  .btn-ghost {
+    background: rgba(255,255,255,0.8);
+    color: #576065;
+    border: 1px solid rgba(255,255,255,0.9);
+  }
+  .btn-primary.disabled, .btn-ghost.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .parse-btn {
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  /* ===== warn bar ===== */
+  .warn-bar {
+    background: rgba(255,218,214,0.4);
+    border: 1px solid rgba(186,26,26,0.3);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .warn-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #93000a;
+  }
+  .warn-item {
+    font-size: 12px;
+    color: #93000a;
+  }
+
+  /* ===== empty preview ===== */
+  .empty-preview {
+    text-align: center;
+    padding: 30px 15px;
+    color: #43474a;
+    font-size: 13px;
+  }
+
+  /* ===== preview list ===== */
+  .preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .preview-card {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.85);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .pidx {
+    width: 28px; height: 28px;
+    border-radius: 9999px;
+    background: #576065;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-warn {
+    font-size: 12px;
+    color: #93000a;
+    background: rgba(255,218,214,0.4);
+    padding: 7px 9px;
+    border-radius: 6px;
+    margin: 0 0 8px;
+  }
+
+  /* ===== icon btn ===== */
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.7);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #43474a;
+    flex-shrink: 0;
+    cursor: default;
+  }
+  .icon-btn.small { width: 28px; height: 28px; font-size: 14px; }
+  .icon-btn.danger { color: #ba1a1a; }
+  .icon-btn.disabled { opacity: 0.3; }
+
+  /* ===== opts ===== */
+  .opts {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 4px;
+  }
+  .opt-row { display: flex; align-items: center; gap: 7px; }
+  .opt-radio {
+    width: 24px; height: 24px;
+    border-radius: 9999px;
+    border: 2px solid #c4c7ca;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    color: #43474a;
+    flex-shrink: 0;
+  }
+  .opt-radio.on {
+    background: #576065;
+    border-color: #576065;
+    color: #fff;
+  }
+
+  .add-opt {
+    margin-top: 10px;
+    font-size: 13px;
+    padding: 8px 14px;
+    width: auto;
+    align-self: flex-start;
+  }
+
+  .add-card {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  /* ===== footer bar ===== */
+  .footer-bar {
+    position: fixed;
+    left: 16px; right: 16px;
+    bottom: 16px;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 50;
+    background: rgba(255,255,255,0.92) !important;
+  }
+  .grow { flex: 1; min-width: 0; }
+
+  /* ===== utilities ===== */
+  .row { display: flex; align-items: center; }
+  .muted { color: #43474a; }
+  .small { font-size: 12px; }
+  .text-center { text-align: center; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- status bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <span class="status-icons">
+      <span>&#x1F4F6;</span>
+      <span>&#x26A1;</span>
+      <span>&#x1F503;</span>
+    </span>
+  </div>
+
+  <!-- nav bar -->
+  <div class="nav-bar">
+    <span class="nav-back">&#x2190;</span>
+    <span class="nav-title">&#x1F4CB; 新建卡片</span>
+  </div>
+
+  <!-- ===== main container ===== -->
+  <div class="container">
+
+    <!-- header -->
+    <div class="header">
+      <span class="chip chip-blue">&#x2728; AI 智能识别</span>
+      <div class="page-title">新建卡片集</div>
+      <div class="page-sub">把题目粘下面，AI 自动识别成卡片。</div>
+    </div>
+
+    <!-- Step 1: meta -->
+    <div class="glass holo-edge step">
+      <div class="step-head">
+        <div class="step-num">1</div>
+        <span class="step-title">卡片集信息</span>
+      </div>
+      <div class="field">
+        <span class="label">标题</span>
+        <input class="input" value="线性代数 Chapter 3" readonly />
+      </div>
+      <div class="field">
+        <span class="label">学科 / 分类</span>
+        <input class="input" placeholder="英语 / 物理 / 编程…" readonly />
+      </div>
+      <div class="field">
+        <span class="label">计划练习时间</span>
+        <div class="input picker-display">点击选择时间</div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <span class="label">简介（可选）</span>
+        <input class="input" placeholder="一句话描述用途" readonly />
+      </div>
+    </div>
+
+    <!-- Step 2: paste -->
+    <div class="glass holo-edge step">
+      <div class="step-head">
+        <div class="step-num done">2</div>
+        <span class="step-title">粘贴你的题目</span>
+      </div>
+      <textarea class="ai-paste" readonly>1. 以下哪些是线性代数中的向量空间？
+A. R²
+B. 所有 2×2 矩阵的集合
+C. 所有 3 次多项式的集合
+D. 所有形如 (x, y, z) 且 x+y+z=0 的向量
+答案: A, B, D
+
+2. 下列哪些矩阵运算满足交换律？
+A. 矩阵加法
+B. 矩阵乘法
+C. 标量乘法
+D. 矩阵转置
+答案: A, C</textarea>
+
+      <div class="sample-row">
+        <span class="sample-chip">&#x1F4DA; 神经科学范例</span>
+        <span class="sample-chip">&#x1F4D6; 英语词卡范例</span>
+        <span class="sample-chip">&#x1F5D1; 清空</span>
+      </div>
+
+      <button class="btn btn-primary parse-btn disabled">&#x2728; AI 识别成卡片</button>
+    </div>
+
+    <!-- Step 3: preview -->
+    <div class="glass holo-edge step">
+      <div class="step-head">
+        <div class="step-num done">3</div>
+        <span class="step-title">预览 &amp; 调整（2 题）</span>
+      </div>
+
+      <!-- warnings -->
+      <div class="warn-bar">
+        <span class="warn-title">&#x26A0; 有 1 处需要确认</span>
+        <span class="warn-item">&middot; 第 2 题未标记正确答案</span>
+      </div>
+
+      <div class="preview-list">
+
+        <!-- card 1 -->
+        <div class="preview-card">
+          <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+            <div class="pidx">1</div>
+            <div class="icon-btn danger small">&#x2715;</div>
+          </div>
+          <div class="field">
+            <span class="label">题干</span>
+            <textarea class="textarea" readonly>以下哪些是线性代数中的向量空间？</textarea>
+          </div>
+          <span class="label" style="margin-top:4px">选项</span>
+          <div class="opts">
+            <div class="opt-row">
+              <div class="opt-radio on">&#x2713;</div>
+              <input class="input grow" value="R&sup2;" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio on">&#x2713;</div>
+              <input class="input grow" value="所有 2&times;2 矩阵的集合" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio">&nbsp;</div>
+              <input class="input grow" value="所有 3 次多项式的集合" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio on">&#x2713;</div>
+              <input class="input grow" value="所有形如 (x, y, z) 且 x+y+z=0 的向量" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost add-opt disabled">+ 加选项</button>
+          <div class="field" style="margin-top:9px;margin-bottom:0">
+            <span class="label">解析（可选）</span>
+            <input class="input" value="R&sup2; 是向量空间；2&times;2 矩阵集构成向量空间；3 次多项式集对加法不封闭（x&sup3; + (-x&sup3; + x&sup2;) 不是 3 次）；x+y+z=0 是 R&sup3; 的子空间。" readonly />
+          </div>
+        </div>
+
+        <!-- card 2 -->
+        <div class="preview-card">
+          <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+            <div class="pidx">2</div>
+            <div class="icon-btn danger small">&#x2715;</div>
+          </div>
+          <div class="card-warn">&#x26A0; 未标记正确答案，请检查</div>
+          <div class="field">
+            <span class="label">题干</span>
+            <textarea class="textarea" readonly>下列哪些矩阵运算满足交换律？</textarea>
+          </div>
+          <span class="label" style="margin-top:4px">选项</span>
+          <div class="opts">
+            <div class="opt-row">
+              <div class="opt-radio">&nbsp;</div>
+              <input class="input grow" value="矩阵加法" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio">&nbsp;</div>
+              <input class="input grow" value="矩阵乘法" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio">&nbsp;</div>
+              <input class="input grow" value="标量乘法" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+            <div class="opt-row">
+              <div class="opt-radio">&nbsp;</div>
+              <input class="input grow" value="矩阵转置" readonly />
+              <div class="icon-btn small disabled">&minus;</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost add-opt disabled">+ 加选项</button>
+          <div class="field" style="margin-top:9px;margin-bottom:0">
+            <span class="label">解析（可选）</span>
+            <input class="input" placeholder="答对答错都会显示" readonly />
+          </div>
+        </div>
+
+      </div>
+
+      <button class="btn btn-ghost add-card disabled">&#xFF0B; 手动加一题</button>
+    </div>
+
+  </div>
+
+  <!-- footer bar -->
+  <div class="glass footer-bar">
+    <button class="btn btn-ghost grow">取消</button>
+    <button class="btn btn-primary grow">保存并练习</button>
+  </div>
+
+</div><!-- /phone -->
+
+</body>
+</html>

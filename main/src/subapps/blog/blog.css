@@ -1,0 +1,215 @@
+.site-blog {
+  min-height: 100vh;
+  padding: 7.5rem 1.25rem 4rem;
+  color: #efe7ea;
+  background:
+    radial-gradient(900px 420px at 10% -10%, rgba(255, 143, 171, 0.16), transparent 60%),
+    #121016;
+}
+
+.site-blog-wrap {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.site-blog-kicker {
+  margin: 0 0 0.6rem;
+  color: #e7a8b8;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.site-blog h1,
+.site-blog-title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1.2;
+}
+
+.site-blog-lead {
+  margin: 0.8rem 0 2rem;
+  color: #c8bcc2;
+}
+
+.site-blog-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.site-blog-card {
+  display: block;
+  padding: 1.1rem 1.15rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-decoration: none;
+}
+
+.site-blog-card:hover {
+  border-color: rgba(255, 168, 190, 0.45);
+}
+
+.site-blog-card h2 {
+  margin: 0.35rem 0;
+  font-size: 1.25rem;
+}
+
+.site-blog-card p,
+.site-blog-meta {
+  margin: 0;
+  color: #b7aab0;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.site-blog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+}
+
+.site-blog-back {
+  display: inline-flex;
+  margin-bottom: 1.4rem;
+  color: #f0c2ce;
+  text-decoration: none;
+}
+
+.bt-prose {
+  font-size: 1.02rem;
+  line-height: 1.85;
+}
+
+.bt-prose h1,
+.bt-prose h2,
+.bt-prose h3 {
+  line-height: 1.35;
+  margin: 1.8rem 0 0.7rem;
+}
+
+.bt-prose img,
+.bt-prose video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+}
+
+.bt-prose pre {
+  overflow: auto;
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  background: #1b1720;
+}
+
+.bt-prose table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.bt-prose th,
+.bt-prose td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.bt-note,
+.bt-quote,
+.bt-poem,
+.bt-folding,
+.bt-timeline,
+.bt-tabs {
+  margin: 1rem 0;
+}
+
+.bt-note,
+.bt-quote,
+.bt-poem,
+.bt-folding {
+  padding: 0.85rem 1rem;
+  border-left: 3px solid #d7a3b4;
+  border-radius: 0 0.8rem 0.8rem 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bt-green,
+.bt-success { border-color: #8dcea8; }
+.bt-red,
+.bt-danger { border-color: #e08b98; }
+.bt-blue,
+.bt-info { border-color: #8eb7e8; }
+.bt-yellow,
+.bt-warning,
+.bt-orange { border-color: #e2c27a; }
+
+.bt-label,
+.bt-span {
+  padding: 0 0.35em;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bt-check {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  margin: 0.25rem 0;
+}
+
+.bt-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 8rem;
+}
+
+.bt-progress i {
+  display: block;
+  width: 4.5rem;
+  height: 0.45rem;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+}
+
+.bt-progress i::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--bt-progress, 0%);
+  border-radius: inherit;
+  background: currentColor;
+}
+
+.bt-gallery {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.bt-poem pre,
+.bt-mermaid {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.bt-tabs section,
+.bt-timeline-list section {
+  margin-top: 0.8rem;
+}
+
+.bt-link {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  color: #f3c6d2;
+}
+
+.bt-link img {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+}

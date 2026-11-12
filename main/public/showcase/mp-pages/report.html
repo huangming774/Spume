@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>练习报告</title>
+<style>
+/* ===== reset & base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: #e8eaed;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Plus Jakarta Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #191c1e;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== phone canvas ===== */
+.phone {
+  width: 375px;
+  height: 812px;
+  background-color: #f7f9fb;
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(255,235,240,0.5) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(230,245,255,0.5) 0%, transparent 40%);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 8px 40px rgba(0,0,0,0.15);
+}
+
+/* ===== status bar ===== */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 0;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #191c1e;
+}
+.status-bar .time { font-weight: 700; }
+.status-bar .icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+/* ===== nav bar ===== */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+  height: 44px;
+}
+.nav-bar .nav-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.nav-bar .nav-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.nav-bar .nav-actions a {
+  text-decoration: none;
+  color: #576065;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+.nav-bar .nav-actions a:hover { background: rgba(0,0,0,0.06); }
+
+/* ===== container ===== */
+.container { padding: 20px 16px 60px; }
+.header { margin-bottom: 18px; }
+.text-center { text-align: center; }
+
+/* ===== chip ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  background: rgba(236,251,240,0.6);
+  border: 1px solid rgba(255,255,255,0.6);
+  color: #66746c;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.chip-blue {
+  background: rgba(240,249,255,0.7);
+  color: #6a7378;
+}
+
+/* ===== titles ===== */
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  margin: 9px 0 6px;
+}
+.page-sub {
+  font-size: 13px;
+  color: #43474a;
+  line-height: 1.5;
+}
+
+/* ===== glass ===== */
+.glass {
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow:
+    0 4px 20px rgba(0,0,0,0.04),
+    0 20px 60px rgba(87,96,101,0.06);
+  border-radius: 16px;
+}
+.holo-edge {
+  position: relative;
+}
+.holo-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0)) padding-box,
+    linear-gradient(135deg, rgba(255,182,193,.4), rgba(135,206,235,.4) 50%, rgba(255,215,0,.3)) border-box;
+}
+
+/* ===== score card ===== */
+.score-card {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.upper {
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ===== ring ===== */
+.ring-wrap { position: relative; }
+.ring-outer {
+  width: 160px; height: 160px;
+  border-radius: 9999px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 15px rgba(135, 206, 235, 0.4));
+}
+.ring-fill {
+  position: absolute; inset: 0;
+  border-radius: 9999px;
+}
+.ring-inner {
+  position: relative; z-index: 1;
+  width: 130px; height: 130px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.95);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: inset 0 0 15px rgba(255,255,255,0.6);
+}
+.ring-num {
+  font-size: 40px;
+  font-weight: 700;
+  color: #576065;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+.ring-denom { font-size: 16px; color: #c4c7ca; font-weight: 500; }
+.ring-label {
+  font-size: 10px;
+  color: #43474a;
+  letter-spacing: 1.5px;
+  margin-top: 6px;
+}
+
+/* ===== stats grid ===== */
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.stat {
+  padding: 12px;
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.85);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.stat-val { font-size: 18px; font-weight: 600; color: #191c1e; }
+
+/* ===== buttons ===== */
+.cta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+.btn-primary {
+  background: #576065;
+  color: #fff;
+}
+.btn-ghost {
+  background: rgba(255,255,255,0.8);
+  color: #576065;
+  border: 1px solid rgba(255,255,255,0.9);
+}
+
+/* ===== chart section ===== */
+.chart-section {
+  margin: 20px 0;
+}
+.chart-section .section-label {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.chart-item .chart-label {
+  width: 56px;
+  font-size: 12px;
+  color: #43474a;
+  flex-shrink: 0;
+  text-align: right;
+}
+.chart-item .chart-track {
+  flex: 1;
+}
+.chart-item .chart-pct {
+  width: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #191c1e;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* nebula bar */
+.nebula-bar {
+  height: 8px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.nebula-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dbe4ea, #bfc8ce 60%, #ffd1dc);
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* ===== review ===== */
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 24px 4px 8px;
+}
+.review-header .bold {
+  font-size: 15px;
+  font-weight: 600;
+}
+.review-header .muted {
+  font-size: 12px;
+  color: #43474a;
+}
+
+.review-list { display: flex; flex-direction: column; gap: 9px; }
+.review-item {
+  padding: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.badge {
+  width: 28px; height: 28px;
+  border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.badge.ok  { background: #ecfbf0; color: #3c4a42; border: 1px solid #bbcac0; }
+.badge.bad { background: #ffdad6; color: #93000a; border: 1px solid #ba1a1a; }
+
+.r-prompt {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.r-ans { display: flex; flex-direction: column; gap: 2px; }
+.ans-text { font-size: 13px; color: #191c1e; line-height: 1.55; }
+.ans-text.strike { color: #ba1a1a; text-decoration: line-through; }
+.r-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #43474a;
+  background: rgba(240,249,255,0.5);
+  padding: 6px 8px;
+  border-radius: 6px;
+  display: block;
+}
+
+/* ===== utilities ===== */
+.muted { color: #43474a; }
+.bold { font-weight: 600; }
+.small { font-size: 12px; }
+.tiny { font-size: 11px; }
+.row { display: flex; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <span class="icons">
+      <span>&#9679;&#9679;&#9679;&#9679;</span>
+      <span>WiFi</span>
+      <span>&#9679;</span>
+    </span>
+  </div>
+
+  <!-- Nav Bar -->
+  <div class="nav-bar">
+    <span></span>
+    <span class="nav-title">练习报告</span>
+    <span class="nav-actions">
+      <a href="#" title="分享">&#x1F517;</a>
+      <a href="#" title="关闭">&times;</a>
+    </span>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header text-center">
+      <span class="chip chip-blue">本周练习</span>
+      <div class="page-title">练习报告</div>
+      <div class="page-sub">完成 10/10 · 用时 4 分 32 秒</div>
+    </div>
+
+    <!-- Score Card -->
+    <div class="glass holo-edge score-card">
+      <span class="upper tiny muted">Session Mastery</span>
+
+      <!-- Ring -->
+      <div class="ring-wrap">
+        <div class="ring-outer">
+          <div class="ring-fill" style="background: conic-gradient(#87CEEB 0%, #FFB6C1 78%, rgba(0,0,0,0.05) 78%, rgba(0,0,0,0.05) 100%);"></div>
+          <div class="ring-inner">
+            <span class="ring-num">8<span class="ring-denom">/10</span></span>
+            <span class="ring-label">SCORE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat">
+          <span class="upper tiny muted">正确率</span>
+          <span class="stat-val">78%</span>
+        </div>
+        <div class="stat">
+          <span class="upper tiny muted">用时</span>
+          <span class="stat-val">4分32秒</span>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="cta-col">
+        <button class="btn btn-ghost">重新练习</button>
+        <button class="btn btn-primary">回到卡片库</button>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <div class="section-label">&#x1F4CA; 题型正确率</div>
+
+      <div class="chart-item">
+        <span class="chart-label">单选题</span>
+        <div class="chart-track">
+          <div class="nebula-bar">
+            <div class="fill" style="width:85%"></div>
+          </div>
+        </div>
+        <span class="chart-pct">85%</span>
+      </div>
+
+      <div class="chart-item">
+        <span class="chart-label">多选题</span>
+        <div class="chart-track">
+          <div class="nebula-bar">
+            <div class="fill" style="width:70%"></div>
+          </div>
+        </div>
+        <span class="chart-pct">70%</span>
+      </div>
+
+      <div class="chart-item">
+        <span class="chart-label">判断题</span>
+        <div class="chart-track">
+          <div class="nebula-bar">
+            <div class="fill" style="width:90%"></div>
+          </div>
+        </div>
+        <span class="chart-pct">90%</span>
+      </div>
+    </div>
+
+    <!-- Review Header -->
+    <div class="review-header">
+      <span class="bold">&#x1F3AF; 错题回顾</span>
+      <span class="muted small">10 题</span>
+    </div>
+
+    <!-- Review List -->
+    <div class="review-list">
+
+      <!-- Wrong Item 1 -->
+      <div class="glass holo-edge review-item">
+        <div class="badge bad">
+          <span>&#x2717;</span>
+        </div>
+        <div class="grow" style="min-width:0">
+          <span class="r-prompt">下列哪个选项不属于面向对象编程的特性？</span>
+          <div class="r-ans">
+            <span class="upper tiny muted">你答</span>
+            <span class="ans-text strike">A. 封装</span>
+            <span class="upper tiny muted" style="margin-top:4px">正解</span>
+            <span class="ans-text">D. 函数重载</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wrong Item 2 -->
+      <div class="glass holo-edge review-item">
+        <div class="badge bad">
+          <span>&#x2717;</span>
+        </div>
+        <div class="grow" style="min-width:0">
+          <span class="r-prompt">在Python中，以下哪个数据类型是可变的？</span>
+          <div class="r-ans">
+            <span class="upper tiny muted">你答</span>
+            <span class="ans-text strike">A. 元组</span>
+            <span class="upper tiny muted" style="margin-top:4px">正解</span>
+            <span class="ans-text">B. 列表</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wrong Item 3 -->
+      <div class="glass holo-edge review-item">
+        <div class="badge bad">
+          <span>&#x2717;</span>
+        </div>
+        <div class="grow" style="min-width:0">
+          <span class="r-prompt">以下哪种设计模式属于创建型模式？</span>
+          <div class="r-ans">
+            <span class="upper tiny muted">你答</span>
+            <span class="ans-text strike">C. 观察者模式</span>
+            <span class="upper tiny muted" style="margin-top:4px">正解</span>
+            <span class="ans-text">A. 工厂模式</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /review-list -->
+  </div><!-- /container -->
+</div><!-- /phone -->
+
+</body>
+</html>

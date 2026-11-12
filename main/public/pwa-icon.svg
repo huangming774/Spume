@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Taozhiyy app icon">
+  <rect width="512" height="512" rx="96" fill="#0b1020"/>
+  <circle cx="256" cy="256" r="166" fill="#f472b6" opacity="0.16"/>
+  <path
+    d="M256 104c28 42 54 76 96 104-42 28-76 54-104 96-28-42-54-76-96-104 42-28 76-54 104-96Z"
+    fill="#f9a8d4"
+  />
+  <path
+    d="M256 184c14 22 28 38 50 52-22 14-38 28-52 50-14-22-28-38-50-52 22-14 38-28 52-50Z"
+    fill="#ffffff"
+  />
+  <path
+    d="M158 340h196c13 0 24 11 24 24s-11 24-24 24H158c-13 0-24-11-24-24s11-24 24-24Z"
+    fill="#ffffff"
+    opacity="0.9"
+  />
+  <path
+    d="M178 408h156c9 0 16 7 16 16s-7 16-16 16H178c-9 0-16-7-16-16s7-16 16-16Z"
+    fill="#f472b6"
+  />
+</svg>

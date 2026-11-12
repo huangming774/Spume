@@ -1,0 +1,100 @@
+name: Validate Taozhiyy
+
+run-name: Validate ${{ github.sha }}
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "main/**"
+      - "blog/**"
+      - "build/**"
+      - "previews/project-gallery/**"
+      - "tools/build-project-gallery.mjs"
+      - "tools/test_project_gallery_deploy.py"
+      - "acg-api/**"
+      - "deploy/**"
+      - "shared/**"
+      - ".github/workflows/deploy.yml"
+  pull_request:
+    paths:
+      - "main/**"
+      - "blog/**"
+      - "build/**"
+      - "previews/project-gallery/**"
+      - "tools/build-project-gallery.mjs"
+      - "tools/test_project_gallery_deploy.py"
+      - "acg-api/**"
+      - "deploy/**"
+      - "shared/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: taozhiyy-validate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      VITE_API_BASE: https://taozhiyy.top
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: |
+            main/package-lock.json
+            blog/package-lock.json
+            build/package-lock.json
+            previews/project-gallery/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: acg-api/go.mod
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build acg-api
+        run: |
+          cd acg-api
+          go mod download
+          go mod verify
+          go test ./...
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o acg-api .
+
+      - name: Build main
+        run: |
+          cd main
+          npm ci
+          npm run build
+        env:
+          VITE_API_BASE: ${{ env.VITE_API_BASE }}
+
+      - name: Build blog
+        run: |
+          cd blog
+          npm ci
+          npm run clean
+          npm run build
+
+      - name: Build build site
+        run: |
+          cd build
+          npm ci
+          npm run build

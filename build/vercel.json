@@ -1,0 +1,15 @@
+{
+  "name": "tzyy11",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }],
+  "redirects": [
+    { "source": "/index.html", "destination": "/", "permanent": true },
+    { "source": "/articles.html", "destination": "/articles", "permanent": true },
+    { "source": "/archives.html", "destination": "/archives", "permanent": true },
+    { "source": "/message.html", "destination": "/message", "permanent": true },
+    { "source": "/post/:slug.html", "destination": "/post/:slug", "permanent": true }
+  ]
+}

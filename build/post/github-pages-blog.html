@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Github搭建博客笔记</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">Github搭建博客笔记</span><span class="i18n-en" style="display:none">Building a Blog with GitHub Pages</span></h1>
+    <div class="post-meta article-meta">
+      <span>2025-01-03</span>
+      <span>2500 <span data-i18n="metaWords">字</span></span>
+      <span>1536 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>10 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>任务：搭建GitHub博客的步骤学习笔记</h2>
+<h3>准备工作——注册GitHub</h3>
+<p>首先，打开 <a href="https://github.com">github.com</a>，来到GitHub的主界面，点击右上角进行注册（使用邮箱注册），登录。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/01.png" alt="GitHub首页" style="max-width:80%;"></p>
+<h3>STEP1 — 进行Fork</h3>
+<p>打开 <a href="https://mzlogin.github.io">mzlogin.github.io</a>，进入博客模板页面。往下拉页面会有Fork指南。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/02.png" alt="博客模板主页" style="max-width:80%;"></p>
+<p>上图即为博客的模版：</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/03.png" alt="模板展示1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/04.png" alt="模板展示2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<p>接下来开始进行Fork。点击Fork选项，然后Create a new fork。</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/05.png" alt="Fork步骤1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/06.png" alt="Fork步骤2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<p>进行设置Settings：</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/07.png" alt="Settings步骤1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/08.png" alt="Settings步骤2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<p>Fork后在浏览器网址搜索自己的网站（如：<code>ZenQG.github.io</code>），进入以下界面，加载不出来需等几分钟。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/09.png" alt="博客首次加载成功" style="max-width:80%;"></p>
+<p>当出现这个界面，证明前面的步骤已经成功，第一步完成！</p>
+<h3>STEP2——处理细节，装饰博客</h3>
+<h4>第一步：删除CNAME文件</h4>
+<p>此文件与域名有关，有需要可自行修改。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/10.png" alt="找到CNAME文件" style="max-width:80%;"></p>
+<h4>第二步——修改配置，装饰自己博客</h4>
+<p>首先，打开<code>_config.yml</code>，进入编辑：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/14.png" alt="打开_config.yml" style="max-width:80%;"></p>
+<p>然后，根据自己的要求更改一些内容：</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/15.png" alt="配置修改1" style="max-width:32%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/16.png" alt="配置修改2" style="max-width:32%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/17.png" alt="配置修改3" style="max-width:32%;border-radius:8px;">
+</div>
+
+<h4>第三步——配置评论系统（giscus）</h4>
+<p>打开 <a href="https://giscus.app/zh-CN">giscus.app/zh-CN</a>：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/18.png" alt="giscus首页" style="max-width:80%;"></p>
+<p>完成相应要求：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/19.png" alt="giscus配置步骤1" style="max-width:80%;"></p>
+<p>确保自己的账号是公开的。打开Settings，往下拉找到Discussions勾选，勾选后出现绿色的Set up discussions进行点击：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/23.png" alt="Settings页面" style="max-width:80%;"></p>
+<p>安装giscus这个App：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/26.png" alt="安装giscus App" style="max-width:80%;"></p>
+<p>打开后进行下载和配置，完成后来到以下界面：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/27.png" alt="giscus配置完成" style="max-width:80%;"></p>
+<p>重新回到 <a href="https://giscus.app/zh-CN">giscus.app/zh-CN</a> 进行仓库验证：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/bistutzyy/tzyy/image-20241001150351940.png" alt="仓库验证" style="max-width:80%;"></p>
+<p>验证成功后进入Discussion分类：</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/28.png" alt="Discussion分类1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/29.png" alt="Discussion分类2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<p>启用giscus，首先进行复制（由于不兼容可不复制后面比对修改）：</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/30.png" alt="启用giscus步骤1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/31.png" alt="启用giscus步骤2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<h4>第四步——谷歌数据分析</h4>
+<p>打开 <a href="https://analytics.google.com">analytics.google.com</a>，没有账号需自己注册+科学上网工具。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/32.png" alt="Google Analytics" style="max-width:80%;"></p>
+<p>谷歌分析展示的页面由于为手机操作效果不好，建议使用电脑，展示如下：</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/33.jpg" alt="Google Analytics面板" style="max-width:80%;"></p>
+<p>将自己的ID输入后完成配置操作。</p>
+<p>以上便是博客的初步搭建！</p>
+<h2>附录</h2>
+<h3>附1：关于部分文件夹的讲解</h3>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/34.png" alt="文件夹结构讲解" style="max-width:80%;"></p>
+<h3>附2：修改博客图标网址</h3>
+<p>图标资源网站：<a href="https://primer.style/foundations/icons/">primer.style/foundations/icons</a></p>
+<h3>附3：关于新建文件和上传文件</h3>
+<p>在GitHub仓库中可以直接新建文件和文件夹。关于新建文件和文件夹的方法如下：</p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/36.png" alt="新建文件1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/37.png" alt="新建文件2" style="max-width:48%;border-radius:8px;">
+</div>
+
+<h3>附4：关于谷歌账号的注册</h3>
+<p>谷歌账号注册需要科学上网工具，正常注册需邮箱和国外手机号。根据我的尝试（用的vivo手机）可以通过下载谷歌商店（Google Play）在里面注册可以跳过手机号验证。以上只是个人尝试，不一定有用，建议上网查查解决方案。</p>
+<h3>附5：成果展示</h3>
+<p>下面是个人搭建博客的结果：</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/38.png" alt="成果展示1" style="max-width:32%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/39.png" alt="成果展示2" style="max-width:32%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/40.png" alt="成果展示3" style="max-width:32%;border-radius:8px;">
+</div>
+
+<h3>附6：感悟分享</h3>
+<p>学习GitHub的搭建是对我的一个考验，当我真正想要去完成这个博客的搭建……有勇气去向学长请教问题，有毅力去完成这么一个完整的文件。在这其中自然是有方方面面的不足，但我还是很欣喜能够完成这么一个对我而言看起来高深莫测的一个方向，也让我有自信去面对学习上的挑战。</p>
+<h2>感谢观看！！</h2></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>Building a Blog with GitHub Pages</h2>
+<h3>Preparation — Register GitHub</h3>
+<p>Open <a href="https://github.com">github.com</a> and sign up with your email.</p>
+<h3>STEP1 — Fork a Template</h3>
+<p>Open <a href="https://mzlogin.github.io">mzlogin.github.io</a> to see the blog template. Click Fork, then Create a new fork. After forking, visit <code>your-username.github.io</code> in your browser.</p>
+<h3>STEP2 — Configure Your Blog</h3>
+<h4>Delete CNAME File</h4>
+<p>This file is related to custom domains. Remove if not needed.</p>
+<h4>Edit <code>_config.yml</code></h4>
+<p>Open and modify the configuration file to personalize your blog.</p>
+<h4>Set Up Comment System (giscus)</h4>
+<p>Visit <a href="https://giscus.app/zh-CN">giscus.app</a>, follow the steps, install the giscus GitHub App, and configure your repository.</p>
+<h4>Google Analytics</h4>
+<p>Set up at <a href="https://analytics.google.com">analytics.google.com</a> and add your tracking ID.</p>
+<h2>Appendix</h2>
+<h3>Tips and Reflections</h3>
+<p>Building this blog was a challenge for me. I'm grateful for the help from seniors and proud of completing something that initially seemed so daunting. This experience gave me confidence to face future learning challenges.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Switch —— 一站管理AI CLI工具的瑞士军刀</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">CC Switch —— 一站管理AI CLI工具的瑞士军刀</span><span class="i18n-en" style="display:none">CC Switch — The Swiss Army Knife for AI CLI Tools</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-13</span>
+      <span>2000 <span data-i18n="metaWords">字</span></span>
+      <span>478 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>8 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><p>如果你同时使用Claude Code、Codex、Gemini CLI等多个AI编程CLI工具，你一定经历过这些痛苦：改配置文件切来切去、API Key记不住、供应商地址找半天、MCP服务器每个工具配一遍……</p>
+<p>CC Switch就是来解决这些问题的。它由GitHub用户farion1231开发，开源免费（MIT协议），截止2026年初已斩获5.4万Star。</p>
+<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-13_17-13-24.png" alt="CC Switch界面" style="max-width:80%;"></p>
+<h2>一、CC Switch是什么？</h2>
+<p>CC Switch是一款基于Tauri 2构建的跨平台桌面应用，核心定位是AI CLI工具的全能配置管理助手。</p>
+<p>简单说：它是一个可视化的配置面板，让你不用再手动编辑JSON/TOML/.env文件来切换AI模型供应商。</p>
+<p>支持的应用：<strong>Claude Code</strong> · <strong>Codex</strong> (OpenAI) · <strong>Gemini CLI</strong> · <strong>OpenCode</strong> · <strong>OpenClaw</strong> · <strong>Hermes Agent</strong></p>
+<h2>二、核心功能一览</h2>
+<h3>1. 多供应商一键切换</h3>
+<p>内置50+预设供应商，覆盖几乎所有主流AI API平台：</p>
+<table>
+<thead>
+<tr>
+<th>分类</th>
+<th>供应商</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>官方</td>
+<td>Anthropic、OpenAI、Google Gemini</td>
+</tr>
+<tr>
+<td>国产</td>
+<td>DeepSeek、Kimi、智谱GLM、Moonshot、百川、Qwen</td>
+</tr>
+<tr>
+<td>聚合平台</td>
+<td>OpenRouter、SiliconFlow、AIHubMix、NVIDIA NIM</td>
+</tr>
+<tr>
+<td>云服务</td>
+<td>AWS Bedrock、Azure、Google Cloud</td>
+</tr>
+</tbody>
+</table>
+<p>支持Anthropic Messages原生格式和OpenAI Chat Completions兼容格式，无论供应商用哪种API格式都能适配。</p>
+<p>切换供应商只需在CC Switch中选择对应配置，所有关联的CLI工具即时生效，无需重启终端。</p>
+<h3>2. MCP服务器统一管理</h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>统一面板</td>
+<td>单一面板管理所有应用的MCP配置</td>
+</tr>
+<tr>
+<td>多协议</td>
+<td>支持 stdio / http / sse 三种传输类型</td>
+</tr>
+<tr>
+<td>预设模板</td>
+<td>fetch、context7、sequential-thinking 等开箱即用</td>
+</tr>
+<tr>
+<td>智能校验</td>
+<td>冲突检测与字段校验</td>
+</tr>
+<tr>
+<td>跨应用同步</td>
+<td>Claude Code / Codex / Gemini CLI / OpenCode 双向同步</td>
+</tr>
+</tbody>
+</table>
+<p>不用再每个工具重复配置一遍MCP了，CC Switch自动帮你做双向同步。</p>
+<h3>3. Skills管理</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>自动发现</td>
+<td>扫描GitHub热门Claude Skills仓库</td>
+</tr>
+<tr>
+<td>一键操作</td>
+<td>安装 / 卸载 / 更新Skills，支持批量</td>
+</tr>
+<tr>
+<td>本地导入</td>
+<td>支持从本地ZIP安装</td>
+</tr>
+<tr>
+<td>预设仓库</td>
+<td>内置 baoyu-skills 等精选源</td>
+</tr>
+<tr>
+<td>版本管理</td>
+<td>版本回滚，随时切回旧版</td>
+</tr>
+</tbody>
+</table>
+<p>相当于一个Skills的应用商店，不用手动下载解压拷贝了。</p>
+<h3>4. 本地路由 &amp; 故障转移</h3>
+<p>内置了一个高性能HTTP本地代理，提供：</p>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>请求监控</td>
+<td>实时查看API请求/响应</td>
+</tr>
+<tr>
+<td>自动故障转移</td>
+<td>主供应商挂掉自动切备用</td>
+</tr>
+<tr>
+<td>熔断器</td>
+<td>连续失败达阈值自动暂停</td>
+</tr>
+<tr>
+<td>健康监控</td>
+<td>供应商延迟可视化面板</td>
+</tr>
+<tr>
+<td>用量统计</td>
+<td>Token消耗、成本追踪、缓存命中率</td>
+</tr>
+</tbody>
+</table>
+<p>还有一个Claude Rectifier功能——修复第三方API网关的thinking block签名格式问题，让DeepSeek等国产模型在Claude Code中也能完整输出思考过程。</p>
+<h3>5. 更多实用功能</h3>
+<ul>
+<li><strong>系统托盘</strong>：托盘秒切供应商，不用打开主窗口</li>
+<li><strong>会话管理</strong>：浏览、搜索、恢复、删除跨应用对话历史</li>
+<li><strong>云同步</strong>：WebDAV / Dropbox / OneDrive / iCloud 多设备同步配置</li>
+<li><strong>深链接</strong>：<code>ccswitch://</code> 协议一键导入供应商/MCP配置</li>
+<li><strong>Prompts管理</strong>：Markdown实时编辑预览，跨应用同步CLAUDE.md</li>
+<li><strong>三语界面</strong>：中文 / English / 日本語</li>
+</ul>
+<h2>三、安装方式</h2>
+<p><strong>Windows</strong>：前往Releases页面下载最新MSI安装包或Portable免安装版。</p>
+<p><strong>macOS</strong>：</p>
+<pre><code class="language-bash">brew tap farion1231/ccswitch
+brew install --cask cc-switch
+</code></pre>
+<p><strong>Linux</strong>：</p>
+<pre><code class="language-bash"># Arch Linux (AUR)
+paru -S cc-switch-bin
+
+# Debian/Ubuntu
+wget https://github.com/farion1231/cc-switch/releases/latest/download/CC-Switch-latest-Linux.deb
+sudo dpkg -i CC-Switch-latest-Linux.deb
+</code></pre>
+<h2>四、实际使用体验</h2>
+<h3>配置效率</h3>
+<p>以前换一个供应商要改Claude Code的settings.json，再改Codex的TOML，还要改.env……现在在CC Switch里选一下，所有工具自动生效。</p>
+<h3>MCP不再重复配置</h3>
+<p>MCP服务器在CC Switch里配置一次，Claude Code和Codex都能用，新增工具时也只需要加一次。</p>
+<h3>Skills安装超方便</h3>
+<p>之前装Skills要手动clone或者下载ZIP解压到.claude/skills/目录，现在在CC Switch里浏览 → 点击安装 → 搞定。</p>
+<h3>故障转移保住效率</h3>
+<p>用DeepSeek的时候偶尔会遇到API限流，本地路由自动切到备用供应商，基本无感切换。</p>
+<h2>五、技术架构</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术栈</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>前端</strong></td>
+<td>React 18 + TypeScript + Vite + TailwindCSS + shadcn/ui + TanStack Query v5</td>
+</tr>
+<tr>
+<td><strong>后端</strong></td>
+<td>Rust（Tauri 2）</td>
+</tr>
+<tr>
+<td><strong>存储</strong></td>
+<td>SQLite</td>
+</tr>
+<tr>
+<td><strong>跨平台</strong></td>
+<td>Windows / macOS / Linux（x64 + arm64）</td>
+</tr>
+</tbody>
+</table>
+<p>Tauri 2让它体积小巧（相比Electron应用），同时Rust保证了本地代理的性能。</p>
+<h2>六、总结</h2>
+<p>如果你每天和Claude Code/Codex/Gemini CLI打交道，CC Switch是必装工具。它把"改配置"这件事从5分钟压缩到5秒，加上MCP和Skills管理、本地路由这些锦上添花的功能，完全可以取代手动管理配置文件的原始方式。</p>
+<p>项目地址：<a href="https://github.com/farion1231/cc-switch">https://github.com/farion1231/cc-switch</a></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>What is CC Switch?</h2>
+<p>A Tauri 2-based cross-platform desktop app for managing all your AI CLI tools — Claude Code, Codex, Gemini CLI — from one panel. 50+ built-in providers, one-click switching, no more manual config editing.</p>
+<h2>Core Features</h2>
+<h3>Provider Switching</h3>
+<p>50+ preset providers (Anthropic, OpenAI, DeepSeek, Kimi, OpenRouter, etc.) with instant switching across all connected CLI tools.</p>
+<h3>MCP Management</h3>
+<p>Configure MCP servers once, sync across Claude Code, Codex, and Gemini CLI automatically.</p>
+<h3>Skills Management</h3>
+<p>Browse, install, update, and rollback Claude Code Skills from GitHub — like an app store for Skills.</p>
+<h3>Local Routing &amp; Failover</h3>
+<p>Built-in HTTP proxy with request monitoring, automatic failover, circuit breaker, health monitoring, and usage statistics.</p>
+<h2>Installation</h2>
+<p>Available on Windows (MSI/Portable), macOS (Homebrew), and Linux (AUR/deb/rpm/AppImage).</p>
+<h2>Verdict</h2>
+<p>If you use multiple AI CLI tools daily, CC Switch is a must-have. It compresses config switching from 5 minutes to 5 seconds.</p>
+<p>Repo: <a href="https://github.com/farion1231/cc-switch">https://github.com/farion1231/cc-switch</a></p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

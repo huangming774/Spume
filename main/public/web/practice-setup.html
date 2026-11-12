@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>开始练习 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .step {
+    border-radius: 24px;
+    padding: 22px;
+    margin-bottom: 16px;
+    opacity: 1;
+    transition: opacity .3s;
+  }
+  .step.locked { opacity: .4; pointer-events: none; }
+
+  .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 9999px;
+    background: var(--primary); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; flex-shrink: 0;
+  }
+  .step-num.done { background: #ecfbf0; color: #3c4a42; border: 1px solid #bbcac0; }
+  .step-title { font-size: 16px; font-weight: 600; }
+  .step-hint  { font-size: 13px; color: var(--on-surface-variant); margin-left: auto; }
+
+  /* count chips */
+  .count-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .count-chip {
+    padding: 18px 6px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.6);
+    border: 1.5px solid rgba(255,255,255,.9);
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .count-chip:hover { background: rgba(255,255,255,.9); transform: translateY(-2px); }
+  .count-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(87,96,101,.25);
+  }
+  .count-chip .n {
+    font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1;
+  }
+  .count-chip .lbl { font-size: 11px; opacity: .7; margin-top: 4px; }
+  .count-custom {
+    margin-top: 10px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--on-surface-variant);
+  }
+  .count-custom input {
+    width: 80px; padding: 8px 12px;
+    border: 1px solid var(--outline-variant); border-radius: 10px;
+    background: rgba(255,255,255,.8);
+    font: inherit;
+  }
+
+  /* category list */
+  .cat-list { display: flex; flex-direction: column; gap: 8px; }
+  .cat-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.6);
+    border: 1.5px solid rgba(255,255,255,.9);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .cat-row:hover { background: rgba(255,255,255,.9); }
+  .cat-row.active {
+    background: rgba(240,249,255,.7);
+    border-color: var(--primary);
+  }
+  .cat-row .cat-emoji {
+    width: 40px; height: 40px; border-radius: 9999px;
+    background: rgba(255,255,255,.8);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .cat-row .cat-name { flex: 1; font-size: 15px; font-weight: 600; }
+  .cat-row .cat-meta { font-size: 12px; color: var(--on-surface-variant); }
+  .cat-row .check {
+    width: 22px; height: 22px; border-radius: 9999px;
+    border: 2px solid var(--outline-variant);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; color: transparent;
+    flex-shrink: 0;
+  }
+  .cat-row.active .check {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+
+  /* deck checkboxes */
+  .deck-list { display: flex; flex-direction: column; gap: 8px; }
+  .deck-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.6);
+    border: 1.5px solid rgba(255,255,255,.9);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .deck-row:hover { background: rgba(255,255,255,.9); }
+  .deck-row.active {
+    background: rgba(236,251,240,.5);
+    border-color: #bbcac0;
+  }
+  .deck-row .check {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid var(--outline-variant);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; color: transparent;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .deck-row.active .check {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .deck-row .body { flex: 1; min-width: 0; }
+  .deck-row h4 { margin: 0; font-size: 14px; font-weight: 600; }
+  .deck-row p  { margin: 4px 0 0; font-size: 12px; color: var(--on-surface-variant); line-height: 1.5; }
+
+  /* mode tiles */
+  .mode-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  @media (max-width: 600px) { .mode-grid { grid-template-columns: 1fr; } }
+  .mode-tile {
+    padding: 20px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.7);
+    border: 1.5px solid rgba(255,255,255,.9);
+    text-align: left;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .mode-tile:hover { background: rgba(255,255,255,.95); transform: translateY(-2px); }
+  .mode-tile.active {
+    border-color: var(--primary);
+    background: rgba(240,249,255,.7);
+  }
+  .mode-tile .ico { font-size: 32px; display:block; }
+  .mode-tile h4 { margin: 8px 0 4px; font-size: 16px; font-weight: 600; }
+  .mode-tile p  { margin: 0; font-size: 12px; color: var(--on-surface-variant); line-height: 1.5; }
+  .mode-tile .recommended {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    background: rgba(236,251,240,.7); color: #3c4a42;
+    padding: 2px 8px; border-radius: 9999px;
+    border: 1px solid #bbcac0;
+  }
+
+  .summary-stat {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    padding: 14px 18px;
+    background: rgba(236,251,240,.5);
+    border: 1px solid rgba(187,202,192,.5);
+    border-radius: 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .summary-stat .item strong {
+    font-size: 18px; font-weight: 700; color: var(--primary);
+    margin-right: 4px;
+  }
+
+  .start-bar {
+    position: sticky; bottom: 16px;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(20px);
+    border:1px solid rgba(255,255,255,.9);
+    border-radius: 18px; padding: 14px;
+    display: flex; align-items: center; gap: 12px; justify-content: space-between;
+    margin-top: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.06);
+  }
+  .start-bar .info { font-size: 13px; color: var(--on-surface-variant); }
+  .start-bar .info b { color: var(--on-surface); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<main class="page" style="max-width:720px">
+  <div style="display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+    <div>
+      <span class="chip chip-blue">
+        <span class="material-symbols-outlined" style="font-size:14px">play_arrow</span>
+        Practice Setup
+      </span>
+      <h1 class="page-title" style="margin-top:10px">开始练习</h1>
+      <p class="page-sub">按步骤选好你想练的内容，最后选模式开练。</p>
+    </div>
+    <a class="btn btn-ghost" href="index.html">
+      <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>返回
+    </a>
+  </div>
+
+  <!-- Step 1: 分类方式 -->
+  <section class="glass holo-edge step" id="step-1">
+    <div class="step-head">
+      <span class="step-num" id="num-1">1</span>
+      <span class="step-title">怎么分类？</span>
+      <span class="step-hint" id="hint-1">选个分类方式</span>
+    </div>
+    <div class="mode-grid">
+      <button class="mode-tile" data-group="date">
+        <span class="ico">📅</span>
+        <h4>按添加日期</h4>
+        <p>按建卡时间分组：今天 / 最近一周 / 最近一月 / 全部。</p>
+      </button>
+      <button class="mode-tile" data-group="subject">
+        <span class="ico">🏷️</span>
+        <h4>按学科</h4>
+        <p>按学科分组：英语 / 物理 / 生物学 / 全部分类…</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 2: 具体选项（根据 step1 动态决定） -->
+  <section class="glass holo-edge step locked" id="step-2">
+    <div class="step-head">
+      <span class="step-num" id="num-2">2</span>
+      <span class="step-title" id="step-2-title">练哪一类？</span>
+      <span class="step-hint" id="hint-2">先选分类方式</span>
+    </div>
+    <div class="cat-list" id="cat-list"></div>
+  </section>
+
+  <!-- Step 3: decks -->
+  <section class="glass holo-edge step locked" id="step-3">
+    <div class="step-head">
+      <span class="step-num" id="num-3">3</span>
+      <span class="step-title">选要练的卡片集</span>
+      <span class="step-hint" id="hint-3">可多选</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" id="btn-select-all">全选</button>
+      <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" id="btn-select-none">清空</button>
+    </div>
+    <div class="deck-list" id="deck-list"></div>
+  </section>
+
+  <!-- Step 4: mode -->
+  <section class="glass holo-edge step locked" id="step-4">
+    <div class="step-head">
+      <span class="step-num" id="num-4">4</span>
+      <span class="step-title">用哪种模式？</span>
+    </div>
+    <div class="mode-grid">
+      <button class="mode-tile" data-mode="deep">
+        <span class="recommended">RECOMMENDED</span>
+        <span class="ico">🧠</span>
+        <h4>Deep Practice 深度练习</h4>
+        <p>词卡式逐题过，节奏舒缓，带解析提示，适合长期记忆。</p>
+      </button>
+      <button class="mode-tile" data-mode="quick">
+        <span class="ico">⚡</span>
+        <h4>Quick Practice 速练模式</h4>
+        <p>连发选择题，快节奏即时反馈，适合临考热身。</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- Start bar -->
+  <div class="start-bar">
+    <div class="info" id="start-info">先完成上面 4 步</div>
+    <button class="btn btn-primary" id="btn-start" disabled>
+      开始练习
+      <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
+    </button>
+  </div>
+</main>
+
+<script type="module">
+import { Store } from './assets/store.js';
+import { mountShell, toast } from './assets/shell.js';
+mountShell('practice', { requireAuth: false });
+
+// State
+const state = {
+  group: null,          // 'date' | 'subject'
+  category: null,       // 'all' | subject string | date bucket key
+  selectedDecks: new Set(),
+  mode: null,
+};
+
+let allDecks = [];
+let availableDecks = [];
+
+// ---- init ----
+(async () => {
+  allDecks = await Store.listDecks();
+  if (!allDecks.length) {
+    toast('请先创建卡片集', 'error');
+    setTimeout(() => location.href = 'create.html', 1200);
+    return;
+  }
+  bindGroupTiles();
+  bindModeTiles();
+
+  // 如果 URL 携带 deckId（从首页"开始练习"过来），预选学科分类 + 该卡片集
+  const urlDeck = new URLSearchParams(location.search).get('deckId');
+  if (urlDeck) {
+    const d = allDecks.find(x => x.id === urlDeck);
+    if (d) {
+      setTimeout(() => {
+        // 选"按学科"方式
+        pickGroup('subject');
+        // 选该学科
+        const target = [...document.querySelectorAll('.cat-row')]
+          .find(r => r.dataset.key === d.subject);
+        if (target) target.click();
+        // 只选当前 deck
+        state.selectedDecks.clear();
+        state.selectedDecks.add(d.id);
+        document.querySelectorAll('.deck-row').forEach(row => {
+          row.classList.toggle('active', state.selectedDecks.has(row.dataset.deckId));
+        });
+        refresh();
+      }, 0);
+    }
+  }
+  refresh();
+})();
+
+// ---- Step 1: 分类方式 ----
+function bindGroupTiles() {
+  document.querySelectorAll('#step-1 .mode-tile').forEach(b => {
+    b.addEventListener('click', () => pickGroup(b.dataset.group));
+  });
+}
+function pickGroup(g) {
+  state.group = g;
+  state.category = null;
+  state.selectedDecks.clear();
+  document.querySelectorAll('#step-1 .mode-tile').forEach(x => {
+    x.classList.toggle('active', x.dataset.group === g);
+  });
+  // 改 step2 标题
+  document.getElementById('step-2-title').textContent =
+    g === 'date' ? '按日期 — 练哪一段时间的？' : '按学科 — 练哪一类？';
+  document.getElementById('hint-2').textContent = '选一个';
+  renderCategories();
+  // 清空 step3
+  document.getElementById('deck-list').innerHTML = '';
+  refresh();
+}
+
+// ---- Step 2: 具体选项 ----
+function renderCategories() {
+  const list = document.getElementById('cat-list');
+  list.innerHTML = '';
+  if (state.group === 'date') {
+    renderDateBuckets(list);
+  } else {
+    renderSubjectBuckets(list);
+  }
+}
+
+function renderSubjectBuckets(list) {
+  const subjects = {};
+  allDecks.forEach(d => {
+    if (!subjects[d.subject]) subjects[d.subject] = { count: 0, cards: 0 };
+    subjects[d.subject].count++;
+    subjects[d.subject].cards += d.cardCount;
+  });
+  const allCards = allDecks.reduce((a,d) => a + d.cardCount, 0);
+  list.appendChild(makeCatRow('all', '🗂', '全部分类', `${allDecks.length} 集 · ${allCards} 题`));
+  Object.keys(subjects).sort().forEach(s => {
+    list.appendChild(makeCatRow(s, emojiFor(s), s, `${subjects[s].count} 集 · ${subjects[s].cards} 题`));
+  });
+}
+
+function renderDateBuckets(list) {
+  // 按 createdAt 分桶
+  const now = Date.now();
+  const DAY = 86400000;
+  const buckets = [
+    { key:'today',  emoji:'🕐', name:'今天添加的',     match: t => (now - t) < DAY },
+    { key:'week',   emoji:'📆', name:'最近一周',       match: t => (now - t) < 7*DAY },
+    { key:'month',  emoji:'🗓', name:'最近一个月',     match: t => (now - t) < 30*DAY },
+    { key:'older',  emoji:'📚', name:'更早之前',       match: t => (now - t) >= 30*DAY },
+    { key:'all',    emoji:'🗂', name:'全部时间',       match: () => true },
+  ];
+  buckets.forEach(b => {
+    const matched = allDecks.filter(d => b.match(d.createdAt || 0));
+    if (!matched.length && b.key !== 'all') return;     // 桶里没东西就不显示（all 永远显示）
+    const cards = matched.reduce((a,d) => a + d.cardCount, 0);
+    list.appendChild(makeCatRow(b.key, b.emoji, b.name, `${matched.length} 集 · ${cards} 题`));
+  });
+}
+
+function makeCatRow(key, emoji, name, meta) {
+  const row = document.createElement('button');
+  row.className = 'cat-row';
+  row.dataset.key = key;
+  row.innerHTML = `
+    <span class="cat-emoji">${emoji}</span>
+    <span style="flex:1">
+      <span class="cat-name">${name}</span>
+      <div class="cat-meta">${meta}</div>
+    </span>
+    <span class="check">✓</span>
+  `;
+  row.addEventListener('click', () => {
+    document.querySelectorAll('.cat-row').forEach(x => x.classList.remove('active'));
+    row.classList.add('active');
+    state.category = key;
+    state.selectedDecks.clear();
+    renderDeckList();
+    refresh();
+  });
+  return row;
+}
+
+function emojiFor(s) {
+  return ({'英语':'🇬🇧','数学':'∑','物理':'⚛️','化学':'🧪','生物学':'🧬','历史':'📜','地理':'🌍','政治':'⚖️','语文':'📖','编程':'💻','法律':'⚖️','医学':'⚕️','通用':'📌'})[s] || '📚';
+}
+
+// ---- Step 3: decks ----
+function getDecksForCategory() {
+  if (!state.category) return [];
+  if (state.group === 'subject') {
+    return state.category === 'all' ? allDecks : allDecks.filter(d => d.subject === state.category);
+  }
+  // date group
+  const now = Date.now(), DAY = 86400000;
+  if (state.category === 'today')  return allDecks.filter(d => (now - d.createdAt) < DAY);
+  if (state.category === 'week')   return allDecks.filter(d => (now - d.createdAt) < 7*DAY);
+  if (state.category === 'month')  return allDecks.filter(d => (now - d.createdAt) < 30*DAY);
+  if (state.category === 'older')  return allDecks.filter(d => (now - d.createdAt) >= 30*DAY);
+  return allDecks;
+}
+
+function renderDeckList() {
+  const host = document.getElementById('deck-list');
+  availableDecks = getDecksForCategory();
+  host.innerHTML = '';
+  if (!availableDecks.length) {
+    host.innerHTML = `<div style="text-align:center;padding:24px;color:var(--on-surface-variant);font-size:13px">该范围内没有卡片集</div>`;
+    return;
+  }
+  // default: select all
+  availableDecks.forEach(d => state.selectedDecks.add(d.id));
+
+  availableDecks.forEach(d => {
+    const row = document.createElement('button');
+    row.className = 'deck-row active';
+    row.dataset.deckId = d.id;
+    const dateStr = fmtCreatedAt(d.createdAt);
+    row.innerHTML = `
+      <span class="check">✓</span>
+      <span class="body">
+        <h4>${esc(d.title)}</h4>
+        <p>${emojiFor(d.subject)} ${d.subject} · ${d.cardCount} 题 · 添加于 ${dateStr}</p>
+      </span>
+    `;
+    row.addEventListener('click', () => {
+      if (state.selectedDecks.has(d.id)) {
+        state.selectedDecks.delete(d.id);
+        row.classList.remove('active');
+      } else {
+        state.selectedDecks.add(d.id);
+        row.classList.add('active');
+      }
+      refresh();
+    });
+    host.appendChild(row);
+  });
+}
+
+function fmtCreatedAt(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const diff = (today - dd) / 86400000;
+  if (diff === 0) return '今天';
+  if (diff === 1) return '昨天';
+  if (diff < 30)  return diff + ' 天前';
+  return (d.getMonth()+1) + '月' + d.getDate() + '日';
+}
+
+document.getElementById('btn-select-all').addEventListener('click', () => {
+  availableDecks.forEach(d => state.selectedDecks.add(d.id));
+  document.querySelectorAll('.deck-row').forEach(r => r.classList.add('active'));
+  refresh();
+});
+document.getElementById('btn-select-none').addEventListener('click', () => {
+  state.selectedDecks.clear();
+  document.querySelectorAll('.deck-row').forEach(r => r.classList.remove('active'));
+  refresh();
+});
+
+// ---- Step 4: mode ----
+function bindModeTiles() {
+  document.querySelectorAll('#step-4 .mode-tile').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#step-4 .mode-tile').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      state.mode = b.dataset.mode;
+      refresh();
+    });
+  });
+}
+
+// ---- refresh: lock/unlock steps, update info, enable start ----
+function refresh() {
+  document.getElementById('step-2').classList.toggle('locked', state.group === null);
+  document.getElementById('step-3').classList.toggle('locked', state.category === null);
+  document.getElementById('step-4').classList.toggle('locked', state.selectedDecks.size === 0);
+
+  document.getElementById('num-1').classList.toggle('done', state.group !== null);
+  document.getElementById('num-2').classList.toggle('done', state.category !== null);
+  document.getElementById('num-3').classList.toggle('done', state.selectedDecks.size > 0);
+  document.getElementById('num-4').classList.toggle('done', state.mode !== null);
+
+  document.getElementById('hint-1').textContent = state.group === null
+    ? '选个分类方式'
+    : (state.group === 'date' ? '按日期' : '按学科');
+
+  if (state.category !== null) {
+    const row = document.querySelector('.cat-row.active');
+    document.getElementById('hint-2').textContent = row ? row.querySelector('.cat-name').textContent : '已选';
+  }
+  document.getElementById('hint-3').textContent = `已选 ${state.selectedDecks.size} 集`;
+
+  const decks = allDecks.filter(d => state.selectedDecks.has(d.id));
+  const totalCards = decks.reduce((a,d) => a + d.cardCount, 0);
+
+  const info = document.getElementById('start-info');
+  const btn  = document.getElementById('btn-start');
+  const ready = state.group !== null && state.category !== null && state.selectedDecks.size > 0 && state.mode !== null;
+
+  if (!ready) {
+    info.textContent = state.group === null ? '请先选分类方式'
+      : state.category === null ? '请选具体分组'
+      : state.selectedDecks.size === 0 ? '请至少选一个卡片集'
+      : '请选练习模式';
+    btn.disabled = true;
+  } else {
+    info.innerHTML = `将从 <b>${decks.length}</b> 集中练 <b>${totalCards}</b> 题 · <b>${state.mode === 'deep' ? '深度' : '速练'}</b>模式`;
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  const deckIds = [...state.selectedDecks].join(',');
+  // 不再限制题数，默认练完所选范围的全部
+  location.href = `practice.html?decks=${deckIds}&mode=${state.mode}&limit=0`;
+});
+
+function esc(s='') { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

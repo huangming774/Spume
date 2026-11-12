@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>留言墙 · 桃之夭夭の创作屋</title>
+<script src="site-i18n.js" defer></script>
+<link rel="stylesheet" href="site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<script src="guestbook.js" defer></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #f9fafb;
+  color: #4a4458;
+}
+
+/* ===== 全站同款背景 ===== */
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 48% 58% at 92% 46%, rgba(255,255,255,0.98), transparent 70%),
+    radial-gradient(ellipse 42% 36% at 92% 92%, rgba(255,253,249,0.98), transparent 68%),
+    linear-gradient(145deg, #ffffff 0%, #fcfdff 34%, #fffdf9 68%, #fbfcfb 100%);
+}
+.bg::before {
+  content: "";
+  position: absolute; inset: -18%;
+  background: linear-gradient(120deg,
+    rgba(198,218,255,0.22) 0%, rgba(255,226,238,0.2) 28%,
+    rgba(221,244,237,0.18) 52%, rgba(238,224,255,0.18) 74%,
+    rgba(255,246,222,0.16) 100%);
+  background-size: 220% 220%;
+  opacity: 0.72;
+  animation: colorFlow 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.bg::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 38% 66% at 92% 48%, rgba(255,255,255,0.88), transparent 72%),
+    radial-gradient(ellipse 48% 46% at 88% 94%, rgba(255,255,255,0.82), transparent 68%),
+    linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.32) 42%, rgba(255,255,255,0.6));
+  pointer-events: none;
+}
+@keyframes colorFlow {
+  0% { transform: translate3d(-2%,-1%,0) scale(1); background-position: 0% 45%; }
+  50% { transform: translate3d(2%,1%,0) scale(1.04); background-position: 70% 55%; }
+  100% { transform: translate3d(1%,-2%,0) scale(1.02); background-position: 100% 45%; }
+}
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+  position: relative; z-index: 10;
+  width: 220px; min-width: 220px; height: 100vh;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  border-right: 1px solid rgba(0,0,0,0.04);
+  display: flex; flex-direction: column; padding: 38px 22px;
+  flex-shrink: 0;
+}
+.sidebar-header { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 1.5px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.blog-name { color: #3a3a4a; font-size: 13px; font-weight: 500; letter-spacing: 1px; }
+.blog-name-full { line-height: 1.35; font-size: 12px; max-width: 140px; }
+.sidebar-social { display: flex; gap: 12px; margin-bottom: 32px; padding: 0 3px; }
+.sidebar-social a { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; transition: background 0.2s; }
+.sidebar-social a:hover { background: rgba(0,0,0,0.04); }
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; }
+.nav-item {
+  display: flex; align-items: center; gap: 11px; padding: 9px 13px; border-radius: 7px;
+  color: #b0b0b8; font-size: 12px; letter-spacing: 0.5px; text-decoration: none; transition: all 0.25s;
+}
+.nav-item:hover { background: rgba(0,0,0,0.02); color: #666; }
+.nav-item.active { background: rgba(0,0,0,0.03); color: #3a3a4a; }
+.nav-icon { width: 17px; height: 17px; opacity: 0.35; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.nav-item.active .nav-icon { opacity: 0.65; }
+.lang-toggle-wrap { padding: 0 2px 10px; }
+.lang-toggle {
+  width: 100%; border: 1px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.55);
+  border-radius: 8px; padding: 8px 6px; font-size: 11px; color: #888; cursor: pointer;
+}
+.lang-toggle:hover { background: rgba(140,160,190,0.12); color: #555; }
+.sidebar-footer { padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.03); color: #c0c0c4; font-size: 9px; letter-spacing: 1px; }
+
+/* ===== 主内容区：铺满右侧 ===== */
+.main {
+  position: relative; z-index: 5;
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 36px 40px 72px;
+}
+.mb-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* 居中主卡片 — 浅色琉璃（桃夭主题） */
+.mb-panel {
+  border-radius: 20px;
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow:
+    0 0 0 1px rgba(186,206,255,0.2) inset,
+    0 24px 64px rgba(140,130,170,0.12),
+    0 0 48px rgba(255,218,225,0.15);
+  overflow: hidden;
+}
+
+.mb-page-head {
+  text-align: center;
+  padding: 44px 32px 28px;
+  border-bottom: 1px solid rgba(186,206,255,0.22);
+  background:
+    radial-gradient(ellipse 80% 100% at 50% 0%, rgba(255,218,225,0.2), transparent 60%),
+    radial-gradient(ellipse 60% 80% at 20% 50%, rgba(186,206,255,0.12), transparent 55%);
+}
+.mb-page-title {
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: clamp(2.4rem, 5.5vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: 10px;
+  line-height: 1.1;
+  background: linear-gradient(112deg, #6b5a9e 0%, #b67aa0 46%, #7f9ddf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 8px 24px rgba(155,140,200,0.2));
+}
+.mb-page-sub {
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 15px;
+  color: #8a8298;
+  letter-spacing: 4px;
+}
+
+.mb-sep {
+  display: flex; align-items: center; justify-content: center;
+  padding: 22px 32px;
+}
+.mb-sep-line {
+  flex: 1; height: 0;
+  border-top: 1px dashed rgba(186,170,255,0.45);
+}
+.mb-sep-icon {
+  width: 34px; height: 34px; margin: 0 14px;
+  border-radius: 10px;
+  border: 1px dashed rgba(186,170,255,0.5);
+  display: grid; place-items: center;
+  font-size: 13px; color: #b8a8d8;
+  background: rgba(255,255,255,0.65);
+  box-shadow: 0 4px 16px rgba(186,170,255,0.12);
+}
+
+.mb-comments { padding: 8px 32px 40px; }
+.mb-section-title {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+  font-size: 17px; font-weight: 600;
+  color: #5a5268; letter-spacing: 2px;
+}
+.mb-section-title svg {
+  width: 18px; height: 18px;
+  color: #9b8fd4; flex-shrink: 0;
+}
+
+/* Hexo 三栏表单（浅色版） */
+.mb-form {
+  border-radius: 14px;
+  border: 1px solid rgba(186,206,255,0.35);
+  background: rgba(255,255,255,0.72);
+  overflow: hidden;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 28px rgba(140,130,170,0.08);
+}
+.mb-form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px dashed rgba(200,195,230,0.65);
+}
+.mb-form-cell + .mb-form-cell { border-left: 1px dashed rgba(200,195,230,0.65); }
+.mb-form-cell label {
+  display: block;
+  padding: 10px 14px 4px;
+  font-size: 11px; font-weight: 600;
+  color: #9a92a8; letter-spacing: 0.5px;
+}
+.mb-form-cell input {
+  width: 100%; border: none; outline: none;
+  background: transparent;
+  padding: 0 14px 12px;
+  font-size: 13px; color: #4a4458;
+  font-family: inherit;
+}
+.mb-form-cell input::placeholder { color: #c8c0d0; }
+.mb-form-cell input:focus { background: rgba(186,206,255,0.1); }
+.mb-form-body textarea {
+  width: 100%; min-height: 128px; border: none; outline: none; resize: vertical;
+  padding: 16px; font-size: 14px; line-height: 1.78; color: #4a4458;
+  background: transparent; font-family: inherit;
+}
+.mb-form-body textarea::placeholder { color: #c8c0d0; }
+.mb-form-body textarea:focus { background: rgba(255,252,255,0.5); }
+.mb-form-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px dashed rgba(200,195,230,0.5);
+  background: rgba(248,246,252,0.85);
+}
+.mb-char-count { font-size: 11px; color: #aaa5b8; font-variant-numeric: tabular-nums; }
+.mb-btn-primary {
+  border: none; border-radius: 999px;
+  padding: 9px 26px;
+  font-family: "Ma Shan Zheng", "ZCOOL XiaoWei", serif;
+  font-size: 16px; letter-spacing: 3px;
+  color: #fff; cursor: pointer;
+  background: linear-gradient(135deg, #d090b4, #ab9ed8 50%, #86aae6);
+  box-shadow: 0 8px 22px rgba(160,148,204,0.32);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.mb-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(160,148,204,0.4);
+}
+.mb-local-hint {
+  margin-bottom: 24px;
+  font-size: 11px; color: #b0a8bc; text-align: center;
+}
+
+.mb-count-bar {
+  margin-bottom: 18px;
+  font-size: 15px; font-weight: 700; color: #5a5268;
+  letter-spacing: 1px;
+}
+.mb-count-bar em {
+  font-style: normal;
+  font-size: 20px;
+  background: linear-gradient(120deg, #8b68b8, #7a9ee8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-right: 4px;
+}
+
+/* 评论列表 */
+#envList { list-style: none; }
+.wl-item {
+  display: flex; gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(210,206,228,0.65);
+}
+.wl-item:last-child { border-bottom: none; }
+.wl-item--new { animation: wlIn 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes wlIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.wl-avatar {
+  flex-shrink: 0;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: "Ma Shan Zheng", serif;
+  font-size: 20px; color: #fff;
+  box-shadow: 0 6px 18px rgba(150,140,190,0.22);
+}
+.wl-item--v1 .wl-avatar { background: linear-gradient(145deg, #e8a8c8, #8898e0); }
+.wl-item--v2 .wl-avatar { background: linear-gradient(145deg, #88d0c0, #68a8e0); }
+.wl-item--v3 .wl-avatar { background: linear-gradient(145deg, #d0a0c8, #7888d8); }
+.wl-item--v4 .wl-avatar { background: linear-gradient(145deg, #b090e0, #7098f0); }
+.wl-main { flex: 1; min-width: 0; }
+.wl-header {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px 10px; margin-bottom: 8px;
+}
+.wl-name {
+  font-size: 14px; font-weight: 700; color: #6e5a98;
+  font-family: "ZCOOL XiaoWei", "KaiTi", serif;
+}
+.wl-time {
+  margin-left: auto;
+  font-size: 11px; color: #b0a8bc;
+  font-variant-numeric: tabular-nums;
+}
+.wl-tags { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
+.wl-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 999px;
+  color: #9088a0;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(210,206,228,0.8);
+}
+.wl-content {
+  font-size: 14px; line-height: 1.82; color: #4a4458;
+  padding: 12px 16px;
+  border-radius: 4px 16px 16px 16px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(210,206,228,0.55);
+  box-shadow: 0 4px 14px rgba(140,130,170,0.06);
+}
+.wl-item--v1 .wl-content { background: linear-gradient(148deg, rgba(255,245,250,0.9), rgba(255,255,255,0.88)); }
+.wl-item--v2 .wl-content { background: linear-gradient(148deg, rgba(240,252,248,0.9), rgba(255,255,255,0.88)); }
+.wl-item--v3 .wl-content { background: linear-gradient(148deg, rgba(248,244,255,0.9), rgba(255,255,255,0.88)); }
+.wl-item--v4 .wl-content { background: linear-gradient(148deg, rgba(240,248,255,0.9), rgba(255,255,255,0.88)); }
+.wl-content p { margin: 0; }
+
+@media (max-width: 768px) {
+  .sidebar { width: 50px; min-width: 50px; padding: 20px 8px; }
+  .blog-name, .nav-label, .sidebar-footer, .sidebar-social { display: none; }
+  .nav-item { justify-content: center; padding: 8px; }
+  .main { padding: 24px 16px 48px; }
+  .mb-comments { padding: 8px 18px 32px; }
+  .mb-page-head { padding: 32px 20px 22px; }
+  .mb-page-title { letter-spacing: 5px; }
+  .mb-form-row { grid-template-columns: 1fr; }
+  .mb-form-cell + .mb-form-cell { border-left: none; border-top: 1px dashed rgba(200,195,230,0.65); }
+  .mb-form-foot { flex-direction: column; align-items: stretch; }
+  .mb-btn-primary { width: 100%; text-align: center; }
+  .wl-time { margin-left: 0; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg::before { animation: none; }
+  .wl-item--new { animation: none; }
+}
+
+/* ===== 留言墙美化：浅白玻璃花园版 ===== */
+.main {
+  position: relative;
+}
+.main::before,
+.main::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(18px);
+}
+.main::before {
+  width: 300px;
+  height: 300px;
+  left: calc(220px + 8vw);
+  top: 10vh;
+  background: radial-gradient(circle, rgba(255,218,225,0.28), transparent 68%);
+}
+.main::after {
+  width: 360px;
+  height: 360px;
+  right: 8vw;
+  bottom: 8vh;
+  background: radial-gradient(circle, rgba(186,206,255,0.22), transparent 70%);
+}
+.mb-wrap {
+  max-width: 1040px;
+}
+.mb-panel {
+  position: relative;
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,252,254,0.66) 48%, rgba(248,252,255,0.7));
+  border: 1px solid rgba(255,255,255,0.92);
+  box-shadow:
+    0 28px 80px rgba(132, 128, 160, 0.16),
+    inset 0 1px 0 rgba(255,255,255,0.82);
+}
+.mb-panel::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.72);
+  pointer-events: none;
+}
+.mb-page-head {
+  position: relative;
+  padding: 50px 42px 30px;
+  background:
+    radial-gradient(ellipse 62% 86% at 50% 0%, rgba(255,218,225,0.26), transparent 66%),
+    radial-gradient(ellipse 54% 70% at 84% 46%, rgba(186,206,255,0.18), transparent 62%);
+}
+.mb-page-head::after {
+  content: "message wall";
+  display: inline-block;
+  margin-top: 16px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: #9a91aa;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(220,216,232,0.72);
+}
+.mb-page-title {
+  letter-spacing: 8px;
+}
+.mb-page-sub {
+  color: #8f879d;
+}
+.mb-sep {
+  padding: 18px 42px 14px;
+}
+.mb-sep-icon {
+  transform: rotate(-8deg);
+  background: linear-gradient(145deg, rgba(255,255,255,0.88), rgba(248,244,255,0.72));
+}
+.mb-comments {
+  padding: 12px 42px 46px;
+}
+.mb-section-title {
+  padding: 0 2px;
+  color: #514a60;
+}
+.mb-form {
+  position: relative;
+  border-radius: 22px;
+  border: 1px solid rgba(211,216,232,0.82);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.68)),
+    radial-gradient(ellipse 80% 100% at 100% 0%, rgba(255,218,225,0.18), transparent 64%);
+  box-shadow:
+    0 18px 48px rgba(126, 118, 150, 0.1),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+}
+.mb-form::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 116px;
+  bottom: 58px;
+  background: repeating-linear-gradient(transparent 0, transparent 33px, rgba(186,176,205,0.12) 34px);
+  pointer-events: none;
+}
+.mb-form-row {
+  position: relative;
+  z-index: 1;
+  border-bottom-color: rgba(218,221,234,0.78);
+}
+.mb-form-cell + .mb-form-cell {
+  border-left-color: rgba(218,221,234,0.78);
+}
+.mb-form-cell label {
+  color: #766d84;
+  letter-spacing: 0.8px;
+}
+.mb-form-cell input,
+.mb-form-body textarea {
+  position: relative;
+  z-index: 1;
+}
+.mb-form-cell input:focus,
+.mb-form-body textarea:focus {
+  background: rgba(255,255,255,0.74);
+}
+.mb-form-body textarea {
+  min-height: 154px;
+}
+.mb-form-foot {
+  position: relative;
+  z-index: 1;
+  padding: 13px 16px;
+  background: rgba(249,248,253,0.78);
+}
+.mb-btn-primary {
+  min-width: 148px;
+  box-shadow:
+    0 12px 28px rgba(159, 148, 204, 0.32),
+    inset 0 1px 0 rgba(255,255,255,0.42);
+}
+.mb-btn-primary:focus-visible {
+  outline: 3px solid rgba(134,170,230,0.32);
+  outline-offset: 3px;
+}
+.mb-local-hint {
+  margin: 8px 0 26px;
+}
+.mb-count-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(220,216,232,0.74);
+}
+#envList {
+  display: grid;
+  gap: 16px;
+}
+.wl-item {
+  position: relative;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(220,224,234,0.72);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.86), rgba(255,255,255,0.66)),
+    radial-gradient(ellipse 70% 90% at 100% 0%, rgba(255,218,225,0.14), transparent 64%);
+  box-shadow: 0 12px 34px rgba(126, 118, 150, 0.08);
+  overflow: hidden;
+  transition: transform 0.26s ease, box-shadow 0.26s ease, border-color 0.26s ease;
+}
+.wl-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(186,206,255,0.78);
+  box-shadow: 0 18px 44px rgba(126, 118, 150, 0.13);
+}
+.wl-item::after {
+  content: "";
+  position: absolute;
+  right: -36px;
+  top: -42px;
+  width: 126px;
+  height: 126px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.62), transparent 70%);
+  pointer-events: none;
+}
+.wl-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 17px;
+  transform: rotate(-4deg);
+}
+.wl-main {
+  position: relative;
+  z-index: 1;
+}
+.wl-header {
+  margin-bottom: 10px;
+}
+.wl-name {
+  color: #51485f;
+  font-size: 16px;
+}
+.wl-time {
+  color: #aaa3b4;
+}
+.wl-tag {
+  background: rgba(247,248,252,0.86);
+}
+.wl-content {
+  border-radius: 5px 16px 16px 16px;
+  background: rgba(255,255,255,0.62);
+  border-color: rgba(224,224,234,0.66);
+  color: #4d4856;
+}
+
+@media (max-width: 768px) {
+  .main::before,
+  .main::after {
+    display: none;
+  }
+  .mb-panel {
+    border-radius: 22px;
+  }
+  .mb-page-head {
+    padding: 34px 20px 24px;
+  }
+  .mb-page-title {
+    letter-spacing: 5px;
+  }
+  .mb-comments {
+    padding: 10px 16px 30px;
+  }
+  .mb-form {
+    border-radius: 18px;
+  }
+  .mb-form::before {
+    top: 212px;
+  }
+  .wl-item {
+    padding: 16px;
+    border-radius: 18px;
+  }
+}
+.sidebar-toggle{position:absolute;top:12px;right:12px;width:28px;height:28px;border:1px solid rgba(0,0,0,0.1);background:rgba(255,255,255,0.6);border-radius:6px;cursor:pointer;font-size:14px;color:#999;display:flex;align-items:center;justify-content:center;z-index:20;transition:all 0.2s}.sidebar-toggle:hover{background:rgba(0,0,0,0.04);color:#555}.sidebar.collapsed{width:50px;min-width:50px;padding:20px 8px}.sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap{display:none}.sidebar.collapsed .nav-item{justify-content:center;padding:8px}.sidebar.collapsed .sidebar-toggle{top:6px;right:auto;left:50%;transform:translateX(-50%)}.sidebar.collapsed .sidebar-nav{padding-top:30px}
+</style>
+<link rel="stylesheet" href="site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="articles.html" class="nav-item"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="message.html" class="nav-item active"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+
+<main class="main">
+  <div class="mb-wrap">
+    <article class="mb-panel">
+
+      <header class="mb-page-head">
+        <h1 class="mb-page-title" data-i18n="navMsg">留言墙</h1>
+        <p class="mb-page-sub">想说的 · 想问的 · 吐槽 · 交流</p>
+      </header>
+
+      <div class="mb-sep" aria-hidden="true">
+        <span class="mb-sep-line"></span>
+        <span class="mb-sep-icon">✦</span>
+        <span class="mb-sep-line"></span>
+      </div>
+
+      <section class="mb-comments" id="msgForm" aria-labelledby="mbSectionTitle">
+        <h2 class="mb-section-title" id="mbSectionTitle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <span data-i18n="hexoComments">评论</span>
+        </h2>
+
+        <form class="mb-form" onsubmit="return false;">
+          <div class="mb-form-row">
+            <div class="mb-form-cell">
+              <label for="msgName" data-i18n="msgNick">昵称</label>
+              <input id="msgName" type="text" maxlength="20" autocomplete="nickname" placeholder="你的昵称" data-i18n-placeholder="msgNick">
+            </div>
+            <div class="mb-form-cell">
+              <label for="msgEmail" data-i18n="hexoEmail">邮箱</label>
+              <input id="msgEmail" type="email" placeholder="选填" autocomplete="email" data-i18n-placeholder="hexoEmail">
+            </div>
+            <div class="mb-form-cell">
+              <label for="msgUrl" data-i18n="hexoUrl">网址(可选)</label>
+              <input id="msgUrl" type="url" placeholder="https://" data-i18n-placeholder="hexoUrl">
+            </div>
+          </div>
+          <div class="mb-form-body">
+            <textarea id="msgText" maxlength="200" placeholder="来留言交流吧…" data-i18n-placeholder="msgBody"></textarea>
+          </div>
+          <div class="mb-form-foot">
+            <span class="mb-char-count"><span id="msgCharNum">0</span> / 200 字</span>
+            <button type="button" class="mb-btn-primary" onclick="addMsg()" data-i18n="msgSubmit">送入星河</button>
+          </div>
+        </form>
+
+
+        <p class="mb-count-bar"><em id="msgLetterCount">0</em><span data-i18n="msgLettersUnit">条回响</span></p>
+
+        <ul id="envList">
+        </ul>
+      </section>
+
+    </article>
+  </div>
+</main>
+
+<script>
+(function () {
+  var ta = document.getElementById("msgText");
+  var num = document.getElementById("msgCharNum");
+  if (ta && num) {
+    function sync() { num.textContent = String(ta.value.length); }
+    ta.addEventListener("input", sync);
+    sync();
+  }
+})();
+</script>
+</body>
+</html>

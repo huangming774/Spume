@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>练习 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* practice-specific tweaks */
+  .practice-bar {
+    position: fixed; top: 56px; left: 0; right: 0; z-index: 30;
+    background: rgba(255,255,255,.5);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,.3);
+    padding: 12px 20px;
+  }
+  @media (min-width:768px){ .practice-bar { top: 64px; } }
+  .practice-bar .row {
+    max-width: 760px; margin: 0 auto;
+    display:flex; align-items:center; justify-content:space-between; gap: 12px;
+    font-size: 11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color: var(--on-surface-variant);
+  }
+  .practice-bar .bar-wrap { flex:1; margin: 0 8px; }
+  .practice-page { padding-top: 130px; }
+  @media (min-width:768px){ .practice-page { padding-top: 144px; } }
+
+  /* Deep mode word card */
+  .deep-card {
+    border-radius: 28px;
+    padding: 36px 28px;
+    text-align: center;
+    min-height: 340px;
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 8px;
+  }
+  .deep-card .pinyin { font-size: 12px; letter-spacing: .18em; color: var(--primary); text-transform: uppercase; font-weight: 600; }
+  .deep-card .word   { font-size: 48px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .deep-card .meta   { font-size: 13px; color: var(--on-surface-variant); margin-top: 6px; }
+  .deep-card .q      { font-size: 15px; color: var(--on-surface-variant); margin-top: 18px; line-height: 1.6; }
+  .deep-card .accent { width: 40px; height: 2px; border-radius: 9999px; margin: 14px auto 0;
+    background: linear-gradient(90deg, transparent, var(--outline-variant), transparent); }
+
+  /* Quick mode question card */
+  .quick-card {
+    border-radius: 24px;
+    padding: 24px;
+  }
+  .quick-card .subj { display: inline-block; }
+  .quick-card .q    { font-size: 20px; line-height:1.45; font-weight:600; margin: 16px 0 0; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .options.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .options.three .option-btn { flex-direction: column; padding: 14px 8px; text-align:center; }
+  .options.three .option-btn .marker { margin-bottom: 4px; }
+
+  .feedback {
+    margin-top: 14px;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-size: 13px; line-height: 1.6;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.ok   { background: rgba(236,251,240,.6); border:1px solid rgba(187,202,192,.5); color:#121e18; }
+  .feedback.bad  { background: rgba(255,218,214,.5); border:1px solid rgba(186,26,26,.3); color:#93000a; }
+  .feedback .label { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; opacity:.7; margin-bottom: 4px; }
+
+  /* DEEP 模式：完整解析卡片 */
+  .deep-explain {
+    margin-top: 18px;
+    border-radius: 20px;
+    padding: 18px 20px;
+    background: rgba(255,255,255,.7);
+    border: 1px solid rgba(255,255,255,.85);
+    box-shadow: 0 4px 20px rgba(87,96,101,.06);
+    display: none;
+  }
+  .deep-explain.show { display: block; animation: slideIn .3s ease-out; }
+  @keyframes slideIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+  .deep-explain .verdict {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600;
+    padding-bottom: 12px; border-bottom: 1px dashed var(--outline-variant);
+    margin-bottom: 12px;
+  }
+  .deep-explain .verdict.ok  { color: #3c4a42; }
+  .deep-explain .verdict.bad { color: #93000a; }
+  .deep-explain .row {
+    display: flex; gap: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 6px;
+  }
+  .deep-explain .row .k {
+    flex-shrink: 0; width: 64px;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    color: var(--on-surface-variant); text-transform: uppercase;
+    padding-top: 3px;
+  }
+  .deep-explain .row .v { flex: 1; color: var(--on-surface); }
+  .deep-explain .row .v.strike { color: var(--error); text-decoration: line-through; }
+  .deep-explain .explain-block {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: rgba(240,249,255,.5);
+    border-radius: 12px;
+    font-size: 13px; line-height: 1.65;
+    color: var(--on-surface);
+  }
+  .deep-explain .explain-block .head {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--primary); margin-bottom: 6px;
+  }
+
+  /* QUICK 模式：极简浮层 */
+  .quick-flash {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(.92);
+    z-index: 50;
+    padding: 24px 36px;
+    border-radius: 28px;
+    backdrop-filter: blur(30px);
+    background: rgba(255,255,255,.85);
+    border: 1px solid rgba(255,255,255,.95);
+    box-shadow: 0 20px 60px rgba(0,0,0,.12);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+  }
+  .quick-flash.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .quick-flash .icon {
+    width: 56px; height: 56px; border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 700;
+  }
+  .quick-flash.ok  .icon { background: #ecfbf0; color: #3c4a42; }
+  .quick-flash.bad .icon { background: #ffdad6; color: #ba1a1a; }
+  .quick-flash .text { font-size: 14px; font-weight: 600; color: var(--on-surface); }
+  .quick-flash .right-ans {
+    font-size: 12px; color: var(--on-surface-variant); margin-top: 2px;
+    max-width: 240px; text-align: center;
+  }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<div class="practice-bar">
+  <div class="row">
+    <a class="icon-btn" href="index.html" aria-label="退出" style="width:32px;height:32px">
+      <span class="material-symbols-outlined" style="font-size:20px">close</span>
+    </a>
+    <div class="bar-wrap">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span id="progress-text">— / —</span>
+        <span id="progress-pct" style="color:var(--primary)">0%</span>
+      </div>
+      <div class="nebula-bar"><i id="progress-bar" style="width:0%"></i></div>
+    </div>
+    <span id="mode-tag">—</span>
+  </div>
+</div>
+
+<main class="page practice-page" style="max-width:560px">
+  <div id="card-host"></div>
+
+  <div id="actions" class="actions hidden">
+    <button class="btn btn-ghost" id="btn-hint" type="button">
+      <span class="material-symbols-outlined" style="font-size:18px">lightbulb</span>提示
+    </button>
+    <button class="btn btn-primary" id="btn-next" type="button">
+      下一题
+      <span class="material-symbols-outlined" style="font-size:18px">arrow_forward</span>
+    </button>
+  </div>
+
+  <div id="loading" class="empty">
+    <span class="material-symbols-outlined">hourglass_top</span>
+    <p>加载题目中…</p>
+  </div>
+
+  <div id="no-cards" class="empty hidden glass holo-edge" style="border-radius:24px">
+    <span class="material-symbols-outlined">inventory_2</span>
+    <p>这个卡片集里还没有题目。</p>
+    <a class="btn btn-primary" id="goto-create" href="#">
+      <span class="material-symbols-outlined" style="font-size:18px">add</span>去添加
+    </a>
+  </div>
+</main>
+
+<script type="module">
+import { Store, shuffle } from './assets/store.js';
+import { mountShell, toast, qs } from './assets/shell.js';
+mountShell('practice', { requireAuth: false });
+
+const deckIdSingle = qs('deckId');                // 单卡片集（来自首页"直接练"）
+const deckIdsMulti = qs('decks');                 // 多卡片集（来自 practice-setup）
+const mode    = qs('mode') || 'quick';
+const limit   = parseInt(qs('limit') || '0', 10); // 0 = no limit
+const cardIds = qs('cards');                      // 错题重练时传
+const modeTag = document.getElementById('mode-tag');
+modeTag.textContent = mode === 'deep' ? 'DEEP PRACTICE' : 'QUICK PRACTICE';
+
+const host       = document.getElementById('card-host');
+const loadingEl  = document.getElementById('loading');
+const noCardsEl  = document.getElementById('no-cards');
+const actionsEl  = document.getElementById('actions');
+const btnHint    = document.getElementById('btn-hint');
+const btnNext    = document.getElementById('btn-next');
+
+let deckMap = {}, cards, idx = 0, items = [], startedAt = Date.now(), cardStart = Date.now();
+let primaryDeckId = '';     // 用于保存 session（如果跨多个，取第一个）
+
+(async () => {
+  let deckIds = [];
+  if (deckIdsMulti) deckIds = deckIdsMulti.split(',');
+  else if (deckIdSingle) deckIds = [deckIdSingle];
+  else { location.href = 'index.html'; return; }
+
+  primaryDeckId = deckIds[0];
+  const decks = await Promise.all(deckIds.map(id => Store.getDeck(id)));
+  decks.forEach(d => deckMap[d.id] = d);
+  let allCards = decks.flatMap(d => d.cards.map(c => ({ ...c, _deckSubject: d.subject, _deckTitle: d.title })));
+
+  if (cardIds) {
+    const set = new Set(cardIds.split(','));
+    allCards = allCards.filter(c => set.has(c.id));
+  }
+  if (!allCards.length) {
+    loadingEl.classList.add('hidden');
+    noCardsEl.classList.remove('hidden');
+    document.getElementById('goto-create').href = 'create.html?deckId=' + primaryDeckId;
+    return;
+  }
+  allCards = shuffle(allCards);
+  if (limit > 0 && limit < allCards.length) allCards = allCards.slice(0, limit);
+  cards = allCards;
+  loadingEl.classList.add('hidden');
+  renderCurrent();
+})();
+
+function renderCurrent() {
+  if (idx >= cards.length) return finish();
+
+  const c = cards[idx];
+  const shuffledOpts = shuffle(c.options);
+  cardStart = Date.now();
+
+  updateProgress();
+  host.innerHTML = '';
+  // 隐藏老的提示/下一步按钮
+  actionsEl.classList.add('hidden');
+  btnHint.classList.add('hidden');
+  btnNext.disabled = true;
+  // 清掉旧的 quick flash
+  const oldFlash = document.getElementById('quick-flash');
+  if (oldFlash) oldFlash.classList.remove('show');
+
+  if (mode === 'deep') {
+    host.innerHTML = renderDeep(c, shuffledOpts);
+  } else {
+    host.innerHTML = renderQuick(c, shuffledOpts);
+  }
+
+  host.querySelectorAll('.option-btn').forEach((btn, i) => {
+    btn.addEventListener('click', () => pick(btn, shuffledOpts[i], c));
+  });
+}
+
+function renderDeep(c, opts) {
+  return `
+    <div class="glass holo-edge deep-card">
+      <div class="pinyin">${escapeHtml(c._deckSubject || '')}</div>
+      <div class="word">${escapeHtml(c.prompt)}</div>
+      <div class="meta">${c.lang === 'zh-en' ? '请选择正确的英文翻译' : '请选择正确选项'}</div>
+      <div class="accent"></div>
+    </div>
+    <div class="options ${opts.length===3?'three':''}" style="margin-top:18px">
+      ${opts.map((o, i) => `
+        <button class="option-btn glass">
+          <span class="marker">${letter(i)}</span>
+          <span>${escapeHtml(o.text)}</span>
+        </button>
+      `).join('')}
+    </div>
+    <div class="deep-explain" id="deep-explain"></div>
+  `;
+}
+function renderQuick(c, opts) {
+  return `
+    <div class="glass holo-edge quick-card">
+      <span class="chip subj">${escapeHtml(c._deckSubject || '')}</span>
+      <h2 class="q">${escapeHtml(c.prompt)}</h2>
+      <div class="options" style="margin-top:18px">
+        ${opts.map((o, i) => `
+          <button class="option-btn glass">
+            <span class="marker">${letter(i)}</span>
+            <span>${escapeHtml(o.text)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function pick(btnEl, chosen, card) {
+  const ok = !!chosen.correct;
+  const correctText = card.options.find(o => o.correct).text;
+
+  // 锁所有按钮 + 标记自己
+  host.querySelectorAll('.option-btn').forEach(b => b.style.pointerEvents = 'none');
+  btnEl.classList.add(ok ? 'correct' : 'wrong');
+  btnEl.querySelector('.marker').textContent = ok ? '✓' : '✕';
+
+  // 答错时高亮正确项
+  if (!ok) {
+    const allBtns = [...host.querySelectorAll('.option-btn')];
+    const target = allBtns.find(b => b.querySelector('span:last-child').textContent === correctText);
+    if (target) {
+      setTimeout(() => {
+        target.classList.add('correct');
+        target.querySelector('.marker').textContent = '✓';
+      }, 280);
+    }
+  }
+
+  // 记录答题数据
+  items.push({
+    cardId: card.id,
+    picked: chosen.text,
+    correct: ok,
+    ms: Date.now() - cardStart,
+  });
+
+  if (mode === 'deep') {
+    // ====== 深度模式：完整解析卡片，等用户主动点"下一题" ======
+    const wrap = document.getElementById('deep-explain');
+    wrap.className = 'deep-explain show';
+    wrap.innerHTML = `
+      <div class="verdict ${ok ? 'ok' : 'bad'}">
+        <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1">
+          ${ok ? 'check_circle' : 'cancel'}
+        </span>
+        ${ok ? '回答正确' : '回答错误'}
+      </div>
+      <div class="row">
+        <span class="k">题目</span>
+        <span class="v">${escapeHtml(card.prompt)}</span>
+      </div>
+      <div class="row">
+        <span class="k">你的答案</span>
+        <span class="v ${ok ? '' : 'strike'}">${escapeHtml(chosen.text)}</span>
+      </div>
+      ${ok ? '' : `
+      <div class="row">
+        <span class="k">正确答案</span>
+        <span class="v" style="color:#3c4a42;font-weight:600">${escapeHtml(correctText)}</span>
+      </div>`}
+      ${card.hint ? `
+        <div class="explain-block">
+          <div class="head">
+            <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
+            解析
+          </div>
+          ${escapeHtml(card.hint)}
+        </div>
+      ` : `
+        <div class="explain-block" style="background:rgba(0,0,0,.03);color:var(--on-surface-variant);font-style:italic">
+          这道题没有附带解析。${ok ? '继续保持！' : '建议返回卡片集补充解析。'}
+        </div>
+      `}
+    `;
+    actionsEl.classList.remove('hidden');
+    btnNext.disabled = false;
+    btnNext.focus();
+    btnHint.classList.add('hidden');  // deep 模式已经展开解析，不需要提示按钮了
+
+  } else {
+    // ====== 速练模式：极简对错浮层，2 秒自动跳 ======
+    showQuickFlash(ok, ok ? null : correctText);
+    clearTimeout(window._autoNext);
+    window._autoNext = setTimeout(() => goNext(), 500);
+  }
+}
+
+function showQuickFlash(ok, correctText) {
+  let el = document.getElementById('quick-flash');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'quick-flash';
+    el.className = 'quick-flash';
+    document.body.appendChild(el);
+  }
+  el.className = 'quick-flash ' + (ok ? 'ok' : 'bad');
+  el.innerHTML = `
+    <div class="icon">${ok ? '✓' : '✕'}</div>
+    <div class="text">${ok ? '答对了' : '答错了'}</div>
+    ${!ok && correctText ? `<div class="right-ans">正解：${escapeHtml(correctText)}</div>` : ''}
+  `;
+  requestAnimationFrame(() => el.classList.add('show'));
+  // 400ms 后淡出（提前一点点让动画跟得上）
+  setTimeout(() => el.classList.remove('show'), 400);
+}
+
+btnHint.addEventListener('click', () => {
+  const c = cards[idx];
+  if (c.hint) toast(c.hint, 'lightbulb');
+});
+btnNext.addEventListener('click', () => {
+  clearTimeout(window._autoNext);
+  goNext();
+});
+function goNext() { idx++; renderCurrent(); }
+
+function updateProgress() {
+  document.getElementById('progress-text').textContent = `${idx + 1} / ${cards.length}`;
+  const pct = Math.round((idx / cards.length) * 100);
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+async function finish() {
+  const session = await Store.saveSession({
+    deckId: primaryDeckId,
+    mode,
+    startedAt,
+    finishedAt: Date.now(),
+    items,
+  });
+  location.replace(`report.html?sessionId=${session.id}`);
+}
+
+function letter(i) { return 'ABCDEF'[i] || (i+1); }
+function escapeHtml(s='') { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

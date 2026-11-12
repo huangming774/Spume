@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>御坂美琴</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">御坂美琴</span><span class="i18n-en" style="display:none">Misaka Mikoto — The Railgun</span></h1>
+    <div class="post-meta article-meta">
+      <span>2025-08-28</span>
+      <span>2000 <span data-i18n="metaWords">字</span></span>
+      <span>912 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>8 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>她是哔哩哔哩</h2>
+<p>你知道吗？B站的全名"bilibili"，就是来自于她。</p>
+<p>御坂美琴，学园都市七位Level 5超能力者中排名第三——代号「超电磁炮」。她拥有操纵电力的能力，指尖跃动的电光，是这座科学之城最耀眼的一道风景。而在粉丝心中，她有一个更亲切的名字：炮姐。</p>
+<p>B站投币、充电——这些刻入DNA的操作，其源头正是炮姐的招牌技能。一个角色能成为一个平台的灵魂，这本身就是传奇。</p>
+<p>她是轻小说史上无可争议的人气女王。「这本轻小说真厉害！」女性角色部门9次登顶（2010-2020年间），2011年斩获国际最萌萌王，萌战冠军累计超过55次。</p>
+<h2>常盘台的王牌</h2>
+<p>御坂美琴，常盘台中学二年级，学生寮208号室。被全校女生仰慕地称为「常盘台的Ace」。</p>
+<p>她的招牌技能：</p>
+<ul>
+<li><strong>超电磁炮</strong>：以游戏厅的金属代币为弹丸，三倍音速射出——硬币划过空气时会因摩擦熔化，化作一道橘色光束</li>
+<li><strong>雷击之枪</strong>：从刘海间放出的蓝白色电击，光速必中</li>
+<li><strong>铁砂之剑</strong>：利用磁力操控铁砂，化为可变形的利刃或风暴</li>
+<li><strong>电磁骇客</strong>：能轻易破解学园都市的电子系统，甚至直接入侵卫星</li>
+</ul>
+<p>但她真正的强大不止于此。在生死关头，美琴会召唤落雷——最大十亿伏特的闪电从天而降，那画面足以成为一代观众心中永不褪色的记忆。</p>
+<p><strong>Level 6绝对能力者计划</strong>：用两万名"妹妹们"与一方通行对战20000次，让一方通行进化至Level 6。美琴得知真相后，独自闯入实验室，试图以牺牲自己的方式终结这场屠杀。一个14岁的少女，选择独自背负两万条人命——这是《超炮》系列最沉重、也最动人的篇章。</p>
+<h2>不是完美的电击公主</h2>
+<p>美琴是个矛盾体。</p>
+<p>她强大到能与一方通行对峙，却会在自动贩卖机吞币时暴躁地使出电击回旋踢；她被称为「最强无敌的电击公主」，却会在便利店里站着看漫画，痴迷于呱太这种幼儿园级别的吉祥物；她嘴上说着"那个笨蛋"——却会在上条当麻遇到麻烦时第一个冲过去。</p>
+<p>傲娇这个词，几乎就是为她量身定做的。</p>
+<p>她穿安全裤、不在乎打扮，却对自己的贫乳暗中在意；她爽朗仗义像个男孩子，却在对当麻偶尔的温柔中暴露出不设防的少女心。这种反差萌，正是她跨越二十年依然让人无法抗拒的原因。</p>
+<blockquote class="quote-art quote-art--electric">
+<p>"即使这样，我还是想守护这个世界。"</p>
+<p class="attr">—— 御坂美琴</p>
+</blockquote>
+
+<h2>她身边的人</h2>
+<p><strong>白井黑子</strong> —— 常盘台的瞬间移动能力者，美琴的室友。对美琴的称呼永远是"姐姐大人"，痴汉属性爆棚，但关键时刻是最可靠的战友。</p>
+<p><strong>初春饰利 &amp; 佐天泪子</strong> —— 栅川中学的Level 1风纪委员和Level 0无能力者。四个女孩凑在一起时，是《超炮》最温暖的部分——吃甜品、逛街、卷入事件然后解决它。</p>
+<p><strong>食蜂操祈</strong> —— Level 5第五位，心理掌握。常盘台真正的"女王"，与美琴的关系是欢喜冤家兼亦敌亦友。</p>
+<h2>横跨三个系列的女人</h2>
+<p>美琴最初只是《魔法禁书目录》中的配角，却因为人气太高，硬生生"逆袭"成为了自己外传的主角。</p>
+<table>
+<thead>
+<tr>
+<th>系列</th>
+<th>类型</th>
+<th>首播/发行</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>《魔法禁书目录》</td>
+<td>TV动画</td>
+<td>2008年</td>
+</tr>
+<tr>
+<td>《某科学的超电磁炮》S1</td>
+<td>TV动画</td>
+<td>2009年</td>
+</tr>
+<tr>
+<td>《某科学的超电磁炮S》S2</td>
+<td>TV动画</td>
+<td>2013年</td>
+</tr>
+<tr>
+<td>《某科学的超电磁炮T》S3</td>
+<td>TV动画</td>
+<td>2020年</td>
+</tr>
+<tr>
+<td>《某科学的一方通行》</td>
+<td>TV动画</td>
+<td>2019年</td>
+</tr>
+<tr>
+<td>《魔法禁书目录 创约》</td>
+<td>轻小说</td>
+<td>2021年—连载中</td>
+</tr>
+</tbody>
+</table>
+<p>三季《超炮》在B站的评分均在9.7-9.8，被誉为"镇站之宝"级别的作品。2025年6月，《超炮》简体中文漫画1-6卷正式上架——距离她首次登场已近二十年，炮姐依然是二次元的常青树。</p>
+<h2>写在最后</h2>
+<p>御坂美琴让我着迷的，不是她有多强。</p>
+<p>是她明明可以冷眼旁观，却偏要为一个素未谋面的克隆人赌上性命；是她明明可以活在"常盘台王牌"的光环里，却愿意穿着幼稚的呱太睡衣在宿舍里打游戏；是她被击倒了无数次，依然会从废墟里爬起来，在刘海间迸出那一缕蓝白色的电光。</p>
+<blockquote class="quote-art quote-art--gold">
+<p>"你指尖跃动的电光，是我此生不变的信仰，唯我超电磁炮永世长存。"</p>
+<p class="attr">—— B站弹幕应援辞</p>
+</blockquote>
+
+<p>这句B站弹幕里反复出现的应援辞，或许就是所有炮厨的心声。</p>
+<p>二十年来，她始终站在那里——学园都市的天台上，指尖转动着一枚游戏厅的硬币。风扬起她的短发和常盘台的校服裙摆，身后是无尽的钢铁森林与夕阳。</p>
+<p>她是御坂美琴。她是炮姐。她是哔哩哔哩。</p>
+<p><strong>她是这个科学世界里，最温暖的一道电流。</strong></p></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>She Is Bilibili</h2>
+<p>Did you know? Bilibili's name comes from her.</p>
+<p>Misaka Mikoto, ranked #3 among Academy City's seven Level 5 espers, codename "The Railgun." Her ability to control electricity — the light dancing at her fingertips — is the brightest sight in this city of science.</p>
+<p>She's the undisputed queen of light novel heroines, winning the "This Light Novel Is Amazing!" female character category 9 times and claiming over 55 moe tournament championships.</p>
+<h2>Tokiwadai's Ace</h2>
+<p>A second-year at Tokiwadai Middle School, admired by all as the "Ace of Tokiwadai."</p>
+<p>Her signature moves:<br>
+- <strong>Railgun</strong>: Fires metal tokens at three times the speed of sound<br>
+- <strong>Lightning Spear</strong>: Blue-white lightning from her bangs, lightspeed<br>
+- <strong>Iron Sand Sword</strong>: Manipulates iron sand into blades or storms<br>
+- <strong>Electromagnetic Hacker</strong>: Can breach Academy City's systems</p>
+<h2>Not a Perfect Princess</h2>
+<p>Mikoto is full of contradictions. Powerful enough to face Accelerator, yet kicks vending machines when they eat her coins. Called the "invincible electric princess," yet obsessed with Gekota, a childish mascot.</p>
+<p>The word "tsundere" might have been coined for her.</p>
+<blockquote>
+<p>"Even so, I still want to protect this world." — Misaka Mikoto</p>
+</blockquote>
+<h2>Across Three Series</h2>
+<p>She started as a side character in A Certain Magical Index but became so popular she got her own spin-off. Three seasons of Railgun scored 9.7-9.8 on Bilibili.</p>
+<h2>Final Thoughts</h2>
+<p>What captivates me isn't her power. It's that she'd risk her life for clones she'd never met; that she keeps getting up no matter how many times she falls; that after twenty years, she's still standing on that rooftop, a coin spinning between her fingers.</p>
+<p><strong>She is Misaka Mikoto. She is the Railgun. She is Bilibili. She is the warmest electric current in a world of science.</strong></p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

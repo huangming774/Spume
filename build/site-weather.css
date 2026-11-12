@@ -1,0 +1,220 @@
+/* 全站晴/雨天 — 桃之夭夭の创作屋 */
+
+html.weather-rainy body {
+  background: #c5d2de;
+  color: #2a3545;
+  transition: background 0.6s ease, color 0.6s ease;
+}
+
+/* 雨天背景 */
+html.weather-rainy .bg {
+  animation: none !important;
+  transition: background 0.6s ease;
+  background:
+    radial-gradient(ellipse 72% 50% at 15% 8%, rgba(72, 92, 118, 0.55), transparent 68%),
+    radial-gradient(ellipse 65% 45% at 85% 6%, rgba(68, 88, 112, 0.5), transparent 66%),
+    radial-gradient(ellipse 95% 55% at 50% -2%, rgba(58, 78, 102, 0.45), transparent 72%),
+    radial-gradient(ellipse 50% 38% at 50% 95%, rgba(140, 160, 180, 0.25), transparent 70%),
+    linear-gradient(168deg, #7a92a8 0%, #94a8bc 30%, #a8bac8 55%, #b8c8d4 80%, #c8d6e0 100%) !important;
+}
+
+html.weather-rainy .bg::before,
+html.weather-rainy .bg::after {
+  opacity: 1;
+}
+
+html.weather-rainy .bg::before {
+  background: linear-gradient(
+    125deg,
+    rgba(58, 78, 102, 0.35) 0%,
+    rgba(98, 118, 142, 0.28) 35%,
+    rgba(72, 92, 118, 0.32) 65%,
+    rgba(118, 138, 158, 0.24) 100%
+  );
+  animation: weatherCloudDrift 24s ease-in-out infinite alternate;
+}
+
+html.weather-rainy .bg::after {
+  background:
+    radial-gradient(ellipse 100% 45% at 50% 0%, rgba(48, 68, 92, 0.35), transparent 70%),
+    linear-gradient(180deg, rgba(72, 92, 118, 0.28) 0%, rgba(168, 184, 198, 0.15) 45%, rgba(188, 202, 214, 0.12) 100%);
+}
+
+@keyframes weatherCloudDrift {
+  0%   { transform: translate3d(-2%, 0, 0); }
+  100% { transform: translate3d(2%, 1.5%, 0); }
+}
+
+/* 雾气 */
+.weather-mist {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  background:
+    linear-gradient(180deg, rgba(58, 78, 102, 0.12) 0%, transparent 25%),
+    radial-gradient(ellipse 130% 70% at 50% 100%, rgba(130, 152, 172, 0.2), transparent 55%);
+}
+html.weather-rainy .weather-mist {
+  opacity: 1;
+}
+
+/* Canvas 雨 */
+.rain-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  width: 100%;
+  height: 100%;
+}
+html.weather-rainy .rain-canvas {
+  opacity: 1;
+}
+
+/* 首页：雨天隐藏太阳雨层，改用 canvas */
+html.weather-rainy .sunshower-layer {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+
+html.weather-rainy .particle-layer,
+html.weather-rainy .sparkle-field {
+  opacity: 0.1;
+}
+
+html.weather-rainy .motion-ribbons {
+  opacity: 0.35;
+}
+html.weather-rainy .motion-ribbon--blue { stroke: rgba(100, 130, 168, 0.4); }
+html.weather-rainy .motion-ribbon--pink { stroke: rgba(120, 140, 162, 0.26); }
+html.weather-rainy .motion-ribbon--mint { stroke: rgba(90, 128, 152, 0.3); }
+
+/* 首页立绘 */
+html.weather-rainy .hero-figure::before {
+  --figure-aura-opacity-low: 0.24;
+  --figure-aura-opacity-high: 0.38;
+  background:
+    linear-gradient(132deg, rgba(94, 118, 146, 0.2), rgba(68, 92, 118, 0.16) 50%, rgba(92, 116, 140, 0.1)),
+    radial-gradient(ellipse 62% 72% at 58% 52%, rgba(145, 164, 184, 0.28), transparent 72%);
+  opacity: 0.34;
+}
+html.weather-rainy .hero-figure img {
+  --figure-shadow-low: drop-shadow(0 18px 44px rgba(44, 62, 84, 0.32));
+  --figure-shadow-high: drop-shadow(0 22px 52px rgba(48, 66, 88, 0.36));
+  --figure-tone: saturate(0.9) brightness(0.95);
+}
+html.weather-rainy .cat-sticker {
+  filter: drop-shadow(0 12px 22px rgba(68, 88, 112, 0.16)) saturate(0.9);
+  opacity: 0.82;
+}
+html.weather-rainy .soul-quote {
+  filter: drop-shadow(0 14px 26px rgba(68, 88, 112, 0.12)) saturate(0.88);
+  opacity: 0.78;
+}
+
+/* 侧边栏 */
+.lang-toggle-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 2px 10px;
+}
+
+.weather-toggle {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+  font-family: inherit;
+}
+.weather-toggle:hover {
+  background: rgba(140, 160, 190, 0.12);
+  color: #555;
+}
+.weather-toggle:active {
+  transform: scale(0.98);
+}
+.weather-toggle-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+html.weather-rainy .weather-toggle {
+  color: #e8f0f8;
+  border-color: rgba(58, 82, 108, 0.4);
+  background: linear-gradient(145deg, #5a748c 0%, #4a6478 100%);
+  box-shadow: 0 2px 10px rgba(48, 68, 92, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+html.weather-rainy .weather-toggle:hover {
+  background: linear-gradient(145deg, #688498 0%, #587088 100%);
+  color: #fff;
+}
+
+html.weather-rainy .sidebar {
+  background: rgba(220, 232, 242, 0.85);
+  border-right-color: rgba(72, 98, 128, 0.14);
+}
+html.weather-rainy .blog-name { color: #2a3848; }
+html.weather-rainy .blog-sub { color: #5a6a7e; }
+html.weather-rainy .nav-item { color: #6a7a8e; }
+html.weather-rainy .nav-item:hover {
+  background: rgba(72, 98, 128, 0.1);
+  color: #3a4a5a;
+}
+html.weather-rainy .nav-item.active {
+  background: rgba(72, 98, 128, 0.14);
+  color: #243040;
+}
+html.weather-rainy .sidebar-footer {
+  border-top-color: rgba(72, 98, 128, 0.12);
+  color: #7a8a9a;
+}
+
+/* 子页内容区 */
+html.weather-rainy .page-title,
+html.weather-rainy .page-title--art {
+  color: #2e3e50;
+}
+html.weather-rainy .page-lead {
+  color: #5a6a7e;
+}
+html.weather-rainy .moment,
+html.weather-rainy .article-card,
+html.weather-rainy .timeline-card,
+html.weather-rainy .gallery-card,
+html.weather-rainy .link-card,
+html.weather-rainy .msg-letter {
+  border-color: rgba(100, 130, 160, 0.2);
+  box-shadow: 0 4px 20px rgba(72, 98, 128, 0.08);
+}
+
+@media (max-width: 768px) {
+  .lang-toggle-wrap {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  .lang-toggle-wrap .lang-toggle,
+  .lang-toggle-wrap .weather-toggle {
+    font-size: 10px;
+    padding: 6px 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rain-canvas { display: none !important; }
+  html.weather-rainy .bg::before { animation: none; }
+}

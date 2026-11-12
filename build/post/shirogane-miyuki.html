@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>只有受到眷顾的人，才能毫不掩饰</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">只有受到眷顾的人，才能毫不掩饰</span><span class="i18n-en" style="display:none">Only the Blessed Can Be Unmasked — Shirogane Miyuki</span></h1>
+    <div class="post-meta article-meta">
+      <span>2025-02-28</span>
+      <span>1800 <span data-i18n="metaWords">字</span></span>
+      <span>856 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>7 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><h2>关于这部番</h2>
+<p>《辉夜大小姐想让我告白》——B站校园恋爱番热度No.1，三季豆瓣评分均在9.0+，被广泛誉为"近十年恋爱喜剧天花板"。两个互相暗恋的天才，因为"先告白的人就输了"这种傲娇心理，展开一场场沙雕又甜蜜的恋爱头脑战。</p>
+<p>但剥开沙雕的外壳，这其实是一部关于努力、自卑与勇气的成长故事。而站在这个故事中心的，是一个把手伸向月球的少年——</p>
+<h2>他不是天才</h2>
+<p>白银御行，秀知院学园学生会会长，全国模拟考第一，品学兼优、行事模范。</p>
+<p>但这些光环，全是他用命拼来的。</p>
+<p>他并非天生聪颖。小时候成绩不理想，父亲公司破产，母亲离家出走——而且只带走了妹妹。他被母亲判定为"没有才能的孩子"。从那以后，他每天学习超过10小时，同时打工补贴家用。他的房间里贴满了标语：</p>
+<blockquote class="quote-art quote-art--crimson">
+<p><b>"努力是最强的才能"</b></p>
+<p><b>"为了成为站在四宫身边的男人"</b></p>
+<p class="attr">—— 白银御行 房间标语</p>
+</blockquote>
+
+<p>用光的圆珠笔堆积如山。睡眠严重不足，才有了那双让周围人畏惧的凶恶眼神。他不是天才，是努力成瘾者——靠超人的毅力考入贵族学校，并长期保持年级第一。</p>
+<p>白银御行，最喜欢的男主之一。喜欢他，不是因为他是完美的学生会长，而是因为他那骨子里的自卑与不服输——明明是个平凡人，偏要与天才站在同一高度。</p>
+<h2>通往月亮的荆棘路</h2>
+<p>他曾说：</p>
+<blockquote class="quote-art quote-art--amber">
+<p>"若是我的话，就绝对不会放开辉夜公主的。我会登上月亮将她夺回，无论花上几十年、几百年。若这是我们的故事，我要将那份话语的深意全部看穿，那就不会是那样的结局了吧。"</p>
+<p class="attr">—— 白银御行</p>
+</blockquote>
+
+<p>他知晓辉夜姬终会像传说中那般离开地面，飞向高不可攀的月亮——就如同四宫辉夜终将离开校园，走向遥不可及的世界。可他偏要与之抗衡。</p>
+<p>那贴满了标语的房间和堆积如山的圆珠笔，都只为了能让自己"成为站在四宫辉夜身边的男人"。这是一场以努力为武器、以爱意为赌注的战争。</p>
+<p>世界上有两种人：受到眷顾的人，和拼命追赶的人。辉夜属于前者，而白银属于后者。他没有血统，没有天赋，没有财富——他只有日复一日的努力，和一份不愿放弃的初恋。</p>
+<h2>行动派的浪漫</h2>
+<p>他说道：</p>
+<blockquote class="quote-art quote-art--rose">
+<p>"我不是说了有想让你看的东西吗，因为我一直没法妥协，因为我一直难以启齿，所以我只能用我能准备到的最棒的礼物送给你，你能懂吧，四宫。这就是，我对你的感情。"</p>
+<p class="attr">—— 白银御行</p>
+</blockquote>
+
+<p>他是行动派。烟火大会时，孤独的辉夜流露出对烟花的渴望，他立马出现：</p>
+<blockquote class="quote-art quote-art--coral">
+<p>"那我就让你看看吧，来吧四宫，你要是那么想看的话，就跟我来吧。忍耐了这么久，辛苦你了，你一点都不奇怪。"</p>
+<p class="attr">—— 白银御行 烟火大会</p>
+</blockquote>
+
+<p>而后带着她在20分钟内从东京赶到千叶，只为了让她实现看烟花的梦想。</p>
+<p>奉心祭上，他以怪盗亚森的身份放出漫天心形气球——那是整部作品中最令人心动的名场面。他骨子里是个不接受悲剧、只追求完美浪漫的理想主义者。</p>
+<h2>卑微到尘埃里，开出花来</h2>
+<p>他也曾袒露心声：</p>
+<blockquote class="quote-art quote-art--rose">
+<p><b>"比起被喜欢，我更想成为被需要的人。"</b></p>
+<p class="attr">—— 白银御行</p>
+</blockquote>
+
+<p>这句话，是他整个人的底色。</p>
+<p>白银内心深处背负着童年创伤——被母亲抛弃、被判定"没有才能"。他形成了"必须不断努力才能获得他人认同"的病态心理。在辉夜面前，他害怕暴露真实的自己，担心一旦告白被拒就会失去一切。</p>
+<p>喜欢一个人，会卑微到尘埃里，然后开出花来。平民精英的身份让他打破"门当户对"的传统叙事——他不是天生的天才，而是用汗水拼出一条通往月亮的荆棘之路的少年。</p>
+<p>正如漫画标题《竹取物语》的大伴御行原型一样——明知挑战辉夜姬是不可能完成的任务，他依然选择正面迎战。这份勇气与执着，正是他最大的魅力。</p>
+<h2>写在最后</h2>
+<p>我很钦佩他，但我成为不了他。</p>
+<p>不是每个人都拥有这份极致的自律与勇气。但至少，在他的故事里，我们看到了一个普通人的可能性——即使生来不被眷顾，也可以靠双手触及星辰。</p>
+<p>他是会长，是怪盗亚森，是白色巨蟒。他是一个把努力变成了超能力的普通人。</p>
+<p><strong>只有受到眷顾的人，才能毫不掩饰。而白银御行，是那个不被眷顾，却偏要站到月亮上的人。</strong></p>
+<div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:20px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/a3238ab701faae9258e91fa3943c028.jpg" alt="白银御行1" style="max-width:48%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1ea21ea97e40bdef5afb46c7fbe3be9.jpg" alt="白银御行2" style="max-width:48%;border-radius:8px;">
+</div></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>About This Anime</h2>
+<p>Kaguya-sama: Love is War — the #1 school romance anime on Bilibili, with all three seasons rated 9.0+ on Douban. Two geniuses who love each other but refuse to confess first because "the one who confesses first loses."</p>
+<p>But beneath the comedy, this is a story about effort, insecurity, and courage. At its center stands a boy reaching for the moon.</p>
+<h2>He Is Not a Genius</h2>
+<p>Shirogane Miyuki, student council president of Shuchiin Academy, ranked #1 nationally. But these honors were earned through sheer willpower.</p>
+<p>Abandoned by his mother who deemed him "a child without talent," he studied over 10 hours daily while working part-time. His room was covered with slogans: "Hard work is the strongest talent" and "To become the man worthy of standing beside Shinomiya."</p>
+<p>He's not a genius — he's a hard-work addict who fought his way into an elite school through superhuman perseverance.</p>
+<h2>The Thorny Path to the Moon</h2>
+<p>He once said he would climb to the moon to bring Princess Kaguya back, even if it took decades or centuries. Knowing that Kaguya Shinomiya would one day leave for an unreachable world, he chose to fight against fate itself.</p>
+<p>There are two kinds of people: the blessed and those who chase desperately. Shirogane is the latter. No lineage, no talent, no wealth — just daily effort and an unshakeable first love.</p>
+<h2>A Romantic Man of Action</h2>
+<p>At the fireworks festival, he took Kaguya from Tokyo to Chiba in 20 minutes just so she could see the fireworks she longed for. At the culture festival, he filled the sky with heart-shaped balloons as the phantom thief Arsène.</p>
+<h2>Blooming from the Dust</h2>
+<p>He once confessed: "More than being loved, I want to be needed."</p>
+<p>This line defines him. Carrying childhood trauma, he developed an unhealthy belief that he must constantly prove his worth. Before Kaguya, he feared exposing his true self.</p>
+<h2>Final Thoughts</h2>
+<p>I admire him deeply, but I can't become him. Not everyone has that extreme discipline and courage. But in his story, we see what's possible — even without being born blessed, you can reach the stars with your own hands.</p>
+<p><strong>He is the one who wasn't blessed, yet insisted on standing on the moon.</strong></p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

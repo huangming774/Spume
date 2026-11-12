@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>历史作答记录 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+  .stat-card {
+    padding: 18px;
+    border-radius: 20px;
+    text-align: center;
+  }
+  .stat-card .v {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+  .stat-card .l {
+    font-size: 11px;
+    color: var(--on-surface-variant);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px 16px;
+    margin: 0 -4px;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    background: rgba(255,255,255,.6);
+    border: 1px solid rgba(255,255,255,.9);
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .filter-chip:hover { background: rgba(255,255,255,.9); }
+  .filter-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    font-weight: 600;
+  }
+
+  .session-list { display: flex; flex-direction: column; gap: 10px; }
+  .sess {
+    border-radius: 18px;
+    padding: 16px 18px;
+    display: flex; gap: 14px; align-items: center;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .sess:hover { transform: translateY(-2px); }
+  .sess .ring {
+    width: 56px; height: 56px;
+    flex-shrink: 0;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sess .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .sess .ring .score {
+    font-size: 16px; font-weight: 700;
+    color: var(--primary); line-height: 1;
+    position: relative; z-index: 1;
+  }
+  .sess .body { flex: 1; min-width: 0; }
+  .sess .row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .sess .title { font-size: 15px; font-weight: 600; color: var(--on-surface); }
+  .sess .row2 { font-size: 12px; color: var(--on-surface-variant); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .sess .badge-mode {
+    font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 9999px;
+    background: rgba(240,249,255,.7); color: var(--primary);
+  }
+  .sess .badge-mode.deep { background: rgba(236,251,240,.7); color: #3c4a42; }
+  .sess .arrow { color: var(--on-surface-variant); flex-shrink: 0; }
+  .sess.deleted {
+    opacity: .55;
+  }
+  .sess.deleted .title::after {
+    content: ' (卡片集已删除)';
+    font-size: 11px; color: var(--error); font-weight: 400;
+  }
+
+  /* group date heading */
+  .group-head {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em;
+    color: var(--on-surface-variant);
+    text-transform: uppercase;
+    margin: 18px 4px 8px;
+  }
+  .group-head:first-of-type { margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<main class="page">
+  <div style="display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+    <div>
+      <span class="chip chip-blue">
+        <span class="material-symbols-outlined" style="font-size:14px">history</span>
+        Practice History
+      </span>
+      <h1 class="page-title" style="margin-top:8px">历史作答记录</h1>
+      <p class="page-sub" id="summary">载入中…</p>
+    </div>
+    <button class="btn btn-ghost" id="btn-clear" title="清空所有历史">
+      <span class="material-symbols-outlined" style="font-size:18px">delete_sweep</span>
+      清空
+    </button>
+  </div>
+
+  <!-- aggregate stats -->
+  <div class="stats-row" id="stats-row"></div>
+
+  <!-- filter -->
+  <div class="filter-bar" id="filter-bar"></div>
+
+  <!-- list -->
+  <div id="session-list" class="session-list"></div>
+
+  <div id="empty" class="empty hidden glass holo-edge" style="border-radius:24px;margin-top:20px">
+    <span class="material-symbols-outlined">history_toggle_off</span>
+    <p style="font-size:15px;margin:0 0 12px">还没做过练习，去练一组试试？</p>
+    <a class="btn btn-primary" href="index.html">
+      <span class="material-symbols-outlined" style="font-size:18px">auto_stories</span>去卡片库
+    </a>
+  </div>
+</main>
+
+<script type="module">
+import { Store, fmtDate, fmtDateTime } from './assets/store.js';
+import { mountShell, toast } from './assets/shell.js';
+mountShell('history', { requireAuth: false });
+
+let allSessions = [];
+let deckMap = {};
+let activeFilter = 'all';
+
+async function render() {
+  const decks = await Store.listDecks();
+  decks.forEach(d => deckMap[d.id] = d);
+  allSessions = await getAllSessions();
+
+  if (!allSessions.length) {
+    document.getElementById('empty').classList.remove('hidden');
+    document.getElementById('summary').textContent = '还没有练习记录';
+    document.getElementById('stats-row').innerHTML = '';
+    document.getElementById('filter-bar').innerHTML = '';
+    document.getElementById('session-list').innerHTML = '';
+    return;
+  }
+  document.getElementById('empty').classList.add('hidden');
+
+  renderStats();
+  renderFilter();
+  renderList();
+}
+
+async function getAllSessions() {
+  return Store.listSessions();
+}
+
+function renderStats() {
+  const totalSess = allSessions.length;
+  const totalQs   = allSessions.reduce((a,s) => a + s.items.length, 0);
+  const totalCorrect = allSessions.reduce((a,s) => a + s.items.filter(i => i.correct).length, 0);
+  const totalMs   = allSessions.reduce((a,s) => a + (s.finishedAt - s.startedAt), 0);
+  const avgAcc    = totalQs ? Math.round(totalCorrect/totalQs*100) : 0;
+  const totalMin  = Math.round(totalMs / 60000);
+
+  document.getElementById('summary').textContent = `共 ${totalSess} 次练习 · ${totalQs} 题 · 平均正确率 ${avgAcc}%`;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="glass holo-edge stat-card"><div class="v">${totalSess}</div><div class="l">练习次数</div></div>
+    <div class="glass holo-edge stat-card"><div class="v">${totalQs}</div><div class="l">作答总数</div></div>
+    <div class="glass holo-edge stat-card"><div class="v">${avgAcc}%</div><div class="l">平均正确率</div></div>
+    <div class="glass holo-edge stat-card"><div class="v">${totalMin}<span style="font-size:14px;color:var(--on-surface-variant);font-weight:500"> 分</span></div><div class="l">累计时长</div></div>
+  `;
+}
+
+function renderFilter() {
+  const subjects = {};
+  allSessions.forEach(s => {
+    const d = deckMap[s.deckId];
+    const k = d ? d.subject : '已删除';
+    subjects[k] = (subjects[k]||0) + 1;
+  });
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = '';
+  bar.appendChild(makeChip('all', '🗂 全部', allSessions.length));
+  Object.keys(subjects).sort().forEach(s => {
+    bar.appendChild(makeChip(s, emojiFor(s) + ' ' + s, subjects[s]));
+  });
+}
+function makeChip(key, label, count) {
+  const b = document.createElement('button');
+  b.className = 'filter-chip' + (activeFilter === key ? ' active' : '');
+  b.innerHTML = `${label} <span style="opacity:.7;font-size:11px">(${count})</span>`;
+  b.addEventListener('click', () => {
+    activeFilter = key;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    b.classList.add('active');
+    renderList();
+  });
+  return b;
+}
+
+function renderList() {
+  const filtered = activeFilter === 'all'
+    ? allSessions
+    : allSessions.filter(s => {
+        const d = deckMap[s.deckId];
+        const subj = d ? d.subject : '已删除';
+        return subj === activeFilter;
+      });
+
+  const host = document.getElementById('session-list');
+  host.innerHTML = '';
+  if (!filtered.length) {
+    host.innerHTML = `<div class="empty"><span class="material-symbols-outlined">filter_alt_off</span><p style="font-size:14px">这个分类下没有记录</p></div>`;
+    return;
+  }
+
+  // group by day
+  let lastGroup = '';
+  filtered.forEach(s => {
+    const g = groupLabel(s.finishedAt);
+    if (g !== lastGroup) {
+      const h = document.createElement('div');
+      h.className = 'group-head';
+      h.textContent = g;
+      host.appendChild(h);
+      lastGroup = g;
+    }
+    host.appendChild(renderSession(s));
+  });
+}
+
+function renderSession(s) {
+  const d = deckMap[s.deckId];
+  const correct = s.items.filter(i => i.correct).length;
+  const total   = s.items.length;
+  const acc     = Math.round(correct/total*100);
+  const ms      = s.finishedAt - s.startedAt;
+  const dur     = fmtDurShort(ms);
+  const offset  = 283 - 283 * correct / total;
+
+  const div = document.createElement('div');
+  div.className = 'glass holo-edge sess' + (d ? '' : ' deleted');
+  div.innerHTML = `
+    <div class="ring">
+      <svg viewBox="0 0 100 100" width="56" height="56">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="8"/>
+        <circle cx="50" cy="50" r="45" fill="none"
+          stroke="${acc >= 80 ? '#87CEEB' : acc >= 50 ? '#bfc8ce' : '#ffb6c1'}"
+          stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="283" stroke-dashoffset="${offset}"/>
+      </svg>
+      <div class="score">${acc}<span style="font-size:9px;font-weight:500;color:var(--on-surface-variant)">%</span></div>
+    </div>
+    <div class="body">
+      <div class="row1">
+        <span class="title">${esc(d ? d.title : '已删除的卡片集')}</span>
+        <span class="badge-mode ${s.mode === 'deep' ? 'deep' : ''}">${s.mode === 'deep' ? 'Deep' : 'Quick'}</span>
+      </div>
+      <div class="row2">
+        <span>${emojiFor(d ? d.subject : '已删除')} ${esc(d ? d.subject : '—')}</span>
+        <span>·</span>
+        <span>${correct} / ${total} 正确</span>
+        <span>·</span>
+        <span>用时 ${dur}</span>
+        <span>·</span>
+        <span>${fmtDateTime(s.finishedAt)}</span>
+      </div>
+    </div>
+    <span class="arrow material-symbols-outlined">chevron_right</span>
+  `;
+  div.addEventListener('click', () => {
+    location.href = 'report.html?sessionId=' + s.id;
+  });
+  return div;
+}
+
+function groupLabel(ts) {
+  const d = new Date(ts);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  const diff = (today - dd) / 86400000;
+  if (diff === 0) return '今天';
+  if (diff === 1) return '昨天';
+  if (diff < 7) return `${diff} 天前`;
+  if (diff < 30) return '本月';
+  return `${d.getFullYear()}年${d.getMonth()+1}月`;
+}
+
+function fmtDurShort(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + ' 秒';
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+
+function emojiFor(s) {
+  return ({'英语':'🇬🇧','数学':'∑','物理':'⚛️','化学':'🧪','生物学':'🧬','历史':'📜','地理':'🌍','政治':'⚖️','语文':'📖','编程':'💻','法律':'⚖️','医学':'⚕️','通用':'📌','已删除':'🗑'})[s] || '📚';
+}
+function esc(s='') { return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// clear all
+document.getElementById('btn-clear').addEventListener('click', async () => {
+  if (!allSessions.length) return toast('已经是空的');
+  if (!confirm(`确定清空全部 ${allSessions.length} 条练习记录？此操作不可恢复。`)) return;
+  try {
+    await Store.clearSessions();
+    toast('已清空', 'delete');
+    render();
+  } catch (e) { toast('清空失败', 'error'); }
+});
+
+render();
+</script>
+</body>
+</html>

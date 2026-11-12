@@ -1,0 +1,130 @@
+import { siteContent } from './content';
+import type { Article } from './types';
+
+export type ArchiveCategory = 'design' | 'feature' | 'engineering';
+type Copy = [string, string];
+type EntryNotes = { category: ArchiveCategory; title: Copy; tags: string[]; note: Copy };
+
+export const categories: { id: ArchiveCategory | 'all'; label: Copy }[] = [
+  { id: 'all', label: ['全部记录', 'All records'] },
+  { id: 'design', label: ['设计手记', 'Design'] },
+  { id: 'feature', label: ['功能生长', 'Features'] },
+  { id: 'engineering', label: ['幕后工程', 'Engineering'] },
+];
+
+const notes: Record<string, EntryNotes> = {
+  'site-growth-20-home-covers-bili-videos': {
+    category: 'feature', title: ['四景预览与个人投稿，都有了新位置', 'Four previews and a place for personal videos'],
+    tags: ['Cover', 'Mobile', 'Bilibili'],
+    note: ['首页加入不规则 2x2 预览和手机四选一，移除亮度入口，控制台右下角改为切换封面。新标签页首访显示 wallpaper1，刷新随机；个人投稿放在追番上方，点击才加载播放器。生产自动同步仍待就绪，当前展示已收录视频。', 'Home adds irregular 2x2 previews and a mobile four-choice picker, removes brightness controls, and puts Switch Cover at the bottom-right of the console. A new tab starts with wallpaper1; refreshes choose randomly. Personal videos sit above the anime tracker with an on-demand player; production sync is pending and known videos remain the fallback.'],
+  },
+  'site-growth-19-folding-fan-covers': {
+    category: 'design', title: ['把四幅封面，展开成一面折扇', 'Four covers unfold into a fan'],
+    tags: ['Cover', 'Motion', 'Folding Fan'],
+    note: ['首页换景改为扇面画屏：悬停预览，点选后画面从扇页铺满屏幕，花瓣与流苏轻轻收尾。保留随机换景、亮度调节和纯净观赏，也照顾触屏、键盘与减少动态效果的偏好。', 'The home cover picker becomes a folding fan. Hover to preview, then select a leaf to expand its image across the screen with a brief petal and tassel flourish. Random selection, brightness, and clean view remain, with touch, keyboard, and reduced-motion support.'],
+  },
+  'site-growth-18-home-console': {
+    category: 'feature', title: ['把常用入口，放进一张控制台', 'One console for the places we visit'],
+    tags: ['Console', 'Navigation', 'Themes'],
+    note: ['HOME 旁多了一张居中的控制台：三个片段、快捷访问和抽奖机入口收在右侧，左侧独立滚动查看更新日志。游艺、夜航、晴笺、银钛四款主题随每次打开轮换。', 'A centered console beside HOME gathers the three fragments, shortcuts, and lottery entrance. Its update log scrolls independently. Arcade, Night, Paper, and Titanium rotate with each opening.'],
+  },
+  'site-growth-17-project-cosmos': {
+    category: 'feature', title: ['项目在星光里，有了自己的位置', 'A place for projects among the stars'],
+    tags: ['Projects', 'Three.js', 'Tutorials'],
+    note: ['片段 01 通向奇想馆，把自己的作品和收录项目放进同一片星空。滑动浏览九个项目，点开可读简介、教程、试用方式和作者来源；页头落款统一为 taozhiyo。', 'Fragment 01 opens Project Cosmos: one starfield for personal and curated projects. Scroll through nine projects, then open their introductions, tutorials, demos, and author credits. The header now reads taozhiyo.'],
+  },
+  'site-growth-16-lottery-wallpaper-source': {
+    category: 'engineering', title: ['抽奖机抽不出图的那一天', 'The day the lottery lost its pictures'],
+    tags: ['Lottery', 'API', 'Diagnosis'],
+    note: ['旧图源失效后，先排查死链，再发现镜像冷启动带来的延迟。最终切换为 t.alcy.cc 静态图源，补上预热，并让停用图源自动下线。', 'Dead links exposed a retired source, then mirror cold starts explained the remaining delays. The final switch uses static images from t.alcy.cc, warms new images, and retires disabled sources automatically.'],
+  },
+  'site-growth-15-time-archive': {
+    category: 'design', title: ['目录不是故事的讲法', 'A table of contents is not a story'],
+    tags: ['Archive', 'Motion', 'Typography'],
+    note: ['记录页从一列文章卡片，变成一条会跟着滚动延伸的时间轴。分类、搜索、阅读索引和可放大的页面留影一起进来，终于能看出时间在往前走。', 'The log page turns from a list of cards into a timeline that extends as you scroll, with filters, search, a reading index, and zoomable page snapshots.'],
+  },
+  'site-growth-14-four-seasons-theme': {
+    category: 'design', title: ['四个页面，四种天气', 'Four pages, four kinds of weather'],
+    tags: ['Seasons', 'Sakura', 'Ocean', 'Snow'],
+    note: ['关于我、浮光集、哔哩哔哩、友链各自有了春樱、夏海、秋叶、冬雪。装饰只留在背景和页头，内容卡片保持原来的样子。', 'About, Glimmer, Bilibili, and Friends take on spring sakura, summer ocean, autumn leaves, and winter snow. Decoration stays in the background and headers.'],
+  },
+  'site-growth-13-glimmer-gallery-moments': {
+    category: 'design', title: ['两个入口，合成一个', 'Two entrances into one'],
+    tags: ['Glimmer', 'Albums', 'Moments'],
+    note: ['相册集和碎语原本各占一个导航位置，内容都不多。合并成浮光集之后，上半是拍立得相册墙，下半是贴纸碎语，导航反而清爽了。', 'Albums and Moments each held a nav slot with little content. Merged into Glimmer: a polaroid wall above, sticky-note moments below, and a cleaner navigation.'],
+  },
+  'site-growth-12-friend-comments-waterfall': {
+    category: 'design', title: ['评论区的形态，是被使用推着改的', 'A comment board shaped by use'],
+    tags: ['Comments', 'Masonry', 'Avatars'],
+    note: ['从单列到瀑布流走了五轮，最后停在每列两条、颜色交错。头像防盗链和统一占位这两件小事，比布局更影响观感。', 'Five rounds from a single column to masonry, settling on two seeded cards per column with alternating colors. Avatar hotlinking and placeholders mattered more than layout.'],
+  },
+  'site-growth-11-guestbook-script-attack': {
+    category: 'engineering', title: ['先关掉入口，再慢慢看清楚', 'Close the door, then look closely'],
+    tags: ['Security', 'XSS', 'Guestbook'],
+    note: ['首页留言收到一批脚本化提交。处理顺序是先在后端停掉写入，再确认有没有真的落库，最后回到渲染方式本身。', 'A burst of scripted submissions hit the guestbook. The order: stop writes in the backend, then establish what actually landed, then revisit the render path itself.'],
+  },
+  'site-growth-10-pull-deploy-and-friend-pr': {
+    category: 'engineering', title: ['把发布交还给服务器', 'Handing deployment back to the server'],
+    tags: ['Deploy', 'Pull', 'Secrets'],
+    note: ['发布链路从“GitHub 连进服务器”改成“服务器自己来取”。分支保护一开，站长后台发布友链也顺势改成自动开 PR。', 'Deployment flipped from GitHub pushing into the server to the server pulling. With branch protection on, friend-link publishing now opens a pull request instead.'],
+  },
+  'site-growth-09-about-quizcard-showcase': {
+    category: 'feature', title: ['让作品，真正被看见', 'Giving the work a place to live'],
+    tags: ['About', 'AI QuizCard', 'Showcase'],
+    note: ['关于页成为正式入口，项目集终于能被真正打开。QuizCard 补上默认题组，第一次来的人也可以直接开始练习。', 'The About page becomes a real destination. QuizCard adds starter decks so a first-time visitor can begin practicing immediately.'],
+  },
+  'site-growth-08-mail-friends-ai-image': {
+    category: 'feature', title: ['小站开始回应每一次到访', 'A small site that responds'],
+    tags: ['Mail', 'Friends', 'AI Image'],
+    note: ['留言通知、连续回复、服务器状态与 AI 生图串成了完整的体验。生成的图片存入 COS，让一次短暂的灵感有了稳定的地址。', 'Mail, threaded replies, server status, and image generation become a connected experience. Generated images are saved to COS.'],
+  },
+  'site-growth-07-moments-controller-scroll-release': {
+    category: 'design', title: ['给零碎的念头，一个位置', 'A place for passing thoughts'],
+    tags: ['Moments', 'Navigation', 'Scroll'],
+    note: ['碎语走进主站导航，发布链路也接上了真实接口。双层滚动被整理掉，页面终于可以顺畅地往下读。', 'Moments joins the main navigation with a working publishing flow. Nested scrolling is removed for a more natural reading experience.'],
+  },
+  'site-growth-06-owner-console-backend-security': {
+    category: 'engineering', title: ['在热闹背后，守好边界', 'Looking after what stays behind the scenes'],
+    tags: ['Owner Console', 'Auth', 'Security'],
+    note: ['收件箱、文章、友链、相册与图片上传接入站长接口。公开页面和私密配置之间，也有了更清晰的边界。', 'The owner console connects to publishing, uploads, albums, and the inbox. Public content and private configuration get clearer boundaries.'],
+  },
+  'site-growth-05-navigation-ai-gallery-source-lottery': {
+    category: 'feature', title: ['把偶然，做成一次小惊喜', 'Making room for a little surprise'],
+    tags: ['Gallery', 'Source Lottery', 'AI'],
+    note: ['相册回到主站，导航重新梳理。参考来源卡片变成 Source Lottery，让一次点击多了一点偶然和趣味。', 'The gallery moves into the main site. Source Lottery turns a reference card into a playful chance encounter.'],
+  },
+  'site-growth-04-homepage-originalization': {
+    category: 'design', title: ['从参考出发，长出自己的样子', 'Finding a voice of its own'],
+    tags: ['Homepage', 'Typography', 'Motion'],
+    note: ['保留学习时的好奇，再逐一改写文案、色调、字体和交互。首页从一份参考，慢慢变成自己的表达。', 'Copy, color, type, and interaction are reworked one by one, bringing a personal voice to the home page.'],
+  },
+  'site-growth-03-backend-services': {
+    category: 'engineering', title: ['让页面背后，有真实的回应', 'Making the site come alive'],
+    tags: ['Go', 'SQLite', 'API'],
+    note: ['登录、留言、AI 助手和统计有了后端支撑。网站开始保存状态，也开始理解不同访问者的身份。', 'Authentication, messages, AI, and statistics gain a backend. The site can now hold state and distinguish visitor identities.'],
+  },
+  'site-growth-02-frontend-design': {
+    category: 'design', title: ['搭起第一间，属于自己的小屋', 'The first room of a personal corner'],
+    tags: ['React', 'Hexo', 'Vite'],
+    note: ['主站、Hexo 博客与成长博客的分工逐渐清晰。这是最早一轮关于页面结构、视觉表达和内容归属的尝试。', 'The main site, Hexo blog, and growth journal find their roles in an early exploration of structure and visual identity.'],
+  },
+  'site-growth-01-infra-prep': {
+    category: 'engineering', title: ['一切从一个地址开始', 'It begins with an address'],
+    tags: ['Domain', 'DNS', 'UCloud'],
+    note: ['在页面出现以前，先安顿域名、解析与服务器。一个想法，从此有了可以被访问的地方。', 'Before the first page, the domain, DNS, and server come together. An idea gets an address people can visit.'],
+  },
+};
+
+export type ChronicleEntry = Article & EntryNotes & { number: string };
+export const chronicleEntries: ChronicleEntry[] = [...siteContent.articles]
+  .sort((a, b) => b.date.localeCompare(a.date) || b.slug.localeCompare(a.slug))
+  .map((article, index, entries) => ({
+    ...article,
+    ...(notes[article.slug] ?? {
+      category: 'feature' as const,
+      title: [article.title_zh, article.title_en] as Copy,
+      tags: [],
+      note: [article.excerpt_zh, article.excerpt_en] as Copy,
+    }),
+    number: String(entries.length - index).padStart(2, '0'),
+  }));

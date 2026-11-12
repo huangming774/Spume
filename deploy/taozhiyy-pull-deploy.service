@@ -1,0 +1,9 @@
+[Unit]
+Description=Taozhiyy pull-based deployment
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/taozhiyy-pull-deploy.sh
+TimeoutStartSec=45min

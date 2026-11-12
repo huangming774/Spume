@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>AI QuizCard · 知识卡片练习应用</title>
+<meta name="description" content="粘贴题目 → AI 智能识别 → 结构化为知识卡片。网页 + 微信小程序双端同构。基于 Titanium Glow 3.0 设计系统。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="assets/showcase.css" />
+</head>
+<body>
+
+<main class="tg-page">
+
+  <!-- 浮动主题切换（取代顶栏，避免和主站导航相撞） -->
+  <div class="tg-theme tg-theme-float" role="group" aria-label="主题">
+    <button type="button" data-mode="light" aria-pressed="false" title="浅色">☀</button>
+    <button type="button" data-mode="dark" aria-pressed="false" title="深色">☾</button>
+    <button type="button" data-mode="auto" aria-pressed="true" title="跟随系统">⊙</button>
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">
+        <span class="tg-chip tg-chip-blue">Showcase · Project</span>
+        <span class="tg-label">v1.2.0</span>
+      </div>
+      <h1>把题目<br><span class="grad">交给 AI</span><br>再交回给你。</h1>
+      <p class="lead">
+        粘贴题目 → AI 智能识别 → 结构化为知识卡片。<br>
+        Deep 深度解析 + Quick 闪练手感双模式，网页与微信小程序双端同构。
+      </p>
+      <div class="hero-stack">
+        <span class="tg-chip">React-like Web</span>
+        <span class="tg-chip">微信小程序</span>
+        <span class="tg-chip tg-chip-blue">Titanium Glow 3.0</span>
+        <span class="tg-chip tg-chip-blue">DeepSeek 兼容</span>
+        <span class="tg-chip tg-chip-pink">多用户隔离</span>
+      </div>
+      <div class="hero-cta">
+        <a class="tg-btn tg-btn-primary" href="#demo">看在线网页 ↓</a>
+        <a class="tg-btn" href="#mp-gallery">看小程序全貌 ↓</a>
+      </div>
+    </div>
+
+    <div class="hero-figure">
+      <div class="hero-figure-art">
+        <div class="knol">QuizCard</div>
+        <div class="hint">Knowledge · Card · System</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 1 · 在线试玩（网页 + 移动端） ============ -->
+  <section id="demo" class="tg-section">
+    <div class="tg-section-head">
+      <div>
+        <span class="tg-chip">01 · Live Demo</span>
+        <h2>访客直接玩</h2>
+      </div>
+      <p>左侧 PC 视图嵌入网页端真实运行版本；右侧 iPhone 14 模拟器同 URL 反映移动端排版。可点"在新窗口打开"全屏体验。</p>
+    </div>
+
+    <div class="tg-demo">
+      <div class="tg-demo-pc">
+        <div class="toolbar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="urlbar"><i class="lock">🔒</i>taozhiyy.top/apps/quizcard/ <span style="margin-left:auto;font-size:10px;color:var(--on-bg-3);">本地预览中</span></span>
+          <a class="urlbar-open" href="../web/index.html" target="_blank" rel="noopener" title="在新窗口打开">↗</a>
+        </div>
+        <div class="frame">
+          <iframe
+            src="../web/index.html?embed=showcase"
+            data-fallback="fb-pc"
+            loading="lazy"
+            title="AI QuizCard 网页端预览"></iframe>
+          <div id="fb-pc" class="frame-fallback" style="display: none;">
+            <span>
+              <b>QuizCard 网页端待部署</b>
+              本地预览：iframe 已指向 ../web/index.html<br>
+              线上部署后请改为 https://taozhiyy.top/apps/quizcard/
+            </span>
+          </div>
+        </div>
+        <div class="tg-demo-cta">
+          <a class="tg-btn tg-btn-primary" href="../web/index.html" target="_blank" rel="noopener">在新窗口打开网页端 ↗</a>
+          <span class="tg-demo-hint">小程序请在微信内搜索 "AI QuizCard" 体验</span>
+        </div>
+      </div>
+
+      <div class="tg-demo-phone">
+        <div class="iphone">
+          <span class="iphone-side left"></span>
+          <span class="iphone-side left btn2"></span>
+          <span class="iphone-side left btn3"></span>
+          <span class="iphone-side"></span>
+          <span class="iphone-notch"></span>
+          <div class="iphone-screen">
+            <iframe
+              src="../web/index.html?embed=showcase"
+              data-fallback="fb-mobile"
+              loading="lazy"
+              title="AI QuizCard 移动端预览"></iframe>
+            <div id="fb-mobile" class="iphone-fallback" style="display: none;">
+              <span>
+                <b>移动端预览</b>
+                本地：../web/index.html<br>
+                线上：/apps/quizcard/
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2 · 核心特性 ============ -->
+  <section class="tg-section">
+    <div class="tg-section-head">
+      <div>
+        <span class="tg-chip">02 · Features</span>
+        <h2>四项核心能力</h2>
+      </div>
+      <p>从输入到输出的全链路设计：AI 解析、双模式练习、统一设计语言、按用户隔离的数据持久化。</p>
+    </div>
+
+    <div class="tg-features">
+      <article class="tg-feature">
+        <div class="feature-num">01</div>
+        <div class="feature-rule"></div>
+        <h3>AI 智能识别</h3>
+        <p>粘贴任意题目原文，AI 自动结构化为题干 + 选项 + 正确答案 + 解析。支持单选、多选、判断三种题型混合识别。</p>
+      </article>
+      <article class="tg-feature">
+        <div class="feature-num">02</div>
+        <div class="feature-rule"></div>
+        <h3>Deep + Quick 双模式</h3>
+        <p>Deep 给完整解析与错题归纳，Quick 给 0.5 秒闪练训练手感。两套交互节奏一冷一热，对应理解与肌肉记忆两种学习需求。</p>
+      </article>
+      <article class="tg-feature">
+        <div class="feature-num">03</div>
+        <div class="feature-rule"></div>
+        <h3>Titanium Glow 3.0</h3>
+        <p>钛金辉光设计系统：毛玻璃 + 全息边 + Nebula 进度条 + Pearlescent 渐变。同一套 token 跨网页与小程序两端复用。</p>
+      </article>
+      <article class="tg-feature">
+        <div class="feature-num">04</div>
+        <div class="feature-rule"></div>
+        <h3>多用户隔离</h3>
+        <p>网页邮箱注册 / 小程序微信一键登录，账户隔离题库与练习记录。默认 AI 接口受限，自定义 API Key 后无限制。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 3 · 小程序画廊 ============ -->
+  <section id="mp-gallery" class="tg-section">
+    <div class="tg-section-head">
+      <div>
+        <span class="tg-chip">03 · Mini Program</span>
+        <h2>小程序完整设计</h2>
+      </div>
+      <p>登录到设置共 9 个页面的 1:1 静态复刻。点击任意一张放大到全屏可滚动查看。</p>
+    </div>
+
+    <div class="tg-gallery">
+      <article class="tg-mp-card" data-mp="mp-pages/login.html" data-label="01 · 登录">
+        <div class="tg-mp-frame"><iframe src="mp-pages/login.html" loading="lazy" title="登录" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">登录</span><span class="num">№ 01</span></div>
+        <p class="note">微信一键登录 / 体验账号 / 用户协议入口。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/library.html" data-label="02 · 卡片库">
+        <div class="tg-mp-frame"><iframe src="mp-pages/library.html" loading="lazy" title="卡片库" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">卡片库</span><span class="num">№ 02</span></div>
+        <p class="note">题库列表、统计、搜索、新建入口。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/create.html" data-label="03 · 新建">
+        <div class="tg-mp-frame"><iframe src="mp-pages/create.html" loading="lazy" title="新建" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">新建</span><span class="num">№ 03</span></div>
+        <p class="note">粘贴 → AI 识别 → 预览调整三步流程。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/setup.html" data-label="04 · 练习设置">
+        <div class="tg-mp-frame"><iframe src="mp-pages/setup.html" loading="lazy" title="练习设置" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">练习设置</span><span class="num">№ 04</span></div>
+        <p class="note">题数 / 顺序 / 范围 / 其他四组开关。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/practice-deep.html" data-label="05 · Deep 练习">
+        <div class="tg-mp-frame"><iframe src="mp-pages/practice-deep.html" loading="lazy" title="Deep 练习" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">Deep 练习</span><span class="num">№ 05</span></div>
+        <p class="note">题干 + 选项 + 解析卡，关注理解。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/practice-quick.html" data-label="06 · Quick 闪练">
+        <div class="tg-mp-frame"><iframe src="mp-pages/practice-quick.html" loading="lazy" title="Quick 闪练" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">Quick 闪练</span><span class="num">№ 06</span></div>
+        <p class="note">0.5 秒倒计时，关注手感与速度。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/report.html" data-label="07 · 报告">
+        <div class="tg-mp-frame"><iframe src="mp-pages/report.html" loading="lazy" title="报告" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">报告</span><span class="num">№ 07</span></div>
+        <p class="note">正确率、用时、题型分布、错题回顾。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/history.html" data-label="08 · 历史">
+        <div class="tg-mp-frame"><iframe src="mp-pages/history.html" loading="lazy" title="历史" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">历史</span><span class="num">№ 08</span></div>
+        <p class="note">按日期分组的练习记录与正确率环。</p>
+      </article>
+
+      <article class="tg-mp-card" data-mp="mp-pages/settings.html" data-label="09 · 设置">
+        <div class="tg-mp-frame"><iframe src="mp-pages/settings.html" loading="lazy" title="设置" scrolling="no"></iframe></div>
+        <div class="tg-mp-meta"><span class="name">设置</span><span class="num">№ 09</span></div>
+        <p class="note">账户、AI 接口、主题、清除数据。</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 4 · 设计语言 ============ -->
+  <section class="tg-section">
+    <div class="tg-section-head">
+      <div>
+        <span class="tg-chip">04 · Design</span>
+        <h2>Titanium Glow 3.0</h2>
+      </div>
+      <p>以"钛金 + 磨砂玻璃"为视觉锚点的设计系统。色板、字阶、玻璃层、全息边都集成在 token 里，跨端复用。</p>
+    </div>
+
+    <div class="tg-design">
+      <!-- 色板 -->
+      <div class="tg-swatches">
+        <div class="tg-swatch sw-1"><b>#FBFCFF</b><span>Canvas Base</span></div>
+        <div class="tg-swatch sw-2"><b>#FFF0F5</b><span>Pale Cherry</span></div>
+        <div class="tg-swatch sw-3"><b>#F0FFF4</b><span>Misty Mint</span></div>
+        <div class="tg-swatch sw-4"><b>#F0F9FF</b><span>Sky Wash</span></div>
+        <div class="tg-swatch sw-5"><b>#1E293B</b><span>Slate Ink</span></div>
+        <div class="tg-swatch sw-6"><b>Holographic</b><span>Edge Refraction</span></div>
+      </div>
+
+      <!-- 字阶 -->
+      <div class="tg-typescale">
+        <div class="row">
+          <span class="sample" style="font-size: 40px; line-height: 1.1; letter-spacing: -0.02em;">Display Lg</span>
+          <span class="label-tag">40 / 700</span>
+        </div>
+        <div class="row">
+          <span class="sample" style="font-size: 32px; line-height: 1.2; letter-spacing: -0.01em;">Headline Lg</span>
+          <span class="label-tag">32 / 600</span>
+        </div>
+        <div class="row">
+          <span class="sample" style="font-size: 20px;">Title Md 标题中号</span>
+          <span class="label-tag">20 / 600</span>
+        </div>
+        <div class="row">
+          <span class="sample" style="font-size: 16px; font-weight: 400;">Body 正文。Plus Jakarta Sans 与思源黑体。</span>
+          <span class="label-tag">16 / 400</span>
+        </div>
+        <div class="row">
+          <span class="sample" style="font-size: 12px; letter-spacing: 0.05em; font-weight: 600;">LABEL SM · UPPERCASE</span>
+          <span class="label-tag">12 / 600</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tg-design-sample">
+      <div class="pill-demo tg-holo">
+        <span class="tg-chip">Holo Edge</span>
+        <p style="margin: 12px 0 0; font-size: 13px; color: var(--on-bg-2);">1px 全息边玻璃</p>
+      </div>
+      <div class="pill-demo">
+        <span class="tg-label">Nebula Bar</span>
+        <p style="margin: 10px 0 6px; font-size: 13px; color: var(--on-bg-2);">进度条</p>
+        <div class="nebula"><i></i></div>
+      </div>
+      <div class="pill-demo">
+        <span class="tg-label">Glass</span>
+        <p style="margin: 10px 0 0; font-size: 13px; color: var(--on-bg-2);">毛玻璃容器 backdrop-blur(20px) + 78% 白填充</p>
+      </div>
+      <div class="pill-demo" style="background: linear-gradient(135deg, #fff0f5, #f0f9ff);">
+        <span class="tg-label">Pearlescent</span>
+        <p style="margin: 10px 0 0; font-size: 13px; color: var(--on-bg-2);">珍珠白渐变</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="tg-footer">
+    <span>© 2026 taozhiyy · AI QuizCard · Titanium Glow 3.0</span>
+  </footer>
+</main>
+
+<!-- Lightbox -->
+<div id="tg-lightbox" class="tg-lightbox" role="dialog" aria-modal="true" aria-label="小程序页面预览">
+  <div class="tg-lightbox-card">
+    <button class="tg-lightbox-close" type="button" aria-label="关闭">✕</button>
+    <iframe src="about:blank" title="预览"></iframe>
+    <div class="tg-lightbox-title"></div>
+  </div>
+</div>
+
+<script src="assets/showcase.js"></script>
+</body>
+</html>

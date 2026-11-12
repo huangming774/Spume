@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>设置 · AI QuizCard</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .section {
+    border-radius: 24px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .section h3 {
+    margin: 0 0 16px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--on-surface-variant);
+  }
+
+  /* 主题选择 3 张卡 */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .theme-tile {
+    padding: 18px 12px;
+    border-radius: 16px;
+    border: 2px solid var(--outline-variant);
+    background: var(--glass-bg-soft);
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .theme-tile:hover { transform: translateY(-2px); }
+  .theme-tile.active {
+    border-color: var(--primary);
+    background: var(--primary-container);
+  }
+  .theme-tile .ico { font-size: 28px; line-height: 1; }
+  .theme-tile .name { margin-top: 6px; font-size: 13px; font-weight: 600; }
+  .theme-tile .desc { font-size: 11px; color: var(--on-surface-variant); margin-top: 2px; }
+
+  /* AI 接口 segment */
+  .api-tabs {
+    display: flex;
+    background: var(--glass-bg-soft);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+  .api-tabs button {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 9px;
+    font-size: 13px; font-weight: 600;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .api-tabs button.active {
+    background: var(--surface);
+    color: var(--primary);
+    box-shadow: 0 2px 8px var(--shadow-color);
+  }
+
+  /* 用量条 */
+  .usage-row {
+    display: flex; gap: 14px;
+    margin-bottom: 14px;
+  }
+  .usage-stat {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--glass-bg-soft);
+    border: 1px solid var(--glass-border);
+  }
+  .usage-stat .label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--on-surface-variant);
+  }
+  .usage-stat .v {
+    font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1;
+    color: var(--primary);
+    margin-top: 6px;
+  }
+  .usage-stat .v .denom {
+    font-size: 14px; font-weight: 500; color: var(--on-surface-variant);
+  }
+  .usage-stat .bar {
+    margin-top: 8px;
+    height: 4px;
+    background: rgba(0,0,0,.08);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+  .usage-stat .bar > i {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, #87CEEB, #FFB6C1);
+    border-radius: 9999px;
+    transition: width .4s ease;
+  }
+  .usage-stat.danger .v { color: var(--error); }
+  .usage-stat.danger .bar > i { background: var(--error); }
+
+  .api-section { display: none; }
+  .api-section.show { display: block; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 600px) {
+    .theme-grid { grid-template-columns: 1fr; }
+    .field-row { grid-template-columns: 1fr; }
+  }
+
+  .info-banner {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    background: rgba(240,249,255,.4);
+    border: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+  }
+  .info-banner.warn {
+    background: rgba(255,218,214,.3);
+    color: var(--on-error-container);
+    border-color: rgba(186,26,26,.3);
+  }
+  .info-banner b { color: var(--on-surface); }
+</style>
+</head>
+<body>
+
+<main class="page" style="max-width:720px">
+  <div style="margin-bottom:24px">
+    <span class="chip chip-blue">
+      <span class="material-symbols-outlined" style="font-size:14px">settings</span>
+      SETTINGS
+    </span>
+    <h1 class="page-title" style="margin-top:8px">设置</h1>
+    <p class="page-sub">主题、AI 接口、用量统计</p>
+  </div>
+
+  <!-- 主题 -->
+  <section class="glass holo-edge section">
+    <h3>外观主题</h3>
+    <div class="theme-grid" id="theme-grid">
+      <div class="theme-tile" data-theme="light">
+        <div class="ico">☀️</div>
+        <div class="name">浅色</div>
+        <div class="desc">明亮清爽</div>
+      </div>
+      <div class="theme-tile" data-theme="dark">
+        <div class="ico">🌙</div>
+        <div class="name">深色</div>
+        <div class="desc">护眼舒缓</div>
+      </div>
+      <div class="theme-tile" data-theme="auto">
+        <div class="ico">⚙️</div>
+        <div class="name">跟随系统</div>
+        <div class="desc">自动切换</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI 接口 -->
+  <section class="glass holo-edge section">
+    <h3>AI 接口</h3>
+
+    <div class="api-tabs">
+      <button data-api="default" class="active">默认接口（受限）</button>
+      <button data-api="custom">自定义接口</button>
+    </div>
+
+    <!-- 默认接口 -->
+    <div class="api-section show" id="api-default">
+      <div class="usage-row" id="usage-row"></div>
+
+      <div class="info-banner" id="default-info">
+        默认接口由本应用提供，每个账号每天最多 <b id="quota-d">5</b> 次、累计最多 <b id="quota-t">50</b> 次。
+        超出后会自动回退到 <b>本地解析</b>（无网络调用，识别简单格式题目）。
+        想无限制使用，请切换到"自定义接口"填你自己的 API。
+      </div>
+    </div>
+
+    <!-- 自定义接口 -->
+    <div class="api-section" id="api-custom">
+      <div class="field"><label>API Key</label>
+        <input id="cfg-key" type="password" placeholder="sk-..." autocomplete="off" />
+      </div>
+      <div class="field-row">
+        <div class="field"><label>模型 ID</label>
+          <input id="cfg-model" placeholder="gpt-4o-mini" />
+        </div>
+        <div class="field"><label>接口地址</label>
+          <input id="cfg-endpoint" placeholder="https://api.openai.com/v1/chat/completions" />
+        </div>
+      </div>
+      <div class="info-banner">
+        填你自己的 OpenAI 兼容 API（也支持 <b>DeepSeek / 智谱 GLM / 通义千问 / OpenRouter</b> 等）。Key 只存在浏览器本地，不会上传。
+      </div>
+      <button class="btn btn-primary" id="cfg-save" style="margin-top:14px">保存自定义接口</button>
+      <button class="btn btn-ghost" id="cfg-clear" style="margin-top:14px;margin-left:8px">清空</button>
+    </div>
+  </section>
+
+  <!-- 账号 -->
+  <section class="glass holo-edge section">
+    <h3>账号</h3>
+    <div id="user-box"></div>
+  </section>
+
+  <!-- 数据 -->
+  <section class="glass holo-edge section">
+    <h3>数据</h3>
+    <button class="btn btn-ghost" id="btn-export-all">导出全部数据</button>
+    <button class="btn btn-ghost" id="btn-reset" style="margin-left:8px;color:var(--error)">清空当前数据</button>
+    <div class="info-banner" style="margin-top:14px">
+      <b>导出</b>：把所有卡片集和练习历史下载成 JSON 备份。<br>
+      <b>清空</b>：删除当前访客/账号下所有卡片集、历史、AI 用量。
+    </div>
+  </section>
+</main>
+
+<script type="module">
+import { Theme, Settings } from './assets/settings.js';
+import { Auth } from './assets/auth.js';
+import { Store } from './assets/store.js';
+import { mountShell, toast } from './assets/shell.js';
+mountShell('library', { requireAuth: false });   // 不强制 active，沿用 library 的高亮
+
+// ---- 主题 ----
+function renderTheme() {
+  const cur = Theme.get();
+  document.querySelectorAll('.theme-tile').forEach(t => {
+    t.classList.toggle('active', t.dataset.theme === cur);
+  });
+}
+document.querySelectorAll('.theme-tile').forEach(t => {
+  t.addEventListener('click', () => {
+    Theme.set(t.dataset.theme);
+    renderTheme();
+    // 顶部图标也同步
+    const ico = document.getElementById('theme-ico');
+    if (ico) ico.textContent = ({ dark:'dark_mode', light:'light_mode', auto:'contrast' })[t.dataset.theme];
+    toast(`已切换：${ {light:'☀️ 浅色',dark:'🌙 深色',auto:'⚙️ 跟随系统'}[t.dataset.theme] }`, 'palette');
+  });
+});
+renderTheme();
+
+// ---- AI tab 切换 ----
+const cur = Settings.ai();
+document.querySelectorAll('.api-tabs button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.api-tabs button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('api-default').classList.toggle('show', b.dataset.api === 'default');
+    document.getElementById('api-custom').classList.toggle('show', b.dataset.api === 'custom');
+  });
+});
+// 进来如果已有自定义，切到 custom 那 tab
+if (cur.source === 'custom') {
+  document.querySelector('[data-api="custom"]').click();
+}
+
+// 自定义接口 form 填充
+document.getElementById('cfg-key').value = (cur.source === 'custom' ? cur.key : '') || '';
+document.getElementById('cfg-model').value = (cur.source === 'custom' ? cur.model : '') || '';
+document.getElementById('cfg-endpoint').value = (cur.source === 'custom' ? cur.endpoint : '') || '';
+
+document.getElementById('cfg-save').addEventListener('click', () => {
+  const key = document.getElementById('cfg-key').value.trim();
+  const model = document.getElementById('cfg-model').value.trim() || 'gpt-4o-mini';
+  const endpoint = document.getElementById('cfg-endpoint').value.trim() || 'https://api.openai.com/v1/chat/completions';
+  if (!key) return toast('请填 API Key', 'error');
+  Settings.setAI({ source: 'custom', key, model, endpoint, label: '自定义' });
+  toast('已保存自定义接口', 'task_alt');
+});
+document.getElementById('cfg-clear').addEventListener('click', () => {
+  if (!confirm('确定清空自定义接口配置？将切回默认接口（受限）。')) return;
+  Settings.useDefault();
+  document.getElementById('cfg-key').value = '';
+  document.getElementById('cfg-model').value = '';
+  document.getElementById('cfg-endpoint').value = '';
+  renderUsage();
+  toast('已切回默认接口', 'restart_alt');
+});
+
+// ---- 用量 ----
+function renderUsage() {
+  const u = Settings.usage();
+  const meta = Settings.defaultsMeta();
+  document.getElementById('quota-d').textContent = meta.quotaDaily;
+  document.getElementById('quota-t').textContent = meta.quotaTotal;
+  const dPct = Math.min(100, Math.round(u.today / meta.quotaDaily * 100));
+  const tPct = Math.min(100, Math.round(u.total / meta.quotaTotal * 100));
+  const dDanger = u.today >= meta.quotaDaily ? 'danger' : '';
+  const tDanger = u.total >= meta.quotaTotal ? 'danger' : '';
+  document.getElementById('usage-row').innerHTML = `
+    <div class="usage-stat ${dDanger}">
+      <div class="label">今日已用</div>
+      <div class="v">${u.today}<span class="denom"> / ${meta.quotaDaily}</span></div>
+      <div class="bar"><i style="width:${dPct}%"></i></div>
+    </div>
+    <div class="usage-stat ${tDanger}">
+      <div class="label">累计已用</div>
+      <div class="v">${u.total}<span class="denom"> / ${meta.quotaTotal}</span></div>
+      <div class="bar"><i style="width:${tPct}%"></i></div>
+    </div>
+  `;
+  // 如果没配 key，加一个提示
+  const ai = Settings.ai();
+  const info = document.getElementById('default-info');
+  if (ai.source === 'default' && !ai.key) {
+    info.classList.add('warn');
+    info.innerHTML = `⚠ <b>默认接口未配置 Key</b>，本地版没有默认 Key 可用，AI 解析功能将使用 <b>本地启发式解析</b>（仍能识别常见格式）。<br><br>
+      如需真模型解析，请切到"自定义接口" Tab，填你自己的 API Key（OpenAI / DeepSeek / 智谱 / OpenRouter 等兼容接口）。`;
+  }
+}
+renderUsage();
+
+// ---- 账号区 ----
+const u = Auth.currentUser();
+const accountLabel = u ? u.email : 'guest';
+const accountId = u ? u.id : 'guest';
+document.getElementById('user-box').innerHTML = u ? `
+  <div style="display:flex;align-items:center;gap:14px">
+    <div style="width:56px;height:56px;border-radius:50%;background:${u.avatar?.color||'#576065'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">
+      ${u.avatar?.letter || (u.email||'?')[0].toUpperCase()}
+    </div>
+    <div style="flex:1">
+      <div style="font-size:16px;font-weight:600">${u.nickname}</div>
+      <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px">${u.email}</div>
+    </div>
+    <button class="btn btn-ghost" id="btn-logout" style="color:var(--error)">退出登录</button>
+  </div>
+` : `
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div style="width:56px;height:56px;border-radius:50%;background:#576065;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">访</div>
+    <div style="flex:1;min-width:180px">
+      <div style="font-size:16px;font-weight:600">访客模式</div>
+      <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px">数据保存在当前浏览器本地。</div>
+    </div>
+    <a class="btn btn-ghost" href="login.html">登录 / 注册</a>
+  </div>
+`;
+
+document.getElementById('btn-logout')?.addEventListener('click', () => {
+  if (!confirm('退出登录？数据不会删除，下次登录还在。')) return;
+  Auth.logout();
+  location.replace('login.html');
+});
+
+// ---- 数据导出 / 清空 ----
+document.getElementById('btn-export-all').addEventListener('click', async () => {
+  const txt = await Store.exportJSON();
+  const blob = new Blob([txt], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `quizcard-backup-${accountLabel}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('已导出', 'download_done');
+});
+
+document.getElementById('btn-reset').addEventListener('click', async () => {
+  if (!confirm(`⚠ 确定清空当前数据空间 (${accountLabel}) 的全部卡片集、练习历史和 AI 用量？此操作无法恢复。`)) return;
+  if (!confirm('再次确认：此操作不可恢复！')) return;
+  await Store.resetAll();
+  localStorage.removeItem('quizcard.' + accountId + '.usage');
+  toast('已清空，刷新中…', 'delete');
+  setTimeout(() => location.reload(), 600);
+});
+</script>
+</body>
+</html>

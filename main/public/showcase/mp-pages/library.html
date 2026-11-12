@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=375, user-scalable=no" />
+<title>卡片库</title>
+<style>
+  /* ===== 全局 reset & token (来自 app.wxss) ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --brand-primary: #6C5CE7;
+    --brand-secondary: #A29BFE;
+    --bg-primary: #0F0B1A;
+    --bg-secondary: #1A1530;
+    --bg-card: #1E1940;
+    --bg-surface: #252050;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255,255,255,0.7);
+    --text-tertiary: rgba(255,255,255,0.45);
+    --border-subtle: rgba(255,255,255,0.08);
+    --border-card: rgba(108,92,231,0.2);
+    --success: #00D2A0;
+    --warning: #FFB74D;
+    --danger: #FF6B6B;
+    --accent-purple: #A29BFE;
+    --accent-blue: #74B9FF;
+    --accent-pink: #FD79A8;
+    --accent-green: #55EFC4;
+    --accent-orange: #FDCB6E;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-card: 0 4px 20px rgba(0,0,0,0.3);
+    --shadow-glow: 0 0 30px rgba(108,92,231,0.15);
+  }
+
+  body {
+    width: 375px;
+    min-height: 812px;
+    margin: 0 auto;
+    background: var(--bg-primary);
+    font-family: var(--font-family);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ===== Status Bar ===== */
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 44px;
+    padding: 0 20px;
+    background: var(--bg-primary);
+    font-size: 12px;
+    color: var(--text-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .statusbar-time { font-weight: 600; font-size: 14px; }
+  .statusbar-icons { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+  .statusbar-icons .signal { letter-spacing: -1px; }
+  .statusbar-icons .battery { letter-spacing: 1px; }
+
+  /* ===== Navbar (小程序导航) ===== */
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 44px;
+    padding: 0 16px;
+    background: var(--bg-primary);
+    position: sticky;
+    top: 44px;
+    z-index: 100;
+  }
+  .navbar-title { font-size: 17px; font-weight: 600; }
+  .navbar-actions { display: flex; align-items: center; gap: 16px; font-size: 18px; color: var(--text-secondary); }
+
+  /* ===== Page ===== */
+  .page {
+    padding: 0 16px 100px;
+  }
+
+  /* ===== Page Header ===== */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+  }
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+
+  /* ===== Stats Row ===== */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-card .stat-icon { font-size: 20px; margin-bottom: 4px; }
+  .stat-card .stat-number { font-size: 20px; font-weight: 700; }
+  .stat-card .stat-label { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* ===== Section Header ===== */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 12px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .section-action {
+    font-size: 13px;
+    color: var(--accent-purple);
+  }
+
+  /* ===== Card List ===== */
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ===== Nebula Card ===== */
+  .nebula-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    overflow: hidden;
+  }
+  .nebula-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+    opacity: 0.6;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .card-icon.purple { background: rgba(108,92,231,0.2); }
+  .card-icon.blue { background: rgba(116,185,255,0.2); }
+  .card-icon.green { background: rgba(85,239,196,0.2); }
+  .card-icon.orange { background: rgba(253,203,110,0.2); }
+  .card-icon.pink { background: rgba(253,121,168,0.2); }
+  .card-body { flex: 1; }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .card-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 10px;
+  }
+  .card-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(108,92,231,0.12);
+    color: var(--accent-purple);
+  }
+  .card-tag.green-tag { background: rgba(0,210,160,0.12); color: var(--success); }
+  .card-tag.blue-tag { background: rgba(116,185,255,0.12); color: var(--accent-blue); }
+  .card-tag.orange-tag { background: rgba(253,203,110,0.12); color: var(--accent-orange); }
+  .card-accuracy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .card-accuracy .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .card-accuracy .value {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 4px;
+  }
+  .card-arrow {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  /* ===== Nebula Bar (Progress Bar) ===== */
+  .nebula-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .nebula-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-blue));
+    transition: width 0.3s ease;
+    position: relative;
+  }
+  .nebula-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .nebula-bar-fill.high { background: linear-gradient(90deg, var(--success), #00E5A0); }
+  .nebula-bar-fill.medium { background: linear-gradient(90deg, var(--warning), #FFD54F); }
+  .nebula-bar-fill.low { background: linear-gradient(90deg, var(--danger), #FF8E8E); }
+
+  /* ===== Floating Button ===== */
+  .floating-btn {
+    position: fixed;
+    bottom: 32px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-primary), #8B7CF7);
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(108,92,231,0.4);
+    cursor: default;
+    z-index: 200;
+  }
+  .floating-btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-primary), var(--accent-blue));
+    opacity: 0.15;
+    z-index: -1;
+  }
+
+  /* ===== Tabbar ===== */
+  .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 375px;
+    height: 64px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 200;
+  }
+  .tabbar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    padding: 4px 0;
+  }
+  .tabbar-item .tab-icon { font-size: 22px; }
+  .tabbar-item.active { color: var(--accent-purple); }
+  .tabbar-item.active .tab-icon { color: var(--accent-purple); }
+
+  /* ===== Gap component ===== */
+  .gap { height: 12px; }
+
+  /* ===== Empty State ===== */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--text-tertiary);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state .empty-text { font-size: 14px; }
+
+  /* ===== Search Bar ===== */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0 12px;
+    height: 40px;
+    margin-bottom: 4px;
+  }
+  .search-bar .search-icon { font-size: 16px; color: var(--text-tertiary); margin-right: 8px; }
+  .search-bar .search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: var(--font-family);
+  }
+  .search-bar .search-input::placeholder { color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+
+  <!-- ===== Status Bar ===== -->
+  <div class="statusbar">
+    <span class="statusbar-time">10:24</span>
+    <span class="statusbar-icons">
+      <span class="signal">🛜</span>
+      <span>5G</span>
+      <span>▮▮▮</span>
+      <span class="battery">86%</span>
+    </span>
+  </div>
+
+  <!-- ===== Navbar ===== -->
+  <div class="navbar">
+    <span class="navbar-title">卡片库</span>
+    <span class="navbar-actions">
+      <span>⋯</span>
+      <span>✕</span>
+    </span>
+  </div>
+
+  <!-- ===== Page Content ===== -->
+  <div class="page">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-title">卡片库</div>
+        <div class="page-subtitle">共 3 套题库 · 60 道题目</div>
+      </div>
+      <span style="font-size:28px;">📚</span>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-number">3</div>
+        <div class="stat-label">题库总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-number">60</div>
+        <div class="stat-label">总题数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✦</div>
+        <div class="stat-number">78%</div>
+        <div class="stat-label">平均正确率</div>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="搜索题库..." readonly />
+    </div>
+
+    <div class="gap"></div>
+
+    <!-- Section: 最近练习 -->
+    <div class="section-header">
+      <span class="section-title">📖 最近练习</span>
+      <span class="section-action">查看全部 ▸</span>
+    </div>
+
+    <!-- Card List -->
+    <div class="card-list">
+
+      <!-- ===== Card 1: 计算机网络 ===== -->
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon purple">🌐</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">计算机网络期末复习</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 12 题</span>
+          <span class="card-meta-item">🕒 昨天</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># 计网</span>
+          <span class="card-tag green-tag"># 期末</span>
+          <span class="card-tag blue-tag"># 复习</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill high" style="width:78%;"></div>
+          </div>
+          <span class="value" style="color:var(--success);">78%</span>
+        </div>
+      </div>
+
+      <!-- ===== Card 2: Vue 3 ===== -->
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon blue">⚡</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">Vue 3 Composition API</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 8 题</span>
+          <span class="card-meta-item">🕒 3 天前</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># Vue</span>
+          <span class="card-tag blue-tag"># 前端</span>
+          <span class="card-tag green-tag"># 进阶</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill high" style="width:92%;"></div>
+          </div>
+          <span class="value" style="color:var(--success);">92%</span>
+        </div>
+      </div>
+
+      <!-- ===== Card 3: 英语六级 ===== -->
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon green">📖</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">英语六级核心词汇</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 40 题</span>
+          <span class="card-meta-item">🕒 1 周前</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># 英语</span>
+          <span class="card-tag orange-tag"># CET-6</span>
+          <span class="card-tag blue-tag"># 词汇</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill medium" style="width:65%;"></div>
+          </div>
+          <span class="value" style="color:var(--warning);">65%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="gap"></div>
+
+    <!-- Section: 全部题库 -->
+    <div class="section-header">
+      <span class="section-title">🗂️ 全部题库</span>
+      <span class="section-action">排序 ▸</span>
+    </div>
+
+    <!-- Mini cards for "全部题库" section (same 3 cards in compact view) -->
+    <div class="card-list">
+
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon purple">🌐</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">计算机网络期末复习</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 12 题</span>
+          <span class="card-meta-item">🕒 昨天</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># 计网</span>
+          <span class="card-tag green-tag"># 期末</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill high" style="width:78%;"></div>
+          </div>
+          <span class="value" style="color:var(--success);">78%</span>
+        </div>
+      </div>
+
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon blue">⚡</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">Vue 3 Composition API</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 8 题</span>
+          <span class="card-meta-item">🕒 3 天前</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># Vue</span>
+          <span class="card-tag blue-tag"># 前端</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill high" style="width:92%;"></div>
+          </div>
+          <span class="value" style="color:var(--success);">92%</span>
+        </div>
+      </div>
+
+      <div class="nebula-card">
+        <div class="card-header">
+          <div class="card-icon green">📖</div>
+          <span class="card-arrow">▸</span>
+        </div>
+        <div class="card-title">英语六级核心词汇</div>
+        <div class="card-meta">
+          <span class="card-meta-item">📝 40 题</span>
+          <span class="card-meta-item">🕒 1 周前</span>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"># 英语</span>
+          <span class="card-tag orange-tag"># CET-6</span>
+        </div>
+        <div class="card-accuracy">
+          <span class="label">✓ 正确率</span>
+          <div class="nebula-bar">
+            <div class="nebula-bar-fill medium" style="width:65%;"></div>
+          </div>
+          <span class="value" style="color:var(--warning);">65%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Empty state note -->
+    <div class="gap"></div>
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">没有更多题库了</div>
+    </div>
+
+  </div>
+
+  <!-- ===== Floating Action Button ===== -->
+  <button class="floating-btn" type="button">✦</button>
+
+  <!-- ===== Tabbar ===== -->
+  <div class="tabbar">
+    <div class="tabbar-item active">
+      <span class="tab-icon">📚</span>
+      <span>卡片库</span>
+    </div>
+    <div class="tabbar-item">
+      <span class="tab-icon">📝</span>
+      <span>练习</span>
+    </div>
+    <div class="tabbar-item">
+      <span class="tab-icon">📊</span>
+      <span>统计</span>
+    </div>
+    <div class="tabbar-item">
+      <span class="tab-icon">👤</span>
+      <span>我的</span>
+    </div>
+  </div>
+
+</body>
+</html>

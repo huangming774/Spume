@@ -1,0 +1,15 @@
+[Unit]
+Description=Taozhiyy API (acg-api + blog AI chat)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/acg-api
+Environment=ACG_API_ADDR=127.0.0.1:8787
+Environment=ACG_DATA_DIR=/var/lib/acg-api
+ExecStart=/opt/acg-api/acg-api
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

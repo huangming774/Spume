@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cc-connect 手机电脑双端连通</title>
+<script src="../site-i18n.js" defer></script>
+
+<link rel="stylesheet" href="../site-weather.css">
+<script>try{if(localStorage.getItem('siteWeather')==='rainy')document.documentElement.classList.add('weather-rainy');}catch(e){}</script>
+<script src="../site-weather.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-dark.min.css"><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+<link rel="stylesheet" href="../site-pages.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh; display:flex; overflow-x:hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: #f9fafb;
+  }
+  .bg {
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 72% 58% at 18% 22%, rgba(186, 206, 255, 0.22), transparent 68%),
+      radial-gradient(ellipse 62% 56% at 88% 78%, rgba(255, 218, 225, 0.18), transparent 64%),
+      linear-gradient(165deg, #fdfefe 0%, #f8f9fb 40%, #fafbfc 100%);
+    animation: gradMorph 16s ease-in-out infinite alternate;
+  }
+  @keyframes gradMorph { 0%,100%{opacity:1} 50%{opacity:.92} }
+  .sidebar {
+    position:relative; z-index:10; width:220px; min-width:220px; height:100vh;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 1px solid rgba(0,0,0,0.04);
+    display:flex; flex-direction:column; padding:38px 22px; flex-shrink:0;
+  }
+  .sidebar-header { display:flex; align-items:center; gap:11px; margin-bottom:18px; }
+  .avatar { width:36px; height:36px; border-radius:50%; overflow:hidden; border:1.5px solid rgba(0,0,0,0.1); }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .blog-name { color:#3a3a4a; font-size:13px; font-weight:500; }
+  .sidebar-social { display:flex; gap:12px; margin-bottom:32px; }
+  .sidebar-social a { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+  .sidebar-nav { flex:1; display:flex; flex-direction:column; }
+  .nav-item {
+    display:flex; align-items:center; gap:11px; padding:9px 13px; border-radius:7px;
+    color:#b0b0b8; font-size:12px; text-decoration:none;
+  }
+  .nav-item:hover { background:rgba(0,0,0,0.02); color:#666; }
+  .nav-item.active { background:rgba(0,0,0,0.03); color:#3a3a4a; }
+  .nav-icon { width:17px; opacity:0.35; font-size:12px; }
+  .nav-item.active .nav-icon { opacity:0.65; }
+  .blog-name-full { font-size:12px; max-width:140px; line-height:1.35; }
+  .sidebar-footer { padding-top:16px; border-top:1px solid rgba(0,0,0,0.03); color:#c0c0c4; font-size:9px; }
+  .main { position:relative; z-index:5; flex:1; overflow-y:auto; height:100vh; padding:40px 50px; }
+  .sidebar-toggle { position:absolute; top:12px; right:12px; width:28px; height:28px; border:1px solid rgba(0,0,0,0.1); background:rgba(255,255,255,0.6); border-radius:6px; cursor:pointer; font-size:14px; color:#999; display:flex; align-items:center; justify-content:center; z-index:20; transition:all 0.2s; }
+  .sidebar-toggle:hover { background:rgba(0,0,0,0.04); color:#555; }
+  .sidebar.collapsed { width:50px; min-width:50px; padding:20px 8px; }
+  .sidebar.collapsed .sidebar-header,.sidebar.collapsed .blog-name,.sidebar.collapsed .nav-label,.sidebar.collapsed .sidebar-footer,.sidebar.collapsed .sidebar-social,.sidebar.collapsed .lang-toggle-wrap { display:none; }
+  .sidebar.collapsed .nav-item { justify-content:center; padding:8px; }
+  .sidebar.collapsed .sidebar-toggle { top:6px; right:auto; left:50%; transform:translateX(-50%); }
+  .sidebar.collapsed .sidebar-nav { padding-top:30px; }
+  @media (max-width:768px) {
+    .sidebar { width:50px; min-width:50px; padding:20px 8px; }
+    .blog-name,.nav-label,.sidebar-footer,.sidebar-social,.sidebar-toggle,.lang-toggle-wrap { display:none; }
+    .nav-item { justify-content:center; padding:6px; }
+    .main { padding:24px 16px; }
+    .post-body.prose table { display:block; overflow-x:auto; font-size:12px; }
+    .post-body.prose th,.post-body.prose td { padding:6px 8px; }
+    .post-body.prose pre { margin:14px 0; font-size:12px; }
+    .post-body.prose pre code { font-size:11px; padding:10px 12px; }
+    .post-body.prose pre::before { height:28px; }
+    .post-body.prose pre::after { top:8px; left:10px; width:9px; height:9px; box-shadow:20px 0 0 #febc2e,40px 0 0 #28c840; }
+    .code-copy-btn { top:4px; right:6px; font-size:10px; padding:1px 8px; }
+    .post-body.prose .quote-art { padding:18px 16px; font-size:15px; }
+    .article-card { padding:16px; }
+    .article-card h2 { font-size:15px; }
+    .page-title { font-size:22px; }
+    .post-title { font-size:20px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:8px; }
+    .gallery-feed { gap:20px; }
+  }
+  @media (max-width:480px) {
+    .main { padding:16px 12px; }
+    .post-body.prose table { font-size:11px; }
+    .post-body.prose th,.post-body.prose td { padding:4px 6px; }
+    .post-body.prose .quote-art { padding:14px 12px; font-size:14px; }
+    .article-card { padding:12px; }
+    .album-grid,.photo-grid { grid-template-columns:repeat(2,1fr); gap:6px; }
+  }
+</style>
+<link rel="stylesheet" href="../site-mobile-nav.css">
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="weather-mist" aria-hidden="true"></div>
+<canvas id="rainCanvas" class="rain-canvas" aria-hidden="true"></canvas>
+<aside class="sidebar">
+  <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
+  <div class="sidebar-header">
+    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div><div class="blog-name blog-name-full" data-i18n="blogTitle">桃之夭夭の创作屋</div></div>
+  </div>
+  <div class="sidebar-social">
+    <a href="https://space.bilibili.com/1061280173" target="_blank" rel="noopener noreferrer" title="B站"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="12.5" rx="2" stroke="#aaa" stroke-width="1.2"/><path d="M6 2l2 3M18 2l-2 3" stroke="#aaa" stroke-width="1.2" stroke-linecap="round"/><path d="M8 9v5M11 9v5M14 9v5M16 9v5" stroke="#aaa" stroke-width="1" stroke-linecap="round"/></svg></a>
+    <a href="https://github.com/bistutzyy" target="_blank" rel="noopener noreferrer" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.78.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.6 9.6 0 0112 6.8c.85.004 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.82-2.34 4.66-4.57 4.91.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" fill="#aaa"/></svg></a>
+</div>
+  <nav class="sidebar-nav">
+    <a href="../index.html" class="nav-item"><span class="nav-icon">HOME</span><span class="nav-label" data-i18n="navHome">首页</span></a>
+    <a href="../archives.html" class="nav-item"><span class="nav-icon">ARC</span><span class="nav-label" data-i18n="navArchive">归档</span></a>
+    <a href="../articles.html" class="nav-item active"><span class="nav-icon">ART</span><span class="nav-label" data-i18n="navArticle">文章</span></a>
+    <a href="../gallery.html" class="nav-item"><span class="nav-icon">ALB</span><span class="nav-label" data-i18n="navGallery">相册</span></a>
+    <a href="../message.html" class="nav-item"><span class="nav-icon">MSG</span><span class="nav-label" data-i18n="navMsg">留言墙</span></a>
+  </nav>
+  <div class="lang-toggle-wrap">
+    <button type="button" class="lang-toggle" id="siteLangToggle">English</button>
+    <button type="button" class="weather-toggle" id="weatherToggle" aria-pressed="false"><span class="weather-toggle-icon" aria-hidden="true">☔</span><span class="weather-toggle-label">雨天</span></button>
+  </div>
+  <div class="sidebar-footer" data-i18n="footerLine">桃之夭夭 © 2026</div>
+</aside>
+<main class="main">
+<article class="page-main-inner post-page">
+  <a href="../articles.html" class="post-back">← <span data-i18n="navArticle">文章</span></a>
+  <header class="post-header">
+    <h1 class="post-title"><span class="i18n-zh">cc-connect 手机电脑双端连通</span><span class="i18n-en" style="display:none">cc-connect — Seamless Phone-PC Workflow</span></h1>
+    <div class="post-meta article-meta">
+      <span>2026-05-14</span>
+      <span>1800 <span data-i18n="metaWords">字</span></span>
+      <span>312 <span data-i18n="metaReads">阅读</span></span>
+      <span><span data-i18n="metaMinutes">约</span>7 <span data-i18n="metaMinSuffix">分钟</span></span>
+    </div>
+  </header>
+  <div class="post-body prose i18n-zh"><p>用手机指挥电脑上的Claude Code写代码、发文件、改配置，全程无需碰键盘。这篇教程记录我如何通过cc-connect把Claude Code接入微信，实现双端联动。</p>
+<p>本文所有操作均在Windows 11 + Node.js 22环境下完成，微信端使用个人微信（ilink通道）。</p>
+<h2>一、什么是cc-connect？</h2>
+<p>cc-connect是一个开源桥接工具，将本地AI编程助手（Claude Code、Cursor、Gemini CLI等）接入微信、飞书、Telegram等聊天平台，让你随时随地从手机远程操控AI Agent。</p>
+<p>项目地址：<a href="https://github.com/chenhg5/cc-connect">https://github.com/chenhg5/cc-connect</a></p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>状态</th>
+<th>平台</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>飞书/Lark</td>
+<td>稳定</td>
+<td>微信个人号</td>
+<td>Beta</td>
+</tr>
+<tr>
+<td>Telegram</td>
+<td>稳定</td>
+<td>企业微信</td>
+<td>稳定</td>
+</tr>
+<tr>
+<td>钉钉</td>
+<td>稳定</td>
+<td>QQ</td>
+<td>稳定</td>
+</tr>
+<tr>
+<td>Slack</td>
+<td>稳定</td>
+<td>LINE</td>
+<td>稳定</td>
+</tr>
+<tr>
+<td>Discord</td>
+<td>稳定</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>核心能力概括：</p>
+<ul>
+<li>手机微信直接与Claude Code对话</li>
+<li>支持图片/文件/语音发送到电脑</li>
+<li>电脑端文件可回传到微信聊天</li>
+<li>斜杠命令操控Agent（/mode、/new、/stop等）</li>
+<li>无需公网IP，扫码即连</li>
+</ul>
+<h2>二、安装配置</h2>
+<h3>Step 1 — 安装Beta版</h3>
+<p>微信个人号渠道仅在Beta版中可用。必须用@beta标签安装：</p>
+<pre><code class="language-bash">npm install -g cc-connect@beta
+</code></pre>
+<p>安装完成后验证：</p>
+<pre><code class="language-bash">cc-connect --version
+</code></pre>
+<h3>Step 2 — 初始化配置</h3>
+<pre><code class="language-bash">cc-connect init
+</code></pre>
+<p>这会在<code>~/.cc-connect/</code>下生成<code>config.toml</code>。关键配置如下：</p>
+<pre><code class="language-toml"># cc-connect configuration
+language = &quot;zh&quot;
+attachment_send = &quot;on&quot;       # 文件回传总开关
+
+[display]
+thinking_messages = false
+tool_messages = false
+
+[[projects]]
+name = &quot;default&quot;
+[projects.agent]
+type = &quot;claudecode&quot;
+[projects.agent.options]
+work_dir = &quot;C:/Users/lenovo&quot;
+mode = &quot;default&quot;
+
+[[projects.platforms]]
+type = &quot;weixin&quot;
+</code></pre>
+<h3>Step 3 — 微信扫码绑定</h3>
+<pre><code class="language-bash">cc-connect weixin setup --project default
+</code></pre>
+<p>终端会弹出二维码 → 用微信扫码确认 → token自动写入配置。无需手动填token。</p>
+<h2>三、启动与使用</h2>
+<pre><code class="language-bash">cc-connect
+</code></pre>
+<p>启动后，打开微信向机器人发消息即可交互。我把工作目录定位在<code>C:/Users/lenovo</code>，这样Claude Code的所有能力（skills、memory、项目上下文）都能在手机上调用。</p>
+<div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:16px 0;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1c108889732d721111aa7c9b76eaee4c.jpg" alt="微信端聊天效果截图一" style="max-width:44%;border-radius:8px;">
+<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1fc28c042ce32d72b0cb28b31e05120a.jpg" alt="微信端聊天效果截图二" style="max-width:44%;border-radius:8px;">
+</div>
+
+<h2>四、微信端斜杠命令</h2>
+<p>在微信对话框直接输入以下命令控制Agent：</p>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/new [name]</code></td>
+<td>开启新会话</td>
+</tr>
+<tr>
+<td><code>/list</code></td>
+<td>列出所有会话</td>
+</tr>
+<tr>
+<td><code>/switch &lt;id&gt;</code></td>
+<td>切换会话</td>
+</tr>
+<tr>
+<td><code>/current</code></td>
+<td>查看当前会话</td>
+</tr>
+<tr>
+<td><code>/history [n]</code></td>
+<td>查看历史消息</td>
+</tr>
+<tr>
+<td><code>/mode default</code></td>
+<td>标准权限模式</td>
+</tr>
+<tr>
+<td><code>/mode plan</code></td>
+<td>规划模式</td>
+</tr>
+<tr>
+<td><code>/mode yolo</code></td>
+<td>自动执行模式</td>
+</tr>
+<tr>
+<td><code>/stop</code></td>
+<td>停止当前任务</td>
+</tr>
+<tr>
+<td><code>/quiet</code></td>
+<td>开关进度消息</td>
+</tr>
+<tr>
+<td><code>/dir &lt;path&gt;</code></td>
+<td>切换工作目录</td>
+</tr>
+<tr>
+<td><code>/model</code></td>
+<td>切换AI模型</td>
+</tr>
+<tr>
+<td><code>/allow &lt;tool&gt;</code></td>
+<td>预授权工具</td>
+</tr>
+<tr>
+<td><code>/memory</code></td>
+<td>管理长期记忆</td>
+</tr>
+<tr>
+<td><code>/cron add</code></td>
+<td>添加定时任务</td>
+</tr>
+</tbody>
+</table>
+<h2>五、文件互传</h2>
+<h3>手机 → 电脑</h3>
+<p>直接在微信发文件/图片/语音，cc-connect自动保存到<code>.cc-connect/attachments/</code>并交给Claude Code处理。</p>
+<h3>电脑 → 手机</h3>
+<p>在终端使用<code>cc-connect send</code>命令将文件发回微信：</p>
+<pre><code class="language-bash"># 发送文件
+cc-connect send --file &quot;C:/Users/lenovo/Desktop/report_final.docx&quot;
+
+# 发送图片
+cc-connect send --image &quot;C:/path/to/screenshot.png&quot;
+
+# 同时发送文件+图片
+cc-connect send --file &quot;report.pdf&quot; --image &quot;chart.png&quot;
+</code></pre>
+<p>发文件用绝对路径最稳妥，避免路径解析问题。</p>
+<h2>六、语音消息</h2>
+<p>cc-connect还支持语音互转。在<code>config.toml</code>中添加speech配置即可使用Groq的whisper-large-v3模型进行语音转文字。</p>
+<ul>
+<li>微信语音自动转文字发给Claude Code</li>
+<li>Claude Code回复可选转语音播报</li>
+<li>需要安装ffmpeg依赖</li>
+</ul>
+<h2>七、总结</h2>
+<p>现在我不在家也能用手机指挥电脑上的Claude Code：</p>
+<ul>
+<li>写博客、改代码、搜文件</li>
+<li>电脑生成的文件一键发到手机</li>
+<li>开车时用语音下指令</li>
+<li>定时任务自动运行</li>
+</ul>
+<p>整套配置不超过30分钟，强烈推荐给所有用Claude Code的朋友。</p>
+<h3>常见问题FAQ</h3>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>解答</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>微信收不到机器人消息？</td>
+<td>检查cc-connect服务是否在运行，以及token是否过期（重新扫码即可）</td>
+</tr>
+<tr>
+<td>文件发送失败？</td>
+<td>确认<code>attachment_send = "on"</code>已设置，并使用Beta版<code>cc-connect@beta</code></td>
+</tr>
+<tr>
+<td>语音转文字不工作？</td>
+<td>需要安装ffmpeg并配置Groq API key，Groq提供免费额度</td>
+</tr>
+<tr>
+<td>可以多台手机同时接入吗？</td>
+<td>可以，多个项目在配置中分不同的<code>[[projects]]</code>即可</td>
+</tr>
+</tbody>
+</table></div>
+  <div class="post-body prose i18n-en" style="display:none"><h2>What is cc-connect?</h2>
+<p>cc-connect is an open-source bridge that connects local AI coding assistants (Claude Code, Cursor, Gemini CLI, etc.) to chat platforms like WeChat, Lark, and Telegram.</p>
+<p>Repo: <a href="https://github.com/chenhg5/cc-connect">https://github.com/chenhg5/cc-connect</a></p>
+<h2>Installation</h2>
+<pre><code class="language-bash">npm install -g cc-connect@beta
+cc-connect init
+cc-connect weixin setup --project default
+</code></pre>
+<h2>Usage</h2>
+<pre><code class="language-bash">cc-connect
+</code></pre>
+<p>Then send messages to the bot on WeChat. Slash commands like <code>/new</code>, <code>/stop</code>, <code>/mode</code>, <code>/switch</code> control the agent.</p>
+<h2>File Transfer</h2>
+<ul>
+<li><strong>Phone → PC</strong>: Send files/images/voice directly in WeChat</li>
+<li><strong>PC → Phone</strong>: <code>cc-connect send --file "path/to/file"</code></li>
+</ul>
+<h2>Voice Messages</h2>
+<p>Configure Groq's whisper-large-v3 in config.toml for speech-to-text.</p>
+<h2>Summary</h2>
+<p>With cc-connect, I can command Claude Code on my PC from anywhere via WeChat — write blogs, edit code, search files, and get results sent back to my phone. The entire setup takes under 30 minutes.</p></div>
+</article>
+</main>
+
+<script>
+(function(){
+  var pres = document.querySelectorAll('.post-body.prose pre');
+  pres.forEach(function(pre){
+    var btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(){
+      var code = pre.querySelector('code');
+      var text = code ? code.innerText : pre.innerText;
+      navigator.clipboard.writeText(text).then(function(){
+        btn.textContent = 'Copied!';
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 2000);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+  hljs.highlightAll();
+  pres.forEach(function(pre){
+    var code = pre.querySelector('code');
+    if (code) {
+      var cls = code.className || '';
+      // plaintext / no-language / text / output → mark as output
+      if (/language-plaintext|language-text|language-output|language-none/.test(cls) || !/language-/.test(cls)) {
+        pre.classList.add('code-output');
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, user-scalable=no">
+  <title>登录 - AI QuizCard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      background: #f7f9fb;
+      color: #191c1e;
+    }
+    body {
+      width: 375px;
+      min-height: 812px;
+      margin: 0 auto;
+      position: relative;
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(255,235,240,0.5) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(230,245,255,0.5) 0%, transparent 40%);
+      background-color: #f7f9fb;
+    }
+
+    /* ===== 伪状态栏 ===== */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 44px;
+      padding: 0 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #191c1e;
+    }
+    .status-bar .time { font-weight: 700; }
+    .status-bar .icons { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+
+    /* ===== 小程序胶囊导航 ===== */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 44px;
+      position: relative;
+      padding: 0 12px;
+    }
+    .nav-bar .title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #191c1e;
+      letter-spacing: 0.3px;
+    }
+    .nav-bar .capsule {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 6px;
+    }
+    .nav-bar .capsule span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.06);
+      font-size: 12px;
+      color: #191c1e;
+      line-height: 1;
+    }
+
+    /* ===== login page ===== */
+    .login-page {
+      min-height: calc(812px - 44px - 44px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 100px 30px 30px;
+      box-sizing: border-box;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo {
+      width: 80px; height: 80px;
+      margin: 0 auto 15px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #576065, #665c60);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 8px 20px rgba(87,96,101,0.3);
+    }
+    .brand-name {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #191c1e;
+      margin-bottom: 6px;
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: #43474a;
+      letter-spacing: 1px;
+    }
+
+    .welcome {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .welcome-line {
+      display: block;
+      font-size: 18px;
+      font-weight: 600;
+      color: #191c1e;
+      margin-bottom: 8px;
+    }
+    .welcome-sub {
+      display: block;
+      font-size: 12px;
+      color: #43474a;
+      line-height: 1.6;
+      padding: 0 10px;
+    }
+
+    .actions {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .login-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: default;
+      font-family: inherit;
+    }
+
+    .wechat-btn {
+      background: #07c160;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(7,193,96,0.3);
+    }
+    .btn-icon { font-size: 18px; }
+
+    .guest-btn {
+      background: rgba(255,255,255,0.7);
+      color: #576065;
+      border: 1px solid rgba(255,255,255,0.9);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 10px;
+    }
+    .divider .line {
+      flex: 1;
+      height: 1px;
+      background: #c4c7ca;
+    }
+    .divider-text {
+      font-size: 11px;
+      color: #74787a;
+    }
+
+    .agreement {
+      margin-top: 30px;
+      font-size: 11px;
+      color: #74787a;
+      text-align: center;
+      line-height: 1.6;
+      padding: 0 10px;
+    }
+    .link {
+      color: #576065;
+      margin: 0 2px;
+    }
+
+    .hov { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <!-- 伪状态栏 -->
+  <div class="status-bar">
+    <span class="time">10:24</span>
+    <span class="icons"><span>🛜</span> 5G <span>▮▮▮</span> 86%</span>
+  </div>
+
+  <!-- 小程序胶囊导航 -->
+  <div class="nav-bar">
+    <span class="title">登录</span>
+    <div class="capsule">
+      <span>⋯</span>
+      <span>×</span>
+    </div>
+  </div>
+
+  <!-- 登录页内容 -->
+  <div class="login-page">
+    <div class="brand">
+      <div class="logo">🗂</div>
+      <div class="brand-name">AI QuizCard</div>
+      <div class="brand-sub">智能知识卡片练习</div>
+    </div>
+
+    <div class="welcome">
+      <span class="welcome-line">欢迎使用</span>
+      <span class="welcome-sub">登录后即可开始练习，数据按账号独立保存</span>
+    </div>
+
+    <div class="actions">
+      <button class="login-btn wechat-btn" type="button">
+        <span class="btn-icon">💬</span>
+        <span>微信一键登录</span>
+      </button>
+
+      <div class="divider">
+        <div class="line"></div>
+        <span class="divider-text">或</span>
+        <div class="line"></div>
+      </div>
+
+      <button class="login-btn guest-btn" type="button">
+        <span>使用体验账号</span>
+      </button>
+    </div>
+
+    <div class="agreement">
+      <span>登录即表示同意</span>
+      <span class="link">用户协议</span>
+      <span>与</span>
+      <span class="link">隐私政策</span>
+    </div>
+  </div>
+</body>
+</html>
