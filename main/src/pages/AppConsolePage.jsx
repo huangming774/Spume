@@ -64,8 +64,8 @@ const defaultMobileMaterial =
   "今天把手机端 AI 发文流程接到真实草稿接口，图片和文字都能先保存到站长控制台。";
 
 const defaultFriendLink = {
-  name: "桃之夭夭",
-  desc: "桃之夭夭的小屋",
+  name: "Spume",
+  desc: "Spume的小屋",
   url: "https://taozhiyy.top",
   avatar: `https://taozhiyy.top${cosAsset("1.png")}`,
 };
@@ -800,7 +800,7 @@ const AppConsolePage = () => {
           >
             <span className="owner-brand-mark">TC</span>
             <span>
-              <strong>桃之夭夭控制器</strong>
+              <strong>Spume控制器</strong>
               <small>站长工作区</small>
             </span>
           </button>

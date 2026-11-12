@@ -3,7 +3,7 @@ date: 2026-06-04
 slug: site-growth-04-homepage-originalization
 title_zh: 建站成长记录 04｜首页原创化改造：从参考学习到个人表达
 title_en: Site Growth Log 04 | Homepage Originalization: From Reference Learning to Personal Expression
-excerpt_zh: 这一篇记录主页原创化的一轮重要更新：从参考 GitHub 上的优秀作品出发，逐步保留自己的文案、字体、色调和叙事，再把 Hero、About、Features、Story、Footer 与移动端适配改造成更属于“桃之夭夭”的表达。
+excerpt_zh: 这一篇记录主页原创化的一轮重要更新：从参考 GitHub 上的优秀作品出发，逐步保留自己的文案、字体、色调和叙事，再把 Hero、About、Features、Story、Footer 与移动端适配改造成更属于“Spume”的表达。
 excerpt_en: This post records an important round of homepage originalization: starting from a great GitHub reference, keeping my own copywriting, typography, colors, and narrative, then reshaping Hero, About, Features, Story, Footer, and mobile behavior into something that feels more like Taozhiyy.
 words: 6800
 reads: 128
@@ -31,7 +31,7 @@ minutes: 26
 
 > 如果这个网站以后要长期作为我的个人站点存在，它不能永远停留在“我复刻了一个我很喜欢的效果”这一层。
 
-所以这一轮改造的目标并不是把原来的一切推倒重来，而是在最大程度保留我真正喜欢的高级动态感的基础上，逐步把主页变成更有个人表达、更有“桃之夭夭”气质的版本。
+所以这一轮改造的目标并不是把原来的一切推倒重来，而是在最大程度保留我真正喜欢的高级动态感的基础上，逐步把主页变成更有个人表达、更有“Spume”气质的版本。
 
 ## 这次原创化不是否认参考，而是承认参考后继续往前走
 
@@ -89,7 +89,7 @@ minutes: 26
 
 以及右下角的：
 
-- `桃之夭夭`
+- `Spume`
 
 这些文字不是参考项目里的内容，而是我已经改过、写过、调过的个人表达。  
 它们和我的站点名字、头像、博客主题、整体风格是一体的。
@@ -120,7 +120,7 @@ minutes: 26
 - 指南针式选择轮盘
 
 这些方向并不是每个都成功。  
-比如花瓣切换虽然听起来有“桃之夭夭”的感觉，但做出来后效果不够自然，反而有点像为了原创而硬加装饰。  
+比如花瓣切换虽然听起来有“Spume”的感觉，但做出来后效果不够自然，反而有点像为了原创而硬加装饰。  
 立体卡牌也遇到了横屏壁纸放进竖屏卡片后主体显示不完整的问题。
 
 最后真正稳定下来的，是“头像指南针”这一版。
@@ -143,7 +143,7 @@ minutes: 26
 它同时结合了几个属于我自己的元素：
 
 - 头像
-- 桃之夭夭的轻盈感
+- Spume的轻盈感
 - 方位与探索感
 - 访客主动操控
 - 横屏壁纸主体展示
@@ -275,7 +275,7 @@ Features 这一部分我原本就很满意。
 
 - 更轻
 - 更温柔
-- 更适合桃之夭夭
+- 更适合Spume
 - 更像个人创作站
 - 更少游戏宣传片式的压迫感
 
@@ -358,7 +358,7 @@ Story 这一部分我也很喜欢原来的不规则裁剪。
 | --- | --- | --- | --- |
 | Hero | 图片切换结构仍接近参考项目 | 改成头像指南针选择器 | 访客可操控罗盘选择壁纸 |
 | Hero 资源 | 本地图片部署后可能丢失 | 上传腾讯云 COS | 罗盘头像线上稳定加载 |
-| 首页文案 | 有些文案是我自己的 | 保留原创文字与字体 | `WELCOME`、`桃之夭夭` 等继续保留 |
+| 首页文案 | 有些文案是我自己的 | 保留原创文字与字体 | `WELCOME`、`Spume` 等继续保留 |
 | About | 视觉效果喜欢但参考感仍在 | 调整展示节奏与移动端表现 | 更像个人站展示区域 |
 | Features | 排版满意但需要增强原创性 | 默认主排版 + 档案书入口 | 主次关系更清楚 |
 | Story | 喜欢不规则裁剪但要换语义 | 纸笺 / 信件式重构 | 保留灵动感，增加个人叙事 |
@@ -580,7 +580,7 @@ For example, the top-left:
 
 and the bottom-right:
 
-- `桃之夭夭`
+- `Spume`
 
 These are not from the reference project. They are words I had already written, adjusted, and made part of the site's identity.  
 They belong together with the site name, avatar, blog theme, and overall tone.
@@ -856,7 +856,7 @@ Here is a clearer comparison table.
 | --- | --- | --- | --- |
 | Hero | image switch still felt close to the reference | avatar compass selector | visitors control a compass to choose wallpapers |
 | Hero asset | local image could fail after deployment | upload to Tencent COS | compass avatar loads from an online asset |
-| Homepage copy | some text was already mine | preserve original text and typography | `WELCOME`, `桃之夭夭`, and related tone remain |
+| Homepage copy | some text was already mine | preserve original text and typography | `WELCOME`, `Spume`, and related tone remain |
 | About | liked the effect but reference trace remained | adjust rhythm and mobile display | feels more like a personal introduction area |
 | Features | layout worked but needed more originality | default layout plus archive-book entry | clearer primary-secondary relationship |
 | Story | liked irregular crop but needed new meaning | paper-note / letter-like redesign | keeps liveliness and adds narrative |

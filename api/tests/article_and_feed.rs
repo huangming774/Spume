@@ -8,15 +8,15 @@ fn article_keeps_an_existing_date_and_uses_the_requested_cover() {
     let now = Utc.with_ymd_and_hms(2026, 11, 12, 1, 2, 3).unwrap();
     let article = build_article(
         ArticleInput {
-            title: "桃之夭夭",
+            title: "Spume",
             body: "---\ndate: 2026-06-01 08:00:00\ncover: https://old.example/a.jpg\ntags:\n  - 随笔\n---\n\n正文\n",
             cover_url: "https://images.example/new.jpg",
         },
         now,
     )
     .expect("article");
-    assert_eq!(article.path, "blog/source/_posts/桃之夭夭.md");
-    assert!(article.markdown.contains("title: 桃之夭夭\n"));
+    assert_eq!(article.path, "blog/source/_posts/Spume.md");
+    assert!(article.markdown.contains("title: Spume\n"));
     assert!(article.markdown.contains("date: 2026-06-01 08:00:00\n"));
     assert!(article
         .markdown

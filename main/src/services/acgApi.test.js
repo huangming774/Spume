@@ -28,7 +28,7 @@ test("getRadarFeed keeps real creator items from the API", async (t) => {
       items: [
         {
           id: "r_real",
-          creatorName: "UP · 桃之夭夭",
+          creatorName: "UP · Spume",
           latestText: "新视频发布了",
         },
       ],
@@ -37,7 +37,7 @@ test("getRadarFeed keeps real creator items from the API", async (t) => {
   const items = await getRadarFeed();
 
   assert.equal(items.length, 1);
-  assert.equal(items[0].creatorName, "UP · 桃之夭夭");
+  assert.equal(items[0].creatorName, "UP · Spume");
 });
 
 test("getRadarFeed returns an empty list when radar sync is unavailable", async (t) => {

@@ -15,14 +15,14 @@ test("normalizes noisy visible page text into a compact page context", () => {
     language: "zh-CN",
     siteSection: "main",
     headings: ["About", "", "  技术栈  "],
-    visibleText: "  关于 桃之夭夭\n\n这里介绍博客由来、技术栈和联系方式。  ",
+    visibleText: "  关于 Spume\n\n这里介绍博客由来、技术栈和联系方式。  ",
   });
 
   assert.equal(context.pagePath, "/about");
   assert.deepEqual(context.headings, ["About", "技术栈"]);
   assert.equal(
     context.visibleText,
-    "关于 桃之夭夭 这里介绍博客由来、技术栈和联系方式。"
+    "关于 Spume 这里介绍博客由来、技术栈和联系方式。"
   );
 });
 

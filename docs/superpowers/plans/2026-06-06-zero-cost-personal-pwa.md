@@ -175,9 +175,9 @@ Create `main/public/manifest.webmanifest`:
 
 ```json
 {
-  "name": "桃之夭夭",
-  "short_name": "桃之夭夭",
-  "description": "A personal site app for 桃之夭夭.",
+  "name": "Spume",
+  "short_name": "Spume",
+  "description": "A personal site app for Spume.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -284,7 +284,7 @@ Update `main/index.html` head:
     <meta name="theme-color" content="#f472b6" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="桃之夭夭" />
+    <meta name="apple-mobile-web-app-title" content="Spume" />
 ```
 
 Keep the existing favicon, viewport, title, preload, assistant scripts, and React entry.

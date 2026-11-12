@@ -6,8 +6,8 @@ import { friendCards } from "../data/friendCards";
 import { cosAsset } from "../lib/cosAsset.js";
 
 const siteAvatarUrl = `https://taozhiyy.top${cosAsset("1.png")}`;
-const copyBlock = `name: 桃之夭夭
-desc: 桃之夭夭的小屋
+const copyBlock = `name: Spume
+desc: Spume的小屋
 url: https://taozhiyy.top
 avatar: ${siteAvatarUrl}`;
 

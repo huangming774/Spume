@@ -2,11 +2,11 @@ export type Lang = 'zh' | 'en';
 
 export const STR = {
   zh: {
-    blogTitle: '桃之夭夭の创作屋',
+    blogTitle: 'Spume',
     navHome: '首页',
     navArchive: '归档',
     navArticle: '文章',
-    footerLine: '桃之夭夭 © 2026',
+    footerLine: 'Spume © 2026',
     archiveTitle: '归档',
     archiveLead: '时光轴',
     articlesTitle: '文章',

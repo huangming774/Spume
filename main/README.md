@@ -1,4 +1,4 @@
-# 桃之夭夭 - Personal Frontend Website
+# Spume - Personal Frontend Website
 
 > 🎨 Heavily customized personal homepage based on the open-source project by **Adrian Hajdin**.
 
@@ -10,7 +10,7 @@ This project is a fork of **[Adrian Hajdin's Award-Winning Website](https://gith
 
 This version has been extensively customized for personal use:
 
-- **Hero Section**: All background videos replaced with anime-style content. Main video in 4K. "桃之夭夭 / WELCOME" branding.
+- **Hero Section**: All background videos replaced with anime-style content. Main video in 4K. "Spume / WELCOME" branding.
 - **About Section**: New illustrations. "FEEL FREE TO KEEP SCROLLING DOWN" message.
 - **Story Section**: Anime scene background. "FOLLOW-UP PLAN" and "LOOK FORWARD TO IT TO THE FULLEST".
 - **Features (Bento Grid)**: Three links — [My Blog](https://bistutzyy.github.io/), [Projects](https://tzyy11.vercel.app/), and [Reimu Blog](https://blog1-reimu.vercel.app/) — each with "Let's go!" buttons.

@@ -13,7 +13,7 @@ function formatDate(value) {
 export function BlogIndexPage() {
   useEffect(() => {
     const previous = document.title;
-    document.title = "文章 · 桃之夭夭";
+    document.title = "文章 · Spume";
     return () => {
       document.title = previous;
     };
@@ -51,7 +51,7 @@ export function BlogPostPage() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = post ? `${post.title} · 桃之夭夭` : "文章 · 桃之夭夭";
+    document.title = post ? `${post.title} · Spume` : "文章 · Spume";
     return () => {
       document.title = previous;
     };

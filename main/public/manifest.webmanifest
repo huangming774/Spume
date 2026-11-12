@@ -1,7 +1,7 @@
 {
-  "name": "桃之夭夭",
-  "short_name": "桃之夭夭",
-  "description": "A personal site app for 桃之夭夭.",
+  "name": "Spume",
+  "short_name": "Spume",
+  "description": "A personal site app for Spume.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",

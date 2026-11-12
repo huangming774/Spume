@@ -11,7 +11,7 @@ import "virtual:journal-scoped.css";
 export default function JournalPage() {
   useEffect(() => {
     return () => {
-      document.title = "桃之夭夭";
+      document.title = "Spume";
     };
   }, []);
 

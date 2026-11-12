@@ -22,7 +22,7 @@ class BlogThemeCleanupTest(unittest.TestCase):
         self.assertNotRegex(hexo_config, r"(?m)^author:\s*bistutzyy\s*$")
 
         self.assertRegex(theme_config, r"(?m)^social:\s*false\s*$")
-        self.assertNotIn("mailto:173236231@qq.com", theme_config)
+        self.assertNotIn("mailto:shangkesan9@gmail.com", theme_config)
         self.assertNotIn("fab fa-github: https://github.com/bistutzyy", theme_config)
 
         self.assertRegex(

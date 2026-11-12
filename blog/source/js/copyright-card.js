@@ -43,7 +43,7 @@
         '<div class="card-back-text">' +
         '转载请联系作者获得授权<br>' +
         '转载请注明来源<br>' +
-        '<a href="' + (articleLink || siteUrl) + '">桃之夭夭</a>' +
+        '<a href="' + (articleLink || siteUrl) + '">Spume</a>' +
         '</div>';
 
       cardInner.appendChild(cardFront);

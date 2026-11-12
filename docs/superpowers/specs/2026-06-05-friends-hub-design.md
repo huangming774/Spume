@@ -15,13 +15,13 @@ This iteration replaces the earlier friends-hub scope. The active scope is now:
 ### In Scope
 
 - Keep `/friends` as a three-section page only.
-- Rewrite the top copy and section framing so it feels like `桃之夭夭`'s own in-site voice, with more poetic wording and less product-description tone.
+- Rewrite the top copy and section framing so it feels like `Spume`'s own in-site voice, with more poetic wording and less product-description tone.
 - Replace placeholder friend cards with a real first featured friend card:
   - Name: `XingHuiSamaの宝藏之地`
   - Desc: `今天我也要学习吗`
   - URL: `https://www.xinghuisama.top`
   - Avatar: `https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg`
-- Preserve `桃之夭夭`'s own friend-link information in the middle section.
+- Preserve `Spume`'s own friend-link information in the middle section.
 - Keep the application board on the existing message system path, but require login before posting friend-link applications.
 - Upgrade the message system to support real replies under a parent message.
 - Make the application board feel like a free-form comment area with expandable replies, not a plain form list.
@@ -60,7 +60,7 @@ Requirements:
 
 This section stays lightweight and copy-friendly.
 
-Content remains the same canonical four-line friend-link info for `桃之夭夭`.
+Content remains the same canonical four-line friend-link info for `Spume`.
 
 Presentation requirements:
 
@@ -71,8 +71,8 @@ Presentation requirements:
 Canonical content:
 
 ```yaml
-name: 桃之夭夭
-desc: 桃之夭夭的小屋
+name: Spume
+desc: Spume的小屋
 url: https://taozhiyy.top
 avatar: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png
 ```
@@ -101,9 +101,9 @@ The default application content should follow this structure:
 已添加本站友链：是
 ```
 
-When the current logged-in identity is `桃之夭夭`, the UI should explicitly surface the identity framing:
+When the current logged-in identity is `Spume`, the UI should explicitly surface the identity framing:
 
-- `以 桃之夭夭 身份提交友链申请`
+- `以 Spume 身份提交友链申请`
 
 ## Reply Model
 
@@ -320,7 +320,7 @@ The work is done when:
 - `/friends` contains only `小伙伴卡片`、`我的友链`、`申请友链的留言区`
 - The page copy and visual framing feel more poetic and site-native
 - `XingHuiSamaの宝藏之地` is the first real friend card shown
-- `我的友链` presents `桃之夭夭`'s four-line info in a copy-friendly card
+- `我的友链` presents `Spume`'s four-line info in a copy-friendly card
 - The application board requires login for submission
 - Users can reply beneath an existing friend-link application
 - Replies persist after refresh

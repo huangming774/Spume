@@ -139,7 +139,7 @@ export const ownerConsoleNotifications = [
 export const ownerConsoleAvatars = [
   {
     id: "tc",
-    label: "桃之夭夭控制器",
+    label: "Spume控制器",
     initial: "TC",
     gradient: "linear-gradient(135deg, #7bb7ff, #83d7cf)",
   },

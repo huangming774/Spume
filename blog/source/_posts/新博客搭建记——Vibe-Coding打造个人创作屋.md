@@ -1,5 +1,5 @@
 ---
-title: 新博客搭建记——用 Vibe Coding 打造「桃之夭夭の创作屋」
+title: 新博客搭建记——用 Vibe Coding 打造「Spume」
 date: 2026-05-17 22:00:00
 updated: 2026-05-18
 sticky: 999999
@@ -10,7 +10,7 @@ description: 用一天时间搭建全新个人主页，再用一天从静态 HTM
 ---
 
 {% note primary %}
-全新个人主页——{% span blue, 桃之夭夭の创作屋 %}，从零到上线再到架构升级，全程用 **Vibe Coding** 完成。
+全新个人主页——{% span blue, Spume %}，从零到上线再到架构升级，全程用 **Vibe Coding** 完成。
 
 地址：{% span blue, https://tzyy11.vercel.app %}
 

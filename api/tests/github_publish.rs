@@ -93,7 +93,7 @@ async fn friend_publish_writes_the_card_and_opens_a_pull_request() {
         &http,
         &spec,
         FriendInput {
-            name: "桃之夭夭",
+            name: "Spume",
             desc: "个人站",
             url: "https://taozhiyy.top",
             avatar: "https://images.example/avatar.jpg",
@@ -110,6 +110,6 @@ async fn friend_publish_writes_the_card_and_opens_a_pull_request() {
         .branch
         .starts_with("owner/friend-20261112-010203-"));
     let stored = saved.content.lock().expect("saved content").clone();
-    assert!(stored.contains("name: \"桃之夭夭\""));
+    assert!(stored.contains("name: \"Spume\""));
     assert!(stored.contains("note: \"FRIEND\""));
 }

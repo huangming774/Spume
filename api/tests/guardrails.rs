@@ -38,7 +38,7 @@ fn guestbook_owner_mail_names_the_channel() {
     };
     assert_eq!(
         owner_subject(notice.channel, notice.reply),
-        "桃之夭夭：新的友链留言"
+        "Spume：新的友链留言"
     );
     let body = owner_body(&notice);
     assert!(body.contains("友链留言"));

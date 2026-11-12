@@ -44,8 +44,8 @@ npm install hexo-theme-reimu
 `_config.yml` 中设置 `theme: reimu`，同时配置站点信息：
 
 ```yaml
-title: 桃之夭夭の花园
-author: 桃之夭夭
+title: Spumeの花园
+author: Spume
 language: zh-CN
 ```
 
@@ -75,7 +75,7 @@ subtitle:
 social:
   github: https://github.com/bistutzyy
   bilibili: https://space.bilibili.com/1061280173
-  email: mailto:173236231@qq.com
+  email: mailto:shangkesan9@gmail.com
 ```
 
 **侧边栏：** 只保留个人信息和标签云，去掉了分类、归档、最新文章：
@@ -111,7 +111,7 @@ menu:
 - GitHub 贡献热力图（使用 `ghchart.rshah.org` 服务，从 GitHub 实时拉取提交数据生成 SVG）
 - 建站日期、技术栈
 
-**友链页** 加入原博客 bistutzyy.github.io 作为友链，命名为「桃之夭夭第一章」。
+**友链页** 加入原博客 bistutzyy.github.io 作为友链，命名为「Spume第一章」。
 
 ### 5. 部署到 Vercel
 

@@ -10,14 +10,14 @@ const GALLERY: &str = "export const galleryAlbums = [\n  {\n    id: \"misaka\",\
 #[test]
 fn friend_card_is_inserted_once() {
     let input = FriendInput {
-        name: "桃之夭夭",
+        name: "Spume",
         desc: "个人站",
         url: "https://taozhiyy.top",
         avatar: "",
     };
     let first = update_friend_cards(FRIENDS, input).expect("insert");
     assert!(first.changed);
-    assert!(first.source.contains("name: \"桃之夭夭\""));
+    assert!(first.source.contains("name: \"Spume\""));
     assert!(first
         .source
         .contains("https://www.google.com/s2/favicons?sz=128&domain=taozhiyy.top"));

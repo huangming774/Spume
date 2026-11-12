@@ -114,7 +114,7 @@ export function HomePage() {
                       alt={zh ? '关于我页面的当前画面' : 'The current About page'}
                       caption={zh ? '页面留影 / 关于我 · 2026.10.26' : 'Page snapshot / About · 2026.10.26'} />}
                     {entry.slug === 'site-growth-04-homepage-originalization' && <ArchiveImage src={homeSnapshot}
-                      alt={zh ? '桃之夭夭首页的当前画面' : 'The current Taozhiyy home page'}
+                      alt={zh ? 'Spume首页的当前画面' : 'The current Taozhiyy home page'}
                       caption={zh ? '页面留影 / 主站首页 · 2026.10.26' : 'Page snapshot / Main site · 2026.10.26'} />}
                     {entry.slug === 'site-growth-02-frontend-design' && <div className="record-memory">
                       <ArchiveImage src={previousHome} portrait alt={zh ? '上一版创作屋的移动端截图' : 'Previous studio mobile layout'}

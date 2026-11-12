@@ -93,7 +93,7 @@ const About = () => {
     <section id="about" className="min-h-screen w-screen bg-[#fff8f1]">
       <div className="relative mb-8 mt-36 flex flex-col items-center gap-5 px-5">
         <p className="font-general text-sm uppercase tracking-[0.35em] text-[#b76e79] md:text-[10px]">
-          Welcome to 桃之夭夭
+          Welcome to Spume
         </p>
 
         <AnimatedTitle
@@ -113,7 +113,7 @@ const About = () => {
         <div className="taoyao-screen-window">
           <div className="taoyao-postcard-detail absolute left-5 right-5 top-5 z-30 flex items-center justify-between text-blue-50">
             <span className="rounded-full border border-white/35 bg-white/18 px-4 py-2 font-general text-[10px] uppercase tracking-[0.35em] backdrop-blur-md">
-              Welcome to 桃之夭夭
+              Welcome to Spume
             </span>
             <span className="font-general text-[10px] uppercase tracking-[0.35em] text-white/78">
               No. 2026

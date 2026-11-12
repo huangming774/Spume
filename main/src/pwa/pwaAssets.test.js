@@ -20,7 +20,7 @@ test("manifest describes an installable personal app", async () => {
   const manifestPath = resolve(publicDir, "manifest.webmanifest");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
-  assert.equal(manifest.name, "桃之夭夭");
+  assert.equal(manifest.name, "Spume");
   assert.equal(manifest.start_url, "/app");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "standalone");

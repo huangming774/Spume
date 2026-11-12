@@ -57,7 +57,7 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 |------|------|
 | 游客 | 10 次/天 |
 | 普通登录 | 50 次/天 |
-| 站长 `173236231@qq.com` | 学号二次验证后 **无限** |
+| 站长 `shangkesan9@gmail.com` | 学号二次验证后 **无限** |
 
 服务器 `/opt/acg-api/.env` 需配置 `AUTH_OWNER_PASSWORD`、`AUTH_OWNER_SECURITY_ANSWER`（或通过 GitHub Actions Secrets 自动同步）。
 

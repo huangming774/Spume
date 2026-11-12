@@ -44,17 +44,17 @@ pub enum MailError {
 /// 站长通知的标题。
 pub fn owner_subject(channel: &str, reply: bool) -> &'static str {
     match (channel, reply) {
-        ("friends", true) => "桃之夭夭：友链留言有新回复",
-        ("friends", false) => "桃之夭夭：新的友链留言",
-        (_, true) => "桃之夭夭：留言有新回复",
-        (_, false) => "桃之夭夭：新的留言",
+        ("friends", true) => "Spume：友链留言有新回复",
+        ("friends", false) => "Spume：新的友链留言",
+        (_, true) => "Spume：留言有新回复",
+        (_, false) => "Spume：新的留言",
     }
 }
 
 /// 站长通知正文。
 pub fn owner_body(notice: &GuestbookNotice<'_>) -> String {
     format!(
-        "桃之夭夭有新的留言通知。\n\n留言位置：{}\n留言人：{}\n留言时间：{}\n\n留言内容：\n{}\n\n查看地址：{}",
+        "Spume有新的留言通知。\n\n留言位置：{}\n留言人：{}\n留言时间：{}\n\n留言内容：\n{}\n\n查看地址：{}",
         channel_name(notice.channel),
         notice.nickname,
         notice.created_at,
@@ -66,7 +66,7 @@ pub fn owner_body(notice: &GuestbookNotice<'_>) -> String {
 /// 回复通知正文。
 pub fn reply_body(notice: &GuestbookNotice<'_>) -> String {
     format!(
-        "你在桃之夭夭留下的留言收到了一条回复。\n\n留言位置：{}\n回复时间：{}\n\n回复内容：\n{}\n\n查看地址：{}",
+        "你在Spume留下的留言收到了一条回复。\n\n留言位置：{}\n回复时间：{}\n\n回复内容：\n{}\n\n查看地址：{}",
         channel_name(notice.channel),
         notice.created_at,
         notice.content,
@@ -112,7 +112,7 @@ pub async fn notify_reply(
     send(
         cfg,
         &recipient,
-        "桃之夭夭：你的留言收到回复",
+        "Spume：你的留言收到回复",
         &reply_body(notice),
     )
     .await

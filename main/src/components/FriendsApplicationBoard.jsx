@@ -28,7 +28,7 @@ const FRIEND_COMMENT_MAX_LENGTH = 500;
 const FRIEND_REPLY_MAX_LENGTH = 300;
 
 const FRIEND_COMMENT_PLACEHOLDER =
-  "写下你的留言、站点介绍，或者想对桃之夭夭说的话...";
+  "写下你的留言、站点介绍，或者想对Spume说的话...";
 
 const FRIEND_COMMENT_TONES = [
   "friends-comment-card--blue",

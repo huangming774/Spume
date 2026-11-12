@@ -21,7 +21,7 @@ test("getGuestbook reads the real guestbook messages endpoint", async (t) => {
           items: [
             {
               id: 7,
-              nickname: "桃之夭夭",
+              nickname: "Spume",
               content: "真实留言",
               createdAt: "2026-06-07 18:00",
             },
@@ -39,7 +39,7 @@ test("getGuestbook reads the real guestbook messages endpoint", async (t) => {
   assert.deepEqual(rows, [
     {
       id: 7,
-      name: "桃之夭夭",
+      name: "Spume",
       content: "真实留言",
       createdAt: "2026-06-07 18:00",
     },
@@ -80,7 +80,7 @@ test("postGuestbook creates a real guestbook message and never fabricates offlin
         return {
           item: {
             id: 8,
-            nickname: "桃之夭夭",
+            nickname: "Spume",
             content: "后端写入",
             createdAt: "2026-06-07 18:01",
           },
@@ -89,20 +89,20 @@ test("postGuestbook creates a real guestbook message and never fabricates offlin
     };
   };
 
-  const row = await postGuestbook({ name: " 桃之夭夭 ", content: " 后端写入 " });
+  const row = await postGuestbook({ name: " Spume ", content: " 后端写入 " });
 
   assert.equal(requestURL, "/api/guestbook/messages");
   assert.equal(requestOptions.method, "POST");
   assert.equal(requestOptions.credentials, "include");
   assert.equal(requestOptions.headers["Content-Type"], "application/json");
   assert.deepEqual(JSON.parse(requestOptions.body), {
-    nickname: "桃之夭夭",
+    nickname: "Spume",
     content: "后端写入",
     channel: "guestbook",
   });
   assert.deepEqual(row, {
     id: 8,
-    name: "桃之夭夭",
+    name: "Spume",
     content: "后端写入",
     createdAt: "2026-06-07 18:01",
   });
@@ -123,7 +123,7 @@ test("postGuestbook reports backend failures instead of creating offline rows", 
   });
 
   await assert.rejects(
-    () => postGuestbook({ name: "桃之夭夭", content: "再试一次" }),
+    () => postGuestbook({ name: "Spume", content: "再试一次" }),
     /留言太频繁啦/,
   );
 });

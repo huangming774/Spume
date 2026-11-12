@@ -11,7 +11,7 @@ export function Layout() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-    document.title = zh ? '创造纪事 · 时光档案馆 | 桃之夭夭' : 'Chronicle · The Time Archive | Taozhiyy';
+    document.title = zh ? '创造纪事 · 时光档案馆 | Spume' : 'Chronicle · The Time Archive | Taozhiyy';
   }, [pathname, zh]);
 
   return (

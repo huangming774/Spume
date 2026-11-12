@@ -352,7 +352,7 @@ import {
 test("detects valid friend application content", () => {
   assert.equal(
     isFriendApplicationContent(
-      "站点名称：桃之夭夭\n站点链接：https://taozhiyy.top\n站点描述：桃之夭夭的小屋\n头像链接：https://img.test/1.png"
+      "站点名称：Spume\n站点链接：https://taozhiyy.top\n站点描述：Spume的小屋\n头像链接：https://img.test/1.png"
     ),
     true
   );
@@ -364,7 +364,7 @@ test("keeps replies under valid friend applications", () => {
       id: 1,
       parentId: 0,
       content:
-        "站点名称：桃之夭夭\n站点链接：https://taozhiyy.top\n站点描述：桃之夭夭的小屋\n头像链接：https://img.test/1.png",
+        "站点名称：Spume\n站点链接：https://taozhiyy.top\n站点描述：Spume的小屋\n头像链接：https://img.test/1.png",
       replies: [{ id: 2, parentId: 1, content: "已回访" }],
       replyCount: 1,
     },

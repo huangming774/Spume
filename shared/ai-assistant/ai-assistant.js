@@ -6,7 +6,7 @@
   var API_CHAT = "/api/chat";
   var API_IMAGE = "/api/ai/image";
   var API_AUTH = "/api/auth";
-  var OWNER_EMAIL = "173236231@qq.com";
+  var OWNER_EMAIL = "shangkesan9@gmail.com";
   var LIMIT_MSG = "今日提问次数用完啦，明天再来问我吧～";
   var IMAGE_LIMIT_MSG = "今日生图次数用完啦，明天再来画吧～";
   var ERROR_MSG = "小精灵暂时走神了，请稍后再试～";

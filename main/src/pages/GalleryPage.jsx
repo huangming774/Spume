@@ -16,7 +16,7 @@ const GalleryPage = () => (
       </p>
       <div className="mt-4 grid gap-6 md:grid-cols-[1.05fr_0.95fr] md:items-end">
         <h1 className="font-zentry text-5xl font-black uppercase leading-none text-[#241322] md:text-7xl">
-          桃之夭夭
+          Spume
           <span className="block text-[#ff8fab]">Gallery</span>
         </h1>
         <p className="max-w-xl text-base leading-relaxed text-[#5f4b52]">
