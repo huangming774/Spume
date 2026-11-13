@@ -1,45 +1,59 @@
-# Rust API
+# 技术栈概览
 
-`api/` 是这个仓库的 HTTP 服务，用 Rust 和 Axum 写成。一个进程同时提供账号、留言、内容同步、聊天、生图和站长发布。数据放在 Postgres，图片放在对象存储，模型和定时任务都通过环境变量接入。
+Spume由两部分组成：Rust 后端 `api/` 和合并后的前端 SPA `main/`。
+这里只列技术选型，架构和部署细节见 [DOCKER.md](../deploy/DOCKER.md)。
 
-## 它做什么
+## 后端 · `api/`（Rust）
 
-- **账号。** 注册、登录、资料和头像。会话写在名为 `acg_session` 的 HttpOnly cookie 里。站长如果配置了安全答案，登录后要先答对题目才会拿到会话。
-- **留言。** 主留言区和友链区，支持回复、站长隐藏和删除。写入时会记地区和掩码 IP，并可以发邮件通知。
-- **内容同步。** 拉取投稿、番剧、UP 主动态和壁纸。封面由本服务转发。手动同步可以马上返回，同一时间只跑一次。
-- **聊天和生图。** 聊天把当前页面上下文交给模型，回复字段是 `reply`。相同问题会先走固定答案。生成的图片再存进对象存储。
-- **站长后台。** 查看状态、草稿、联系邮箱和提醒。文章、友链、动态和图册可以通过 GitHub 写回仓库。
-- **内部任务。** 给调度器使用：同步、清理过期数据、建立检索索引、补存图片。配置了签名密钥时会校验请求签名。
+**语言与运行时**：Rust（edition 2021）+ Tokio 异步运行时。
 
-每分钟还有次数限制：聊天 20 次，生图 6 次，图库 60 次。聊天另外还有每日额度和 5 秒间隔。
+**Web 框架**：Axum 0.8，路由、JSON 提取器、multipart 文件上传、共享 `AppState` 都在它之上。
 
-## 目录
+**数据与存储**：
 
-| 路径 | 内容 |
+| 用途 | 选型 |
 | --- | --- |
-| `api/src/` | 服务代码。入口是 `main.rs`，路由在 `routes.rs` |
-| `api/migrations/001_init.sql` | 启动时执行的表结构 |
-| `api/.env.example` | 环境变量示例 |
-| `api/tests/` | 不连外部服务的测试 |
+| 主数据库 | PostgreSQL（Supabase 托管），SQLx 0.8，启动时执行 `migrations/001_init.sql` |
+| 图床 / 生图产物 | Cloudflare R2 |
+| 站内语义/全文搜索 | Zilliz Cloud（Milvus REST v2，BM25 全文检索 + 中文分词） |
+| 限流与计数 | Upstash Redis（ZSET 滑动窗口） |
+| 后台任务调度 | Upstash QStash（带签名校验的内部任务接口） |
 
-## 运行
+**主要依赖**：
 
-需要 Rust 2021。
+- `reqwest`（rustls）——调用 DeepSeek/Agnes/DashScope 等外部 AI 与内容 API
+- `lettre`（SMTP over TLS）——留言邮件通知
+- `bcrypt` ——账号密码哈希
+- `hmac` / `sha2` / `md-5` ——B 站 WBI 签名、内部任务请求签名
+- `serde` / `serde_json` ——接口序列化
+- `dotenvy` ——启动时读 `/opt/acg-api/.env` 和 `.env`（不覆盖已有环境变量）
+- `tracing` + `tracing-subscriber` ——结构化日志
+- `thiserror` ——内部错误类型
 
-```text
-cd api
-cargo run
-```
+**接入的外部 AI 服务**：DeepSeek（聊天）、Agnes（生图）、DashScope（生图备选）。
 
-默认监听 `0.0.0.0:8080`。地址用 `ACG_API_ADDR` 修改，例如 `:8080`。
+**内容发布**：站长后台通过 GitHub Contents API 把文章、友链、动态、图册写回仓库。
 
-没有 `DATABASE_URL` 时进程也能启动。需要保存数据的接口会返回数据库未连接。对象存储、聊天、生图、检索和邮件也是配齐对应变量之后才启用。变量说明和完整路径表在 [api/README.md](api/README.md)。
+## 前端 · `main/`（合并 SPA）
 
-## 检查
+**框架与构建**：React 18 + Vite 8，JavaScript/JSX 为主，`src/subapps/journal`（建站日志子应用）用 TypeScript/TSX。
 
-```text
-cd api
-cargo fmt --all
-cargo clippy --all-targets -- -D warnings
-cargo test
-```
+**路由**：React Router v6。`/blog`（文章）、`/build`（建站日志）、`/projects`（星空馆）都是 SPA 路由，不再是独立子站。
+
+**样式**：Tailwind CSS 3 + 自定义 CSS。journal 子应用的纯 CSS 用 `postcss-prefix-selector` 做作用域隔离，避免污染主站。
+
+**动画与交互**：GSAP（配 `@gsap/react`）、Motion（`motion` 包，滚动/入场动画）。
+
+**3D 与图标**：Three.js（星空馆 `/projects`，原生 JS 模块，React 组件包装后动态 `import()` 挂载并负责销毁清理）、`lucide` / `lucide-react` 图标。
+
+**内容渲染**：`marked` + `highlight.js` 渲染 Markdown 文章与代码高亮。文章源是 `blog/source/_posts/*.md`，构建期由 Vite 的 `import.meta.glob` 内联进包，不再依赖 Hexo 生成 HTML；建站日志内容是构建期生成的 `content.json`。
+
+**AI 助手**：`shared/ai-assistant/`，原生 JS + CSS 的独立组件，可挂在任意页面，走后端 `/api/chat`、`/api/ai/image`。
+
+## 构建与部署
+
+**统一构建入口**：`tools/vercel-build.mjs`，把 `main/dist` + `shared/ai-assistant` 组装成 `out/`，本地、CI、容器共用同一套逻辑。
+
+**容器化**：`api/Dockerfile`（Rust 多阶段构建）+ `deploy/docker/Dockerfile.web`（Node 构建 + nginx 运行），nginx 负责 SPA fallback、`/api/` 反代和 TLS。
+
+**CI/CD**：GitHub Actions（`.github/workflows/docker.yml`）构建镜像推 GHCR，服务器定时 `docker compose pull` 部署（见 [DOCKER.md](../deploy/DOCKER.md)）。
