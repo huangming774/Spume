@@ -36,6 +36,7 @@ fn friends_root_requires_a_name_and_email() {
         nickname: "看",
         email: "",
         account_name: None,
+        account_email: None,
         account_avatar: "",
     });
     assert_eq!(missing.expect_err("email").code, "INVALID_EMAIL");
@@ -46,11 +47,27 @@ fn friends_root_requires_a_name_and_email() {
         nickname: "路人",
         email: "",
         account_name: Some("站长"),
+        account_email: Some("owner@example.com"),
         account_avatar: "/a.png",
     })
     .expect("account");
     assert_eq!(saved.nickname, "站长");
     assert_eq!(saved.avatar, "/a.png");
+}
+
+#[test]
+fn empty_display_name_falls_back_to_the_email_prefix() {
+    let composed = compose(ComposeInput {
+        channel: "guestbook",
+        parent_id: 0,
+        nickname: "",
+        email: "",
+        account_name: Some("  "),
+        account_email: Some("spume@example.com"),
+        account_avatar: "",
+    })
+    .expect("account");
+    assert_eq!(composed.nickname, "spume");
 }
 
 #[test]
@@ -108,7 +125,19 @@ fn reply_threads_nest_and_hide_client_fields() {
     assert!(public[0]["replies"][0]["replies"][0]
         .get("ipMasked")
         .is_none());
+    // Go 的 omitempty：name 不输出，空 replies/replyCount/status/isAdminUser 省略。
+    assert!(public[0].get("name").is_none());
+    assert!(public[0].get("isAdminUser").is_none());
+    assert!(public[0].get("status").is_none());
+    assert!(public[0]["replies"][0]["replies"][0]
+        .get("replies")
+        .is_none());
+    assert!(public[0]["replies"][0]["replies"][0]
+        .get("replyCount")
+        .is_none());
     let owner = thread_json(vec![root], vec![child, nested], true);
+    // 站长视图带 status（Go 的 scanGuestbookRow 只给 admin 填）。
+    assert_eq!(owner[0]["status"], json!("visible"));
     assert_eq!(
         owner[0]["replies"][0]["replies"][0]["ipMasked"],
         json!("203.0.*.*")

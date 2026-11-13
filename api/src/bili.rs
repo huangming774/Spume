@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, SecondsFormat, TimeZone, Utc};
 use serde_json::{json, Value};
 
 use crate::AppState;
@@ -52,29 +52,40 @@ pub async fn sync_owner(state: &AppState) -> Result<usize, String> {
 
 pub async fn owner_feed(state: &AppState) -> Result<Value, String> {
     let uid = state.cfg.bilibili_uid.clone();
-    let profile = format!("https://space.bilibili.com/{uid}");
+    let profile = format!("https://space.bilibili.com/{uid}/");
     let Some(pool) = state.db.as_ref() else {
         return Ok(empty_feed(&uid, &profile));
     };
     let rows = sqlx::query_as::<_, (String, String, String, String, String, DateTime<Utc>, String, DateTime<Utc>)>(
-        "SELECT bvid, title, description, cover, cover_remote, published_at, duration, synced_at FROM bilibili_videos ORDER BY published_at DESC",
+        "SELECT bvid, title, description, cover, cover_remote, published_at, duration, synced_at FROM bilibili_videos ORDER BY published_at DESC, bvid",
     )
     .fetch_all(pool)
     .await
-    .map_err(|error| format!("投稿列表没有读出来: {error}"))?;
+    .map_err(|error| {
+        // 原始错误只进日志，不给客户端（和 query_failed 一致）。
+        tracing::error!(%error, "owner videos read failed");
+        "投稿缓存暂不可用".to_string()
+    })?;
     let sync = sqlx::query_as::<_, (String, String, Option<DateTime<Utc>>, Option<i32>, Option<DateTime<Utc>>, String)>(
         "SELECT state, reason, attempted_at, upstream_code, synced_at, owner_name FROM bili_sync WHERE uid = $1",
     )
     .bind(&uid)
     .fetch_optional(pool)
-    .await
-    .map_err(|error| format!("投稿同步状态没有读出来: {error}"))?;
-    let ready = !rows.is_empty();
-    let synced_at = rows
-        .iter()
-        .map(|row| row.7)
-        .max()
-        .map(|value| value.to_rfc3339())
+    .await;
+    // Go 读 attempt 行失败只把 sync 降级成 cache_error，接口照样 200。
+    let (sync, sync_broken) = match sync {
+        Ok(row) => (row, false),
+        Err(error) => {
+            tracing::error!(%error, "bili sync status read failed");
+            (None, true)
+        }
+    };
+    // ready / syncedAt 以 state 行（bili_sync.synced_at）为准：成功同步过一次
+    // 就算 ready，0 个视频也是 true，不再看 items 非空或其最大时间。
+    let synced_at = sync.as_ref().and_then(|row| row.4);
+    let ready = synced_at.is_some();
+    let synced_at = synced_at
+        .map(|value| value.to_rfc3339_opts(SecondsFormat::AutoSi, true))
         .unwrap_or_default();
     let name = sync
         .as_ref()
@@ -90,7 +101,7 @@ pub async fn owner_feed(state: &AppState) -> Result<Value, String> {
                     "title": title,
                     "description": description,
                     "cover": public_cover(&bvid, &cover, &remote),
-                    "publishedAt": published.to_rfc3339(),
+                    "publishedAt": published.to_rfc3339_opts(SecondsFormat::Secs, true),
                     "duration": duration
                 })
             },
@@ -101,13 +112,13 @@ pub async fn owner_feed(state: &AppState) -> Result<Value, String> {
             state_name,
             reason,
             attempted
-                .map(|value| value.to_rfc3339())
+                .map(|value| value.to_rfc3339_opts(SecondsFormat::AutoSi, true))
                 .unwrap_or_default(),
             code,
         ),
         None => (
-            if ready { "ok" } else { "pending" }.to_string(),
-            String::new(),
+            if sync_broken { "error" } else { "pending" }.to_string(),
+            if sync_broken { "cache_error" } else { "" }.to_string(),
             String::new(),
             None,
         ),
@@ -120,7 +131,7 @@ pub async fn owner_feed(state: &AppState) -> Result<Value, String> {
         "owner": {"uid": uid, "name": name, "profileUrl": profile},
         "items": items,
         "ready": ready,
-        "syncedAt": if ready { synced_at } else { String::new() },
+        "syncedAt": synced_at,
         "sync": sync_json
     }))
 }

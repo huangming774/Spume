@@ -106,12 +106,17 @@ pub async fn notify_reply(
     let Some(recipient) = recipient else {
         return Ok(());
     };
+    let recipient = recipient.trim();
+    // Go 在收件人为空或校验失败时静默跳过，不回退也不报错（guestbook_messages.go:480）。
+    if recipient.is_empty() || !email_ok(recipient) {
+        return Ok(());
+    }
     if recipient.eq_ignore_ascii_case(cfg.smtp_user.trim()) {
         return Ok(());
     }
     send(
         cfg,
-        &recipient,
+        recipient,
         "Spume：你的留言收到回复",
         &reply_body(notice),
     )
@@ -190,7 +195,8 @@ async fn reply_recipient(pool: &PgPool, parent_id: i64) -> Result<Option<String>
         return Ok(None);
     };
     let contact = contact.trim();
-    if email_ok(contact) {
+    // Go 在 contact_email 非空时直接使用，不在选取处校验（guestbook_messages.go:505-506）。
+    if !contact.is_empty() {
         return Ok(Some(contact.to_string()));
     }
     let Some(user_id) = user_id else {

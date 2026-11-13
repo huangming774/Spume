@@ -16,6 +16,11 @@ async fn run() -> Result<(), String> {
         )
         .init();
     let cfg = Config::from_env();
+    if cfg.allow_unsigned_internal {
+        tracing::warn!(
+            "ACG_ALLOW_UNSIGNED_INTERNAL=true: /api/internal/* skips QStash signature checks"
+        );
+    }
     let addr = taozhiyy_api::config::bind_addr(&cfg.bind);
     let state = AppState::connect(cfg).await;
     let app = router(state);
@@ -23,7 +28,10 @@ async fn run() -> Result<(), String> {
         .await
         .map_err(|error| format!("bind {addr}: {error}"))?;
     tracing::info!(%addr, "taozhiyy-api listening");
-    axum::serve(listener, app)
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
         .await
         .map_err(|error| format!("serve: {error}"))?;
     Ok(())

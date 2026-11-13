@@ -64,6 +64,8 @@ pub async fn record(pool: &PgPool, event: AuditEvent<'_>) -> Result<(), AuditErr
 }
 
 fn fingerprint(kind: &str, value: &str) -> String {
+    // 和 Go 的 recordSecurityAudit 一样先 TrimSpace，再去空值、算哈希。
+    let value = value.trim();
     if value.is_empty() {
         return String::new();
     }

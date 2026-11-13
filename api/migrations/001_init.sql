@@ -203,3 +203,5 @@ CREATE TABLE IF NOT EXISTS guestbook_ip_cache (
   ip_region TEXT NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE ai_image_quota ADD COLUMN IF NOT EXISTS last_request_at TIMESTAMPTZ;

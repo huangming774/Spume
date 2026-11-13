@@ -9,8 +9,7 @@ const ANSWER_MAX: usize = 4000;
 pub fn normalize_question(value: &str) -> String {
     let mut out = String::new();
     let mut space = false;
-    for ch in value.trim().chars() {
-        let ch = ch.to_lowercase().next().unwrap_or(ch);
+    for ch in value.trim().to_lowercase().chars() {
         if ch.is_whitespace() {
             space = true;
             continue;
@@ -25,11 +24,10 @@ pub fn normalize_question(value: &str) -> String {
 }
 
 /// 问题和答案都要有内容，问题最多 240 字，答案最多 4000 字。
+/// 和 Go 一样按未 trim 的原文计数。
 pub fn input_ok(question: &str, answer: &str) -> bool {
-    let question = question.trim();
-    let answer = answer.trim();
-    !question.is_empty()
-        && !answer.is_empty()
+    !question.trim().is_empty()
+        && !answer.trim().is_empty()
         && question.chars().count() <= QUESTION_MAX
         && answer.chars().count() <= ANSWER_MAX
 }
@@ -51,5 +49,7 @@ mod tests {
         assert!(!input_ok(" ", "答"));
         assert!(!input_ok(&"问".repeat(241), "答"));
         assert!(!input_ok("问", &"答".repeat(4001)));
+        // Go 按未 trim 的原文计数，前后空白也占额度。
+        assert!(!input_ok(&format!(" {}", "问".repeat(240)), "答"));
     }
 }

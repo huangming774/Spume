@@ -1,8 +1,10 @@
 //! 生图上游。
 //!
-//! 配了 `AGNES_API_KEY` 时优先用 Agnes。否则用百炼的通义万相多模态接口。
-//! 两个都没配时，接口告诉前端生图还不能用。
+//! 配了 `CLOUDFLARE_AI_TOKEN` 时优先用 Cloudflare Workers AI。
+//! 其次是 Agnes（`AGNES_API_KEY`），最后是百炼的通义万相多模态接口。
+//! 三个都没配时，接口告诉前端生图还不能用。
 
+use base64::Engine;
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -13,8 +15,10 @@ pub const PROMPT_REJECTED_MESSAGE: &str = "提示词被 Agnes 拒绝了，可能
 
 /// 上游返回的一张图。
 pub struct GeneratedImage {
-    /// 临时下载地址。
+    /// 临时下载地址。上游直接给图片字节时为空。
     pub url: String,
+    /// 上游直接返回的图片字节。有值时不用再下载。
+    pub bytes: Option<Vec<u8>>,
     /// 实际调用的模型名。
     pub model: String,
     /// 归一化后的尺寸，形如 `1024*1024`。
@@ -51,14 +55,26 @@ pub fn normalize_size(size: &str) -> &'static str {
     }
 }
 
-/// 至少一个生图密钥已经配置。
-pub fn configured(cfg: &Config) -> bool {
-    !cfg.agnes_api_key.is_empty() || !cfg.dashscope_api_key.is_empty()
+/// Go 的提示词归一化：去掉首尾空白，中间连续空白压成一个空格。
+pub fn normalize_prompt(prompt: &str) -> String {
+    prompt.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// 配额接口展示的模型名。有 Agnes 密钥，或百炼也没配时，展示 Agnes 模型。
+/// 至少一个生图上游已经配置。
+pub fn configured(cfg: &Config) -> bool {
+    cloudflare_ready(cfg) || !cfg.agnes_api_key.is_empty() || !cfg.dashscope_api_key.is_empty()
+}
+
+/// Cloudflare Workers AI 是否可用。
+fn cloudflare_ready(cfg: &Config) -> bool {
+    !cfg.cloudflare_ai_token.is_empty() && !cfg.cloudflare_account_id.is_empty()
+}
+
+/// 配额接口展示的模型名。优先 Cloudflare，其次 Agnes，最后百炼。
 pub fn public_model(cfg: &Config) -> &str {
-    if !cfg.agnes_api_key.is_empty() || cfg.dashscope_api_key.is_empty() {
+    if cloudflare_ready(cfg) {
+        &cfg.cloudflare_ai_model
+    } else if !cfg.agnes_api_key.is_empty() || cfg.dashscope_api_key.is_empty() {
         &cfg.agnes_image_model
     } else {
         &cfg.dashscope_image_model
@@ -112,6 +128,7 @@ pub fn dashscope_image(payload: &Value) -> Option<GeneratedImage> {
         .unwrap_or(0);
     Some(GeneratedImage {
         url,
+        bytes: None,
         model: String::new(),
         size: String::new(),
         request_id: payload
@@ -125,7 +142,7 @@ pub fn dashscope_image(payload: &Value) -> Option<GeneratedImage> {
     })
 }
 
-/// 调用已配置的上游。Agnes 优先于百炼。
+/// 调用已配置的上游。Cloudflare 优先于 Agnes，Agnes 优先于百炼。
 pub async fn generate(
     http: &reqwest::Client,
     cfg: &Config,
@@ -133,6 +150,9 @@ pub async fn generate(
     size: &str,
 ) -> Result<GeneratedImage, ImageGenError> {
     let size = normalize_size(size);
+    if cloudflare_ready(cfg) {
+        return request_cloudflare(http, cfg, prompt, size).await;
+    }
     if !cfg.agnes_api_key.is_empty() {
         return request_agnes(http, cfg, prompt, size).await;
     }
@@ -174,6 +194,7 @@ async fn request_agnes(
     })?;
     Ok(GeneratedImage {
         url,
+        bytes: None,
         model: cfg.agnes_image_model.clone(),
         size: size.to_string(),
         request_id: String::new(),
@@ -222,6 +243,100 @@ async fn request_dashscope(
     Ok(image)
 }
 
+/// Cloudflare Workers AI 的生图地址。
+pub fn cloudflare_endpoint(account: &str, model: &str) -> String {
+    format!(
+        "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
+        account.trim(),
+        model.trim().trim_start_matches('/')
+    )
+}
+
+/// `1024*1024` 这种尺寸拆成宽高。坏值回到 1024。
+pub fn size_pair(size: &str) -> (i32, i32) {
+    let (width, height) = size.split_once('*').unwrap_or(("1024", "1024"));
+    (
+        width.trim().parse().unwrap_or(1024),
+        height.trim().parse().unwrap_or(1024),
+    )
+}
+
+/// Workers AI 的图有两种返回：`image/*` 响应体直接是图片字节（SDXL 等），
+/// 或 JSON 里 `result/image` 放 base64（flux 等）。两种都收。
+pub fn cloudflare_image(content_type: &str, body: &[u8]) -> Option<Vec<u8>> {
+    let content_type = content_type.split(';').next().unwrap_or("").trim();
+    if content_type.starts_with("image/") && !body.is_empty() {
+        return Some(body.to_vec());
+    }
+    if content_type.contains("json") {
+        let payload: Value = serde_json::from_slice(body).ok()?;
+        let encoded = payload.pointer("/result/image").and_then(Value::as_str)?;
+        return base64::engine::general_purpose::STANDARD
+            .decode(encoded.trim())
+            .ok()
+            .filter(|raw| !raw.is_empty());
+    }
+    None
+}
+
+/// 宽高被模型 schema 拒绝（如 flux 只收 prompt）时，退回只传 prompt 重试。
+fn schema_rejected(payload: &Value) -> bool {
+    payload
+        .get("errors")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter().any(|row| {
+                row.get("message")
+                    .and_then(Value::as_str)
+                    .is_some_and(|message| message.contains("not allowed"))
+            })
+        })
+        .unwrap_or(false)
+}
+
+async fn request_cloudflare(
+    http: &reqwest::Client,
+    cfg: &Config,
+    prompt: &str,
+    size: &str,
+) -> Result<GeneratedImage, ImageGenError> {
+    let (width, height) = size_pair(size);
+    let url = cloudflare_endpoint(&cfg.cloudflare_account_id, &cfg.cloudflare_ai_model);
+    let mut raw = send_raw(
+        http,
+        &url,
+        &cfg.cloudflare_ai_token,
+        &json!({"prompt": prompt, "width": width, "height": height}),
+    )
+    .await?;
+    if schema_rejected(&raw.body) {
+        raw = send_raw(
+            http,
+            &url,
+            &cfg.cloudflare_ai_token,
+            &json!({"prompt": prompt}),
+        )
+        .await?;
+    }
+    if !(200..300).contains(&raw.status) {
+        log_provider("cloudflare", raw.status, &raw.body);
+        return Err(ImageGenError::Provider);
+    }
+    let bytes = cloudflare_image(&raw.content_type, &raw.bytes).ok_or_else(|| {
+        log_provider("cloudflare", raw.status, &raw.body);
+        ImageGenError::Provider
+    })?;
+    Ok(GeneratedImage {
+        url: String::new(),
+        bytes: Some(bytes),
+        model: cfg.cloudflare_ai_model.clone(),
+        size: size.to_string(),
+        request_id: String::new(),
+        width,
+        height,
+    })
+}
+
 struct UpstreamBody {
     status: u16,
     body: Value,
@@ -248,6 +363,52 @@ async fn send(
     let status = response.status().as_u16();
     let body = response.json::<Value>().await.unwrap_or(Value::Null);
     Ok(UpstreamBody { status, body })
+}
+
+/// Cloudflare 的响应可能是图片字节也可能是 JSON，不能复用 JSON 版 `send`。
+struct UpstreamRaw {
+    status: u16,
+    content_type: String,
+    bytes: Vec<u8>,
+    body: Value,
+}
+
+async fn send_raw(
+    http: &reqwest::Client,
+    url: &str,
+    key: &str,
+    body: &Value,
+) -> Result<UpstreamRaw, ImageGenError> {
+    let response = http
+        .post(url)
+        .timeout(std::time::Duration::from_secs(120))
+        .bearer_auth(key)
+        .json(body)
+        .send()
+        .await
+        .map_err(|error| {
+            tracing::error!(%error, "image provider request failed");
+            ImageGenError::Provider
+        })?;
+    let status = response.status().as_u16();
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let bytes = response.bytes().await.map(|item| item.to_vec()).unwrap_or_default();
+    let parsed = if content_type.contains("json") {
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null)
+    } else {
+        Value::Null
+    };
+    Ok(UpstreamRaw {
+        status,
+        content_type,
+        bytes,
+        body: parsed,
+    })
 }
 
 fn prompt_rejected(status: u16, payload: &Value) -> bool {
@@ -334,6 +495,7 @@ mod tests {
     fn size_and_endpoints_follow_the_go_client() {
         assert_eq!(normalize_size("720*1280"), "720*1280");
         assert_eq!(normalize_size("999*999"), "1024*1024");
+        assert_eq!(normalize_prompt("  一只  猫\n\t在睡觉  "), "一只 猫 在睡觉");
         assert_eq!(
             agnes_endpoint("https://apihub.agnes-ai.com"),
             "https://apihub.agnes-ai.com/v1/images/generations"
@@ -391,5 +553,42 @@ mod tests {
         assert_eq!(public_model(&cfg), "z-image-turbo");
         cfg.agnes_api_key = "agnes".into();
         assert_eq!(public_model(&cfg), "agnes-image-2.1-flash");
+    }
+
+    #[test]
+    fn cloudflare_wins_over_agnes_when_configured() {
+        let mut cfg = Config::for_test();
+        cfg.agnes_api_key = "agnes".into();
+        cfg.cloudflare_account_id = "account".into();
+        cfg.cloudflare_ai_token = "token".into();
+        assert!(configured(&cfg));
+        assert_eq!(public_model(&cfg), cfg.cloudflare_ai_model);
+    }
+
+    #[test]
+    fn cloudflare_size_and_response_parsing() {
+        assert_eq!(size_pair("1280*720"), (1280, 720));
+        assert_eq!(size_pair("坏值"), (1024, 1024));
+        // image/* 响应体直接是图片字节（SDXL）。
+        assert_eq!(
+            cloudflare_image("image/png", b"\x89PNGdata").unwrap(),
+            b"\x89PNGdata".to_vec()
+        );
+        // flux 的 JSON base64（解出来是 JPEG 也照收）。
+        let encoded = base64::engine::general_purpose::STANDARD.encode(b"\xff\xd8\xff");
+        let payload = format!("{{\"result\":{{\"image\":\"{encoded}\"}}}}");
+        assert_eq!(
+            cloudflare_image("application/json", payload.as_bytes()).unwrap(),
+            vec![0xff, 0xd8, 0xff]
+        );
+        assert!(cloudflare_image("application/json", b"{}").is_none());
+        assert!(cloudflare_image("text/plain", b"hello").is_none());
+    }
+
+    #[test]
+    fn schema_rejection_triggers_the_prompt_only_retry() {
+        let rejected = json!({"errors":[{"message":"Additional properties '/width' not allowed","code":5006}]});
+        assert!(schema_rejected(&rejected));
+        assert!(!schema_rejected(&json!({"errors":[{"message":"busy"}]})));
     }
 }

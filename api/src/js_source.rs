@@ -349,7 +349,7 @@ fn moment_insert_at(
     year: &str,
     date: &str,
 ) -> Result<usize, SourceError> {
-    let new_order = date_order(year, date)?;
+    let new_order = date_order(year, date);
     let mut pos = open + 1;
     while let Some(rel) = source
         .get(pos..close)
@@ -359,7 +359,7 @@ fn moment_insert_at(
         let date_index = pos + rel;
         let existing_date = quoted_after(source.get(date_index..close).unwrap_or(""));
         let existing_year = year_before(source, date_index);
-        if !existing_date.is_empty() && new_order >= date_order(&existing_year, &existing_date)? {
+        if !existing_date.is_empty() && new_order >= date_order(&existing_year, &existing_date) {
             if let Some(object_start) = source[..date_index].rfind("\n  {") {
                 return Ok(object_start + 1);
             }
@@ -393,20 +393,16 @@ fn quoted_after(source: &str) -> String {
     rest[..second].to_string()
 }
 
-fn date_order(year: &str, date: &str) -> Result<i32, SourceError> {
-    let Some((month, day)) = date.split_once('.') else {
-        return Err(SourceError::Invalid("碎语日期格式应为 6.8 这样的月.日"));
-    };
-    let year_number = year
-        .parse::<i32>()
-        .map_err(|_| SourceError::Invalid("碎语年份格式应为 2026 这样的四位年份"))?;
-    let month = month
-        .parse::<i32>()
-        .map_err(|_| SourceError::Invalid("碎语日期格式应为 6.8 这样的月.日"))?;
-    let day = day
-        .parse::<i32>()
-        .map_err(|_| SourceError::Invalid("碎语日期格式应为 6.8 这样的月.日"))?;
-    Ok(year_number * 10_000 + month * 100 + day)
+// 和 Go 的 ownerMomentDateOrder 一样，解析失败按 0 排序，不让既有条目挡住插入。
+fn date_order(year: &str, date: &str) -> i32 {
+    let parts: Vec<&str> = date.split('.').collect();
+    if parts.len() != 2 {
+        return 0;
+    }
+    let year_number = year.parse::<i32>().unwrap_or(0);
+    let month = parts[0].parse::<i32>().unwrap_or(0);
+    let day = parts[1].parse::<i32>().unwrap_or(0);
+    year_number * 10_000 + month * 100 + day
 }
 
 fn filled_year(raw: &str, site: chrono::DateTime<chrono::Utc>) -> Result<String, SourceError> {
@@ -458,7 +454,7 @@ fn unpadded(value: &str) -> &str {
 }
 
 fn dotted_number(value: &str, max: usize) -> bool {
-    (1..=max).contains(&value.len()) && value.chars().all(|ch| ch.is_ascii_digit()) && value != "0"
+    (1..=max).contains(&value.len()) && value.chars().all(|ch| ch.is_ascii_digit())
 }
 
 fn content_lines(content: &str) -> Vec<String> {

@@ -2,13 +2,17 @@ use std::time::Duration;
 
 use taozhiyy_api::audit::normalize;
 use taozhiyy_api::mail::{owner_body, owner_subject, GuestbookNotice};
-use taozhiyy_api::rate_limit::{pipeline_count, RateGate};
+use taozhiyy_api::rate_limit::{pipeline_count, pipeline_count_at, RateGate};
 
 #[test]
 fn redis_pipeline_count_reads_the_increment() {
     let body = serde_json::json!([{"result": 3}, {"result": 1}]);
     assert_eq!(pipeline_count(&body).expect("count"), 3);
     assert!(pipeline_count(&serde_json::json!({"result": "nope"})).is_err());
+    // 滑动窗口的 ZCARD 在 pipeline 第 3 条。
+    let window = serde_json::json!([{"result": 0}, {"result": 1}, {"result": 4}, {"result": 1}]);
+    assert_eq!(pipeline_count_at(&window, 2).expect("count"), 4);
+    assert!(pipeline_count_at(&window, 5).is_err());
 }
 
 #[test]

@@ -1,4 +1,5 @@
 mod account;
+pub mod ai_model;
 pub mod audit;
 mod bili;
 pub mod chat_prompt;
@@ -24,6 +25,7 @@ pub mod search_hits;
 pub mod sync_auth;
 pub mod wallpaper;
 mod wbi;
+mod weather;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -47,6 +49,10 @@ pub struct AppState {
     pub auth_gate: RateGate,
     /// 手动同步是否已经在跑。同一时刻只允许一次。
     pub sync_running: Arc<AtomicBool>,
+    /// 免费模型轮换缓存。见 [ai_model]。
+    pub ai_model: ai_model::SharedCache,
+    /// 导航栏天气缓存。见 [weather]。
+    pub weather_cache: weather::SharedCache,
 }
 
 impl AppState {
@@ -97,6 +103,8 @@ impl AppState {
             gallery_gate: RateGate::new(60, Duration::from_secs(60)),
             auth_gate: RateGate::new(15, Duration::from_secs(60)),
             sync_running: Arc::new(AtomicBool::new(false)),
+            ai_model: ai_model::new_cache(),
+            weather_cache: weather::new_cache(),
         }
     }
 }

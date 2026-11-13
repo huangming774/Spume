@@ -7,17 +7,43 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::{DateTime, NaiveDate, Utc};
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-use crate::r2::{presign_put, public_url, signed_put_url};
+use crate::r2::{presign_put, public_url};
 use crate::AppState;
+
+/// 和 Go 一致的 JSON 解析失败契约：400 `{"error":"INVALID_JSON", ...}`，
+/// 而不是 axum 默认的纯文本 400/422。
+pub struct AppJson<T>(pub T);
+
+impl<S, T> axum::extract::FromRequest<S> for AppJson<T>
+where
+    T: DeserializeOwned,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request(
+        req: axum::extract::Request,
+        state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        match axum::Json::<T>::from_request(req, state).await {
+            Ok(axum::Json(value)) => Ok(AppJson(value)),
+            Err(_) => Err(fail(
+                StatusCode::BAD_REQUEST,
+                "INVALID_JSON",
+                "请求内容格式不正确。",
+            )),
+        }
+    }
+}
 
 pub fn router(state: AppState) -> Router {
     let cors = cors_layer(&state);
-    Router::new()
+    let app = Router::new()
         .route("/api/v1/health", get(health))
         .route("/api/auth/me", get(auth_me))
         .route("/api/auth/register", post(auth_register))
@@ -34,6 +60,10 @@ pub fn router(state: AppState) -> Router {
             "/api/guestbook/messages/{id}",
             axum::routing::delete(guestbook_delete).patch(guestbook_patch),
         )
+        .route(
+            "/api/guestbook/messages/{id}/status",
+            axum::routing::patch(guestbook_patch),
+        )
         .route("/api/v1/guestbook", get(guestbook_list))
         .route("/api/v1/bangumi/list", get(bangumi_list))
         .route("/api/v1/radar/feed", get(radar_feed))
@@ -48,6 +78,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/ai/image/gallery", get(image_gallery))
         .route("/api/server/info", get(server_info))
         .route("/api/client/network", get(client_network))
+        .route("/api/weather", get(crate::weather::get))
         .route("/api/owner/status", get(owner_status))
         .route("/api/owner/emails", get(owner_emails))
         .route(
@@ -74,44 +105,78 @@ pub fn router(state: AppState) -> Router {
         .route("/api/internal/sync/wallpaper", post(sync_wallpaper))
         .route("/api/internal/maintenance", post(maintain))
         .route("/api/internal/index-content", post(index_site))
+        .route("/api/internal/refresh-ai-model", post(refresh_ai_model))
         .route("/api/internal/jobs/image/{id}", post(restock_image))
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
-        .layer(cors)
-        .with_state(state)
+        .layer(axum::middleware::from_fn(inject_remote_ip))
+        .with_state(state);
+    match cors {
+        Some(cors) => app.layer(cors),
+        None => app,
+    }
 }
 
-fn cors_layer(state: &AppState) -> CorsLayer {
+/// 没有 X-Forwarded-For / X-Real-IP 时，用 TCP 连接的远端地址回填，
+/// 和 Go 的 clientIP 回退 RemoteAddr 一致，避免直连时全站共用一个限流桶。
+/// 连接信息缺失（如单测直呼 router）时跳过。
+async fn inject_remote_ip(
+    mut request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    // 空的代理头和 Go 的 clientIP 一样当没有：X-Forwarded-For / X-Real-IP 都为空时
+    // 依然回填直连地址，否则全站会共用一个限流桶。
+    let has_proxy_header = header_text(request.headers(), "x-forwarded-for")
+        .or_else(|| header_text(request.headers(), "x-real-ip"))
+        .is_some();
+    if !has_proxy_header {
+        if let Some(axum::extract::ConnectInfo(addr)) = request
+            .extensions()
+            .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        {
+            if let Ok(value) = HeaderValue::from_str(&addr.ip().to_string()) {
+                request.headers_mut().insert("x-real-ip", value);
+            }
+        }
+    }
+    next.run(request).await
+}
+
+/// 来源列表为空时返回 None：整个不加 CORS 层，和 Go 版一致——
+/// Go 只在来源命中白名单时才回 `Access-Control-Allow-Origin`，白名单为空时
+/// 任何请求都拿不到 CORS 头（此时不能用 `AllowOrigin::any()` 加 credentials）。
+fn cors_layer(state: &AppState) -> Option<CorsLayer> {
     let origins: Vec<HeaderValue> = state
         .cfg
         .allowed_origins
         .iter()
         .filter_map(|origin| origin.parse().ok())
         .collect();
-    let origin = if origins.is_empty() {
-        AllowOrigin::any()
-    } else {
-        AllowOrigin::list(origins)
-    };
-    CorsLayer::new()
-        .allow_origin(origin)
-        .allow_credentials(true)
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::ACCEPT,
-            header::AUTHORIZATION,
-            header::COOKIE,
-            HeaderName::from_static("x-sync-trigger-token"),
-        ])
+    if origins.is_empty() {
+        return None;
+    }
+    Some(
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list(origins))
+            .allow_credentials(true)
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([
+                header::CONTENT_TYPE,
+                header::ACCEPT,
+                header::AUTHORIZATION,
+                header::COOKIE,
+                HeaderName::from_static("x-blog-user-id"),
+                HeaderName::from_static("x-sync-trigger-token"),
+            ]),
+    )
 }
 
-fn fail(status: StatusCode, error: &str, message: &str) -> Response {
+pub(crate) fn fail(status: StatusCode, error: &str, message: &str) -> Response {
     (status, Json(json!({"error": error, "message": message}))).into_response()
 }
 
@@ -143,13 +208,14 @@ struct SessionUser {
     avatar: String,
     is_owner: bool,
     unlimited: bool,
+    created_at: DateTime<Utc>,
 }
 
 async fn session_user(state: &AppState, headers: &HeaderMap) -> Option<SessionUser> {
     let pool = state.db.as_ref()?;
     let token = session_token(headers)?;
-    sqlx::query_as::<_, (i64, String, String, String, bool, bool)>(
-        r#"SELECT u.id, u.email, u.display_name, u.avatar, u.is_owner, s.unlimited
+    sqlx::query_as::<_, (i64, String, String, String, bool, bool, DateTime<Utc>)>(
+        r#"SELECT u.id, u.email, u.display_name, u.avatar, u.is_owner, s.unlimited, u.created_at
            FROM sessions s JOIN users u ON u.id = s.user_id
            WHERE s.id = $1 AND s.expires_at > now()"#,
     )
@@ -159,13 +225,14 @@ async fn session_user(state: &AppState, headers: &HeaderMap) -> Option<SessionUs
     .ok()
     .flatten()
     .map(
-        |(id, email, display_name, avatar, is_owner, unlimited)| SessionUser {
+        |(id, email, display_name, avatar, is_owner, unlimited, created_at)| SessionUser {
             id,
             email,
             display_name,
             avatar,
             is_owner,
             unlimited,
+            created_at,
         },
     )
 }
@@ -183,7 +250,7 @@ fn session_token(headers: &HeaderMap) -> Option<&str> {
 fn session_cookie(token: &str, secure: bool) -> HeaderValue {
     let secure = if secure { "; Secure" } else { "" };
     HeaderValue::from_str(&format!(
-        "acg_session={token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=1209600{secure}"
+        "acg_session={token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000{secure}"
     ))
     .expect("cookie")
 }
@@ -206,11 +273,6 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
     } else {
         String::new()
     };
-    let vector_url = if state.cfg.vector_ready() {
-        format!("{}/info", state.cfg.vector_url.trim_end_matches('/'))
-    } else {
-        String::new()
-    };
     let r2_url = if state.cfg.r2_ready() {
         state.cfg.r2_public_base.clone()
     } else {
@@ -218,7 +280,7 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
     };
     let (redis, vector, r2) = tokio::join!(
         crate::jobs::probe(&state, &redis_url, &state.cfg.redis_token, false),
-        crate::jobs::probe(&state, &vector_url, &state.cfg.vector_token, false),
+        crate::jobs::vector_probe(&state),
         crate::jobs::probe(&state, &r2_url, "", true),
     );
     let ready = db && redis != "down" && vector != "down" && r2 != "down";
@@ -234,7 +296,9 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
 
 #[derive(Deserialize)]
 struct AuthBody {
+    #[serde(default)]
     email: String,
+    #[serde(default)]
     password: String,
 }
 
@@ -244,7 +308,7 @@ async fn auth_me(State(state): State<AppState>, headers: HeaderMap) -> Json<Valu
     };
     Json(json!({
         "loggedIn": true,
-        "unlimited": user.unlimited || user.is_owner,
+        "unlimited": user.unlimited,
         "user": user_json(&user),
     }))
 }
@@ -252,7 +316,7 @@ async fn auth_me(State(state): State<AppState>, headers: HeaderMap) -> Json<Valu
 async fn auth_register(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<AuthBody>,
+    AppJson(body): AppJson<AuthBody>,
 ) -> Response {
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
@@ -293,23 +357,38 @@ async fn auth_register(
         }
     };
     let inserted = sqlx::query_as::<_, (i64,)>(
-        "INSERT INTO users (email, password_hash, is_owner) VALUES ($1, $2, $3) RETURNING id",
+        "INSERT INTO users (email, password_hash, display_name, is_owner) VALUES ($1, $2, $3, $4) RETURNING id",
     )
     .bind(&email)
     .bind(&hash)
+    .bind(crate::account::nickname_from_email(&email))
     .bind(false)
     .fetch_one(pool)
     .await;
-    let Ok((id,)) = inserted else {
-        return fail(StatusCode::CONFLICT, "EMAIL_TAKEN", "这个邮箱已经注册过了");
+    let (id,) = match inserted {
+        Ok(row) => row,
+        Err(error) => {
+            let unique = error
+                .as_database_error()
+                .and_then(|item| item.code())
+                .is_some_and(|code| code == "23505");
+            if unique {
+                return fail(
+                    StatusCode::CONFLICT,
+                    "EMAIL_EXISTS",
+                    "该邮箱已注册，请直接登录",
+                );
+            }
+            return query_failed(&error);
+        }
     };
-    issue_session(&state, pool, id, false).await
+    issue_session(&state, pool, id, false, &headers).await
 }
 
 async fn auth_login(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<AuthBody>,
+    AppJson(body): AppJson<AuthBody>,
 ) -> Response {
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
@@ -321,93 +400,74 @@ async fn auth_login(
             "数据库还没有连上",
         );
     };
-    let email = body.email.trim().to_lowercase();
+    // 不带 @ 的输入等于站长登录名时，映射到站长邮箱；否则按邮箱处理。
+    let email = crate::account::resolve_login_email(
+        &body.email,
+        &state.cfg.owner_login_name,
+        &state.cfg.owner_email,
+    );
     let row = sqlx::query_as::<_, (i64, String, String, String, bool)>(
         "SELECT id, password_hash, display_name, avatar, is_owner FROM users WHERE email = $1",
     )
     .bind(&email)
     .fetch_optional(pool)
     .await;
-    let Ok(Some((id, hash, display_name, avatar, owner))) = row else {
+    let (id, hash, _display_name, _avatar, owner) = match row {
+        Ok(Some(values)) => values,
+        Ok(None) => {
+            return fail(
+                StatusCode::UNAUTHORIZED,
+                "INVALID_CREDENTIALS",
+                "账号或密码错误",
+            )
+        }
+        Err(error) => return query_failed(&error),
+    };
+    if bcrypt::verify(&body.password, &hash).ok() != Some(true) {
+        if owner {
+            if let Err(response) = note_audit(
+                &state,
+                &headers,
+                AuditNote {
+                    event: "owner.login",
+                    outcome: "failure",
+                    actor: 0,
+                    target_type: "owner",
+                    target_id: "",
+                    detail: "invalid_credentials",
+                },
+            )
+            .await
+            {
+                return *response;
+            }
+        }
         return fail(
             StatusCode::UNAUTHORIZED,
             "INVALID_CREDENTIALS",
-            "邮箱或密码不正确",
+            "账号或密码错误",
         );
-    };
-    if bcrypt::verify(&body.password, &hash).ok() != Some(true) {
+    }
+    if owner {
+        // 站长账号密码直接进后台，不再走安全问答（有意去掉双重验证）。
         if let Err(response) = note_audit(
             &state,
             &headers,
             AuditNote {
-                event: "auth.login",
-                outcome: "failure",
+                event: "owner.login",
+                outcome: "success",
                 actor: id,
-                target_type: "user",
+                target_type: "owner",
                 target_id: &id.to_string(),
-                detail: "bad_password",
+                detail: "password_login",
             },
         )
         .await
         {
             return *response;
         }
-        return fail(
-            StatusCode::UNAUTHORIZED,
-            "INVALID_CREDENTIALS",
-            "邮箱或密码不正确",
-        );
     }
-    if let Err(response) = note_audit(
-        &state,
-        &headers,
-        AuditNote {
-            event: "auth.login",
-            outcome: "success",
-            actor: id,
-            target_type: "user",
-            target_id: &id.to_string(),
-            detail: "ok",
-        },
-    )
-    .await
-    {
-        return *response;
-    }
-    if owner && !state.cfg.owner_security_answer.is_empty() {
-        return begin_owner_challenge(&state, pool, id, &email, &display_name, &avatar).await;
-    }
-    issue_session(&state, pool, id, owner).await
-}
-
-async fn begin_owner_challenge(
-    state: &AppState,
-    pool: &sqlx::PgPool,
-    id: i64,
-    email: &str,
-    display_name: &str,
-    avatar: &str,
-) -> Response {
-    let token = hex::encode(rand::random::<[u8; 16]>());
-    let saved = sqlx::query("INSERT INTO login_challenges (token, user_id, expires_at) VALUES ($1, $2, now() + interval '10 minutes')")
-        .bind(&token)
-        .bind(id)
-        .execute(pool)
-        .await;
-    if saved.is_err() {
-        return fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "SERVER_ERROR",
-            "安全验证没有准备好",
-        );
-    }
-    Json(json!({
-        "ok": true,
-        "needsSecurityQuestion": true,
-        "securityQuestion": state.cfg.owner_security_question,
-        "challengeToken": token,
-        "user": {"id": id, "email": email, "displayName": display_name, "avatar": avatar, "isOwner": true}
-    })).into_response()
+    issue_session(&state, pool, id, owner, &headers).await
 }
 
 async fn issue_session(
@@ -415,9 +475,10 @@ async fn issue_session(
     pool: &sqlx::PgPool,
     user_id: i64,
     owner: bool,
+    headers: &HeaderMap,
 ) -> Response {
     let token = hex::encode(rand::random::<[u8; 32]>());
-    let saved = sqlx::query("INSERT INTO sessions (id, user_id, unlimited, expires_at) VALUES ($1, $2, $3, now() + interval '14 days')")
+    let saved = sqlx::query("INSERT INTO sessions (id, user_id, unlimited, expires_at) VALUES ($1, $2, $3, now() + interval '30 days')")
         .bind(&token)
         .bind(user_id)
         .bind(owner)
@@ -441,47 +502,51 @@ async fn issue_session(
     let mut response = Json(json!({"ok": true, "loggedIn": true, "unlimited": owner, "user": user.as_ref().map(user_json)})).into_response();
     response.headers_mut().insert(
         header::SET_COOKIE,
-        session_cookie(&token, state.cfg.cookie_secure),
+        session_cookie(&token, cookie_secure(state, headers)),
     );
     response
 }
 
+/// Go 的 cookieSecure：默认安全，除非显式关掉；HTTPS（含反代）时总是安全。
+fn cookie_secure(state: &AppState, headers: &HeaderMap) -> bool {
+    if !state.cfg.cookie_secure {
+        return false;
+    }
+    header_text(headers, "x-forwarded-proto")
+        .is_some_and(|value| value.eq_ignore_ascii_case("https"))
+        || header_text(headers, header::ORIGIN.as_str())
+            .is_some_and(|value| value.starts_with("https://"))
+}
+
 async fn auth_logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let (Some(pool), Some(token)) = (state.db.as_ref(), session_token(&headers)) {
+        // Go 忽略删除失败，注销总是成功。
         if let Err(error) = sqlx::query("DELETE FROM sessions WHERE id = $1")
             .bind(token)
             .execute(pool)
             .await
         {
-            let mut response = fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                &format!("会话没有注销: {error}"),
-            )
-            .into_response();
-            response
-                .headers_mut()
-                .insert(header::SET_COOKIE, clear_cookie(state.cfg.cookie_secure));
-            return response;
+            tracing::warn!(%error, "session delete failed during logout");
         }
     }
     let mut response = Json(json!({"ok": true})).into_response();
-    response
-        .headers_mut()
-        .insert(header::SET_COOKIE, clear_cookie(state.cfg.cookie_secure));
+    response.headers_mut().insert(
+        header::SET_COOKIE,
+        clear_cookie(cookie_secure(&state, &headers)),
+    );
     response
 }
 
 #[derive(Deserialize)]
 struct ProfileBody {
-    #[serde(rename = "displayName")]
+    #[serde(rename = "displayName", default)]
     display_name: String,
 }
 
 async fn auth_profile(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<ProfileBody>,
+    AppJson(body): AppJson<ProfileBody>,
 ) -> Response {
     let Some(user) = session_user(&state, &headers).await else {
         return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
@@ -516,15 +581,16 @@ async fn auth_profile(
 
 #[derive(Deserialize)]
 struct VerifyBody {
-    #[serde(rename = "challengeToken")]
+    #[serde(rename = "challengeToken", default)]
     challenge_token: String,
+    #[serde(default)]
     answer: String,
 }
 
 async fn auth_verify_security(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<VerifyBody>,
+    AppJson(body): AppJson<VerifyBody>,
 ) -> Response {
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
@@ -536,19 +602,32 @@ async fn auth_verify_security(
             "数据库还没有连上",
         );
     };
-    if state.cfg.owner_security_answer.is_empty()
-        || body.answer.trim() != state.cfg.owner_security_answer
-    {
+    let token = body.challenge_token.trim();
+    let user_id = if token.is_empty() {
+        None
+    } else {
+        match sqlx::query_scalar::<_, i64>(
+            "DELETE FROM login_challenges WHERE token = $1 AND expires_at > now() RETURNING user_id",
+        )
+        .bind(token)
+        .fetch_optional(pool)
+        .await
+        {
+            Ok(value) => value,
+            Err(error) => return query_failed(&error),
+        }
+    };
+    let Some(user_id) = user_id else {
         if let Err(response) = note_audit(
             &state,
             &headers,
             AuditNote {
-                event: "auth.verify",
+                event: "owner.security_verify",
                 outcome: "failure",
                 actor: 0,
-                target_type: "login_challenge",
+                target_type: "owner",
                 target_id: "",
-                detail: "bad_answer",
+                detail: "invalid_challenge",
             },
         )
         .await
@@ -556,32 +635,50 @@ async fn auth_verify_security(
             return *response;
         }
         return fail(
-            StatusCode::FORBIDDEN,
-            "SECURITY_ANSWER_REJECTED",
-            "安全答案不正确",
+            StatusCode::BAD_REQUEST,
+            "INVALID_CHALLENGE",
+            "验证已失效，请重新登录",
         );
-    }
-    let user_id = sqlx::query_scalar::<_, i64>(
-        "DELETE FROM login_challenges WHERE token = $1 AND expires_at > now() RETURNING user_id",
-    )
-    .bind(body.challenge_token.trim())
-    .fetch_optional(pool)
-    .await;
-    let user_id = match user_id {
-        Ok(value) => value,
+    };
+    let is_owner = sqlx::query_scalar::<_, bool>("SELECT is_owner FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await;
+    let is_owner = match is_owner {
+        Ok(Some(value)) => value,
+        Ok(None) => false,
         Err(error) => return query_failed(&error),
     };
-    let Some(user_id) = user_id else {
+    if !is_owner {
         if let Err(response) = note_audit(
             &state,
             &headers,
             AuditNote {
-                event: "auth.verify",
+                event: "owner.security_verify",
                 outcome: "failure",
-                actor: 0,
-                target_type: "login_challenge",
-                target_id: "",
-                detail: "expired",
+                actor: user_id,
+                target_type: "owner",
+                target_id: &user_id.to_string(),
+                detail: "forbidden_user",
+            },
+        )
+        .await
+        {
+            return *response;
+        }
+        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "无权进行此验证");
+    }
+    if body.answer.trim() != state.cfg.owner_security_answer.trim() {
+        if let Err(response) = note_audit(
+            &state,
+            &headers,
+            AuditNote {
+                event: "owner.security_verify",
+                outcome: "failure",
+                actor: user_id,
+                target_type: "owner",
+                target_id: &user_id.to_string(),
+                detail: "wrong_answer",
             },
         )
         .await
@@ -590,18 +687,18 @@ async fn auth_verify_security(
         }
         return fail(
             StatusCode::UNAUTHORIZED,
-            "CHALLENGE_EXPIRED",
-            "安全验证已过期，请重新登录",
+            "WRONG_ANSWER",
+            "学号回答不正确",
         );
-    };
+    }
     if let Err(response) = note_audit(
         &state,
         &headers,
         AuditNote {
-            event: "auth.verify",
+            event: "owner.security_verify",
             outcome: "success",
             actor: user_id,
-            target_type: "user",
+            target_type: "owner",
             target_id: &user_id.to_string(),
             detail: "ok",
         },
@@ -610,7 +707,7 @@ async fn auth_verify_security(
     {
         return *response;
     }
-    issue_session(&state, pool, user_id, true).await
+    issue_session(&state, pool, user_id, true, &headers).await
 }
 
 async fn auth_avatar(
@@ -624,7 +721,7 @@ async fn auth_avatar(
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
     }
-    let (public, key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await {
+    let (public, _key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await {
         Ok(saved) => saved,
         Err(response) => return *response,
     };
@@ -647,16 +744,22 @@ async fn auth_avatar(
             &format!("头像已上传，资料没有更新: {error}"),
         );
     }
-    Json(json!({"ok": true, "user": {"id": user.id, "email": user.email, "displayName": user.display_name, "avatar": public, "isOwner": user.is_owner}, "item": {"url": public, "path": key}})).into_response()
+    Json(json!({"ok": true, "user": {"id": user.id, "email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name), "avatar": public, "isOwner": user.is_owner}})).into_response()
+}
+
+/// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。
+fn go_timestamp(value: DateTime<Utc>) -> String {
+    value.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
 fn user_json(user: &SessionUser) -> Value {
     json!({
         "id": user.id,
         "email": user.email,
-        "displayName": if user.display_name.is_empty() { user.email.clone() } else { user.display_name.clone() },
+        "displayName": crate::account::display_name_or_email(&user.email, &user.display_name),
         "avatar": user.avatar,
         "isOwner": user.is_owner,
+        "createdAt": go_timestamp(user.created_at),
     })
 }
 
@@ -698,6 +801,7 @@ async fn guestbook_list(
 #[derive(Deserialize)]
 struct GuestbookBody {
     nickname: Option<String>,
+    #[serde(default)]
     content: String,
     channel: Option<String>,
     #[serde(rename = "contactEmail")]
@@ -709,7 +813,7 @@ struct GuestbookBody {
 async fn guestbook_create(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<GuestbookBody>,
+    AppJson(body): AppJson<GuestbookBody>,
 ) -> Response {
     let Ok(pool) = db_required(&state) else {
         return fail(
@@ -724,9 +828,7 @@ async fn guestbook_create(
         return fail(StatusCode::BAD_REQUEST, "INVALID_CHANNEL", "留言分区不正确");
     };
     let parent_id = body.parent_id.unwrap_or(0);
-    if parent_id < 0 {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_PARENT", "回复楼层不正确");
-    }
+    // 检查顺序对齐 Go：分区 -> 维护 -> 正文 -> 楼层（guestbook_messages.go:312-341）。
     if channel == "guestbook" && !state.cfg.guestbook_main_posts {
         return fail(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -737,6 +839,9 @@ async fn guestbook_create(
     let content = body.content.trim();
     if let Err(error) = crate::guestbook::check_content(content) {
         return fail(StatusCode::BAD_REQUEST, error.code, error.message);
+    }
+    if parent_id < 0 {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_PARENT", "回复楼层不正确");
     }
     let user = session_user(&state, &headers).await;
     let admin = user.as_ref().is_some_and(|item| item.is_owner);
@@ -755,12 +860,10 @@ async fn guestbook_create(
         .await
         {
             Ok(count) => count,
-            Err(_) => {
-                return fail(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "SERVER_ERROR",
-                    "回复楼层没有核对成功",
-                )
+            Err(error) => {
+                // Go 在核对失败时当作不存在（guestbook_messages.go:578-589）。
+                tracing::warn!(%error, "guestbook parent check failed");
+                0
             }
         };
         if count == 0 {
@@ -777,6 +880,7 @@ async fn guestbook_create(
         nickname: body.nickname.as_deref().unwrap_or(""),
         email: body.contact_email.as_deref().unwrap_or(""),
         account_name: user.as_ref().map(|item| item.display_name.as_str()),
+        account_email: user.as_ref().map(|item| item.email.as_str()),
         account_avatar: user.as_ref().map(|item| item.avatar.as_str()).unwrap_or(""),
     }) {
         Ok(composed) => composed,
@@ -809,12 +913,10 @@ async fn guestbook_create(
     }
     let region = match crate::guestbook::lookup_region(Some(pool), &state.http, &ip).await {
         Ok(region) => region,
-        Err(_) => {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                "地区没有查到",
-            )
+        Err(error) => {
+            // Go 的 lookupIPRegion 从不失败，查不到就记「未知地区」继续提交（guestbook_ip.go:50-71）。
+            tracing::warn!(%error, "guestbook region lookup failed");
+            "未知地区".to_string()
         }
     };
     let row = sqlx::query_as::<_, (i64, DateTime<Utc>)>(
@@ -844,7 +946,8 @@ async fn guestbook_create(
         );
     };
     let nickname = composed.nickname;
-    let created_at = created.to_rfc3339();
+    // Go 用 RFC3339 秒精度、Z 结尾（guestbook_messages.go:422）。
+    let created_at = created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let notice = crate::mail::GuestbookNotice {
         channel: &channel,
         nickname: &nickname,
@@ -853,19 +956,11 @@ async fn guestbook_create(
         reply: parent_id > 0,
     };
     if let Err(error) = crate::mail::notify_owner(&state.cfg, &notice).await {
-        return fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "MAIL_FAILED",
-            &format!("留言已保存，通知邮件没有发出: {error}"),
-        );
+        tracing::warn!(%error, "guestbook owner notification failed");
     }
     if admin && parent_id > 0 {
         if let Err(error) = crate::mail::notify_reply(&state.cfg, pool, parent_id, &notice).await {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "MAIL_FAILED",
-                &format!("留言已保存，回复通知没有发出: {error}"),
-            );
+            tracing::warn!(%error, "guestbook reply notification failed");
         }
     }
     if let Err(response) = note_audit(
@@ -898,7 +993,7 @@ async fn guestbook_create(
         user_agent_hash: String::new(),
         created_at: created,
     };
-    let Some(item) = crate::guestbook::thread_json(vec![item], Vec::new(), false)
+    let Some(mut item) = crate::guestbook::thread_json(vec![item], Vec::new(), false)
         .into_iter()
         .next()
     else {
@@ -908,6 +1003,8 @@ async fn guestbook_create(
             "小纸条没有贴上，请稍后再试哦",
         );
     };
+    // Go 的新增响应总是带回 status（guestbook_messages.go:436-447）。
+    item["status"] = json!("visible");
     Json(json!({"message": "留言成功", "item": item})).into_response()
 }
 
@@ -944,12 +1041,10 @@ async fn guestbook_rate(
     };
     let ((hour_count, day_count), hour_limit, day_limit) = match counts {
         Ok(counts) => counts,
-        Err(_) => {
-            return Err(Box::new(fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                "留言频率没有核对成功",
-            )))
+        Err(error) => {
+            // Go 在核对失败时放行，只留告警。
+            tracing::warn!(%error, "guestbook rate check failed; allowing");
+            return Ok(());
         }
     };
     if hour_count >= hour_limit || day_count >= day_limit {
@@ -995,24 +1090,31 @@ async fn guestbook_duplicate(
             "RATE_LIMITED",
             "相同内容提交太快啦，稍后再试试～",
         ))),
-        Err(_) => Err(Box::new(fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "SERVER_ERROR",
-            "重复留言没有核对成功",
-        ))),
+        Err(error) => {
+            // Go 在核对失败时放行。
+            tracing::warn!(%error, "guestbook duplicate check failed; allowing");
+            Ok(())
+        }
     }
 }
 
 async fn guestbook_delete(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(id): Path<i64>,
+    Path(raw_id): Path<String>,
 ) -> Response {
+    // Go 先解析 id，非法或 <= 0 直接 404（guestbook_messages.go:70-73）。
+    let Ok(id) = raw_id.parse::<i64>() else {
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
+    };
+    if id <= 0 {
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
+    }
     let Some(user) = session_user(&state, &headers).await else {
-        return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
+        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "无权操作");
     };
     if !user.is_owner {
-        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "只有站长可以删除留言");
+        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "无权操作");
     }
     let Ok(pool) = db_required(&state) else {
         return fail(
@@ -1030,15 +1132,12 @@ async fn guestbook_delete(
     {
         Ok(updated) => updated,
         Err(error) => {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                &format!("留言没有删除: {error}"),
-            )
+            tracing::warn!(%error, "guestbook delete failed");
+            return fail(StatusCode::INTERNAL_SERVER_ERROR, "SERVER_ERROR", "删除失败");
         }
     };
     if updated.rows_affected() == 0 {
-        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在。");
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
     }
     if let Err(response) = note_audit(
         &state,
@@ -1062,14 +1161,21 @@ async fn guestbook_delete(
 async fn guestbook_patch(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Path(id): Path<i64>,
-    Json(body): Json<Value>,
+    Path(raw_id): Path<String>,
+    AppJson(body): AppJson<Value>,
 ) -> Response {
+    // Go 先解析 id，非法或 <= 0 直接 404（guestbook_messages.go:56-62）。
+    let Ok(id) = raw_id.parse::<i64>() else {
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
+    };
+    if id <= 0 {
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
+    }
     let Some(user) = session_user(&state, &headers).await else {
-        return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
+        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "无权操作");
     };
     if !user.is_owner {
-        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "只有站长可以修改留言");
+        return fail(StatusCode::FORBIDDEN, "FORBIDDEN", "无权操作");
     }
     let Ok(pool) = db_required(&state) else {
         return fail(
@@ -1078,12 +1184,13 @@ async fn guestbook_patch(
             "数据库还没有连上",
         );
     };
-    let status = body.get("status").and_then(Value::as_str).unwrap_or("");
+    // Go 会 trim 后再比对（guestbook_messages.go:686-691）。
+    let status = body.get("status").and_then(Value::as_str).unwrap_or("").trim();
     if !matches!(status, "visible" | "hidden" | "deleted") {
         return fail(
             StatusCode::BAD_REQUEST,
-            "INVALID_STATUS",
-            "留言状态只能是可见、隐藏或删除。",
+            "INVALID_CONTENT",
+            "无效的状态",
         );
     }
     let updated = match sqlx::query("UPDATE guestbook_messages SET status = $1 WHERE id = $2")
@@ -1094,15 +1201,12 @@ async fn guestbook_patch(
     {
         Ok(updated) => updated,
         Err(error) => {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                &format!("留言状态没有更新: {error}"),
-            )
+            tracing::warn!(%error, "guestbook status update failed");
+            return fail(StatusCode::INTERNAL_SERVER_ERROR, "SERVER_ERROR", "更新失败");
         }
     };
     if updated.rows_affected() == 0 {
-        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在。");
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "留言不存在");
     }
     if let Err(response) = note_audit(
         &state,
@@ -1124,7 +1228,7 @@ async fn guestbook_patch(
 }
 
 async fn bangumi_list(State(state): State<AppState>) -> Response {
-    match list_simple(&state, "SELECT id, title, watched, total, latest_episode, cover_path, link_url FROM bangumi_items ORDER BY updated_at DESC").await {
+    match list_simple(&state, "SELECT id, title, watched, total, latest_episode, cover_path, link_url FROM bangumi_items ORDER BY title").await {
         Ok(items) => Json(json!({"items": items})).into_response(),
         Err(error) => query_failed(&error),
     }
@@ -1135,7 +1239,7 @@ async fn radar_feed(State(state): State<AppState>) -> Response {
         return Json(json!({"items": []})).into_response();
     };
     let rows = match sqlx::query_as::<_, (String, String, String, String, String, String, bool)>(
-        "SELECT id, creator_name, latest_text, cover_path, link_url, up_uid, is_new FROM radar_feed ORDER BY published_at DESC LIMIT 40",
+        "SELECT id, creator_name, latest_text, cover_path, link_url, up_uid, is_new FROM radar_feed WHERE up_uid NOT LIKE 'seed_%' ORDER BY published_at DESC",
     )
     .fetch_all(pool)
     .await
@@ -1234,7 +1338,8 @@ async fn wallpaper_draw(
             "sourceUrl": "https://picsum.photos/",
             "licenseNote": "图池里还没有接口壁纸",
             "kind": "api",
-            "addedAt": Utc::now().to_rfc3339()
+            "status": "active",
+            "addedAt": Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
         })
     } else {
         json!({
@@ -1246,12 +1351,17 @@ async fn wallpaper_draw(
             "sourceUrl": "https://taozhiyy.top/",
             "licenseNote": "站点图池为空时的占位",
             "kind": "fallback",
-            "addedAt": Utc::now().to_rfc3339()
+            "status": "active",
+            "addedAt": Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
         })
     };
     let Some(pool) = state.db.as_ref() else {
-        return Json(json!({"item": fallback, "fallback": true, "apiOnly": api_only}))
-            .into_response();
+        return Json(if api_only {
+            json!({"item": fallback, "fallback": true, "apiOnly": true})
+        } else {
+            json!({"item": fallback, "fallback": true})
+        })
+        .into_response();
     };
     let kind = if api_only { Some("api") } else { None };
     let row = sqlx::query_as::<_, (String, String, String, String, String, String, String, String, DateTime<Utc>)>(
@@ -1269,7 +1379,7 @@ async fn wallpaper_draw(
             Ok(_) => {}
             Err(error) => {
                 tracing::warn!(error = %error, "wallpaper sync failed, serving fallback");
-                return Json(json!({"item": fallback, "fallback": true, "apiOnly": true, "syncError": "图池暂时无法刷新，已为你展示备选壁纸"}))
+                return Json(json!({"item": fallback, "fallback": true, "apiOnly": true}))
                     .into_response();
             }
         }
@@ -1286,19 +1396,45 @@ async fn wallpaper_draw(
         row
     };
     let Some((id, url, preview, source, author, source_url, license, kind, added)) = row else {
-        return Json(json!({"item": fallback, "fallback": true, "apiOnly": api_only}))
-            .into_response();
+        return Json(if api_only {
+            json!({"item": fallback, "fallback": true, "apiOnly": true})
+        } else {
+            json!({"item": fallback, "fallback": true})
+        })
+        .into_response();
     };
-    Json(json!({"item": {"id": id, "url": url, "previewUrl": preview, "source": source, "author": author, "sourceUrl": source_url, "licenseNote": license, "kind": kind, "addedAt": added.to_rfc3339()}, "apiOnly": api_only})).into_response()
+    let item = json!({"id": id, "url": url, "previewUrl": preview, "source": source, "author": author, "sourceUrl": source_url, "licenseNote": license, "kind": kind, "status": "active", "addedAt": added.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)});
+    Json(if api_only {
+        json!({"item": item, "apiOnly": true})
+    } else {
+        json!({"item": item})
+    })
+    .into_response()
 }
 
 async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>) -> Response {
     if !state.cfg.vector_ready() {
         return Json(json!({"configured": false, "items": []})).into_response();
     }
-    let response = match state.http.post(format!("{}/query", state.cfg.vector_url.trim_end_matches('/')))
+    // limit 默认 10，上限 50，和迁移计划里的接口约定一致。type 参数先接受不生效。
+    let limit = query.limit.unwrap_or(10).clamp(1, 50);
+    // Zilliz Cloud（Milvus REST v2）BM25 全文检索：data 直接传查询原文，
+    // BM25 Function 把查询编成稀疏向量，metric_type 固定 BM25。
+    let response = match state
+        .http
+        .post(format!(
+            "{}/v2/vectordb/entities/search",
+            state.cfg.vector_uri.trim_end_matches('/')
+        ))
         .bearer_auth(&state.cfg.vector_token)
-        .json(&json!({"data": query.q, "topK": query.limit.unwrap_or(10), "includeMetadata": true, "includeData": false}))
+        .json(&json!({
+            "collectionName": state.cfg.vector_collection,
+            "data": [query.q],
+            "annsField": "sparse",
+            "limit": limit,
+            "outputFields": ["title", "url", "excerpt", "type", "id"],
+            "searchParams": {"metric_type": "BM25", "params": {}}
+        }))
         .send()
         .await
     {
@@ -1330,7 +1466,7 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
             );
         }
     };
-    match crate::search_hits::hits_from_vector(&body) {
+    match crate::search_hits::hits_from_milvus(&body) {
         Ok(items) => Json(json!({"configured": true, "items": items})).into_response(),
         Err(error) => {
             tracing::error!(error = %error, "vector hits parse failed");
@@ -1385,6 +1521,20 @@ impl Drop for SyncRunningGuard<'_> {
     }
 }
 
+/// 同一时刻只允许一个同步在跑（和 Go 的 syncRunning 互斥一致）。
+fn try_begin_sync(state: &AppState) -> Option<SyncRunningGuard<'_>> {
+    state
+        .sync_running
+        .compare_exchange(
+            false,
+            true,
+            std::sync::atomic::Ordering::AcqRel,
+            std::sync::atomic::Ordering::Acquire,
+        )
+        .ok()
+        .map(|_| SyncRunningGuard(&state.sync_running))
+}
+
 async fn run_queued_sync(state: &AppState) {
     if let Err(error) = crate::bili::sync_owner(state).await {
         tracing::error!(%error, "queued video sync failed");
@@ -1409,7 +1559,12 @@ async fn authorize_sync_trigger(
         return Ok(());
     }
     let user = session_user(state, headers).await;
-    if user.as_ref().is_some_and(|item| item.is_owner) {
+    // 站长分支和 Go 的 syncTriggerOwnerAuthorized / requireOwnerSession 一致：
+    // 必须是站长而且会话 unlimited。
+    if user
+        .as_ref()
+        .is_some_and(|item| item.is_owner && item.unlimited)
+    {
         return Ok(());
     }
     if state.cfg.sync_trigger_token.is_empty() {
@@ -1440,14 +1595,19 @@ async fn sync_bili(
     uri: OriginalUri,
     body: Bytes,
 ) -> Response {
+    // 站长会话可以直接触发（和 require_owner 同一把尺子：is_owner 且 unlimited），
+    // 否则必须有 QStash 签名。
     let owner = session_user(&state, &headers)
         .await
-        .is_some_and(|user| user.is_owner);
+        .is_some_and(|user| user.is_owner && user.unlimited);
     if !owner {
         if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
             return *response;
         }
     }
+    let Some(_sync) = try_begin_sync(&state) else {
+        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+    };
     let count = match crate::bili::sync_owner(&state).await {
         Ok(count) => count,
         Err(message) => return fail(StatusCode::BAD_GATEWAY, "SYNC_FAILED", &message),
@@ -1472,6 +1632,9 @@ async fn sync_wallpaper(
     if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
         return *response;
     }
+    let Some(_sync) = try_begin_sync(&state) else {
+        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+    };
     match crate::wallpaper::sync_pool(&state).await {
         Ok(count) => Json(json!({"ok": true, "count": count})).into_response(),
         Err(error) => {
@@ -1494,6 +1657,9 @@ async fn sync_radar(
     if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
         return *response;
     }
+    let Some(_sync) = try_begin_sync(&state) else {
+        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+    };
     match crate::feed::sync_radar(&state, Utc::now()).await {
         Ok(report) => Json(json!({"ok": true, "saved": report.saved, "failed": report.failed}))
             .into_response(),
@@ -1514,7 +1680,7 @@ async fn chat_quota(State(state): State<AppState>, headers: HeaderMap) -> Respon
         Ok(value) => value,
         Err(response) => return *response,
     };
-    Json(quota_json(&state, &user, limit, used)).into_response()
+    Json(quota_json(&state, &user, limit, used).await).into_response()
 }
 
 #[derive(Deserialize)]
@@ -1547,7 +1713,7 @@ struct ChatBody {
 async fn chat_post(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<ChatBody>,
+    AppJson(body): AppJson<ChatBody>,
 ) -> Response {
     if let Err(response) = admit(&state, &headers, &state.chat_gate, "chat", 20).await {
         return *response;
@@ -1557,7 +1723,6 @@ async fn chat_post(
         Ok(value) => value,
         Err(response) => return *response,
     };
-    let mut quota = quota_json(&state, &user, limit, used);
     let raw_message = body.message.unwrap_or_default();
     let message = raw_message.trim();
     if message.is_empty() {
@@ -1574,6 +1739,7 @@ async fn chat_post(
             "单次最多 2000 字哦",
         );
     }
+    let mut quota = quota_json(&state, &user, limit, used).await;
     let answer = match fixed_answer(&state, message).await {
         Ok(answer) => answer,
         Err(response) => return *response,
@@ -1593,7 +1759,7 @@ async fn chat_post(
         if let Err(response) = record_chat(&state, &user, ChatStat::NotConfigured).await {
             return *response;
         }
-        quota["chatEnabled"] = json!(false);
+        // Go 语义：没配 DeepSeek 时 chatEnabled = 是否存在固定答案，前端据此保留输入框。
         quota["error"] = json!("CHAT_NOT_CONFIGURED");
         quota["message"] = json!("小精灵还在沉睡中～站长配置 DeepSeek API Key 后就能聊天啦");
         return (StatusCode::SERVICE_UNAVAILABLE, Json(quota)).into_response();
@@ -1636,54 +1802,81 @@ async fn chat_post(
                 .unwrap_or(""),
         },
     );
+    // 模型走免费轮换（ai_model 每天随机挑），现检失败才用 DEEPSEEK_MODEL 兜底。
+    // 免费模型经常被下线/限权（403/404/429）：标记坏模型换一个重试，别让一个模型卡死全天。
     let endpoint = format!(
         "{}/v1/chat/completions",
         state.cfg.deepseek_base_url.trim_end_matches('/')
     );
-    let response = state
-        .http
-        .post(endpoint)
-        .bearer_auth(&state.cfg.deepseek_api_key)
-        .timeout(Duration::from_secs(45))
-        .json(&crate::chat_prompt::request_body(
-            &state.cfg.deepseek_model,
-            &prompt,
-        ))
-        .send()
-        .await;
-    let response = match response {
-        Ok(item) => item,
-        Err(error) => {
+    let mut model = crate::ai_model::resolve(&state).await;
+    let mut attempts = 0_u8;
+    let response = loop {
+        attempts += 1;
+        let sent = state
+            .http
+            .post(&endpoint)
+            .bearer_auth(&state.cfg.deepseek_api_key)
+            .timeout(Duration::from_secs(45))
+            .json(&crate::chat_prompt::request_body(&model, &prompt))
+            .send()
+            .await;
+        let sent = match sent {
+            Ok(item) => item,
+            Err(error) => {
+                release_chat_turn(&state, &headers, &user).await;
+                if let Err(response) = record_chat(&state, &user, ChatStat::UpstreamError).await {
+                    return *response;
+                }
+                return chat_upstream(quota, &error.to_string());
+            }
+        };
+        let status = sent.status();
+        if status.is_success() {
+            break sent;
+        }
+        let detail = sent.text().await.unwrap_or_default();
+        // 403/404/429 是模型侧拒绝，换个模型再试；其它状态码（401/402/400…）重试也没用。
+        let model_rejected = matches!(status.as_u16(), 403 | 404 | 429);
+        if !model_rejected || attempts >= 3 {
+            release_chat_turn(&state, &headers, &user).await;
             if let Err(response) = record_chat(&state, &user, ChatStat::UpstreamError).await {
                 return *response;
             }
-            return chat_upstream(quota, &error.to_string());
+            return chat_upstream(
+                quota,
+                &format!(
+                    "HTTP {}: {}",
+                    status,
+                    detail.chars().take(200).collect::<String>()
+                ),
+            );
         }
-    };
-    let response = match response.error_for_status() {
-        Ok(item) => item,
-        Err(error) => {
-            if let Err(response) = record_chat(&state, &user, ChatStat::UpstreamError).await {
-                return *response;
-            }
-            return chat_upstream(quota, &error.to_string());
-        }
+        tracing::warn!(
+            %model,
+            %status,
+            detail = %detail.chars().take(200).collect::<String>(),
+            "chat model rejected; rotating to another free model"
+        );
+        crate::ai_model::mark_failed(&state, &model);
+        model = crate::ai_model::resolve(&state).await;
     };
     let payload = match response.json::<Value>().await {
         Ok(body) => body,
         Err(error) => {
+            release_chat_turn(&state, &headers, &user).await;
             if let Err(response) = record_chat(&state, &user, ChatStat::UpstreamError).await {
                 return *response;
             }
             return chat_upstream(quota, &error.to_string());
         }
     };
+    // Go 只拿 trim 后的内容判空，回复本身原样返回。
     let Some(reply) = payload["choices"][0]["message"]["content"]
         .as_str()
-        .map(str::trim)
-        .filter(|text| !text.is_empty())
+        .filter(|text| !text.trim().is_empty())
         .map(str::to_string)
     else {
+        release_chat_turn(&state, &headers, &user).await;
         if let Err(response) = record_chat(&state, &user, ChatStat::UpstreamError).await {
             return *response;
         }
@@ -1692,37 +1885,44 @@ async fn chat_post(
     if let Err(response) = record_chat(&state, &user, ChatStat::Success).await {
         return *response;
     }
-    if let Err(response) = bump_quota(&state, &headers, &user).await {
-        return *response;
-    }
     quota["used"] = json!(used + 1);
-    quota["remaining"] = json!((limit - used - 1).max(0));
+    quota["remaining"] = json!(if limit < 0 { -1 } else { (limit - used - 1).max(0) });
     quota["reply"] = json!(reply);
     Json(quota).into_response()
 }
 
-fn quota_json(state: &AppState, user: &Option<SessionUser>, limit: i64, used: i64) -> Value {
-    let unlimited = user
-        .as_ref()
-        .is_some_and(|item| item.unlimited || item.is_owner);
+async fn quota_json(state: &AppState, user: &Option<SessionUser>, limit: i64, used: i64) -> Value {
+    // 对齐 Go chat.go 的标志位：chatEnabled = 配了 DeepSeek 或存在固定答案。
+    let unlimited = user.as_ref().is_some_and(|item| item.unlimited);
+    let deepseek = !state.cfg.deepseek_api_key.is_empty();
+    let mut fixed = false;
+    if let Some(pool) = state.db.as_ref() {
+        fixed = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS (SELECT 1 FROM ai_fixed_answers WHERE status = 'active')",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap_or_else(|error| {
+            tracing::warn!(%error, "chat fixed answers flag failed");
+            false
+        });
+    }
     json!({
         "limit": if unlimited { -1 } else { limit },
         "used": used,
         "remaining": if unlimited { -1 } else { (limit - used).max(0) },
         "isLogin": user.is_some(),
         "unlimited": unlimited,
-        "chatEnabled": !state.cfg.deepseek_api_key.is_empty(),
-        "deepseekEnabled": !state.cfg.deepseek_api_key.is_empty(),
-        "fixedAnswersEnabled": true,
+        "chatEnabled": deepseek || fixed,
+        "deepseekEnabled": deepseek,
+        "fixedAnswersEnabled": fixed,
         "imageEnabled": !state.cfg.dashscope_api_key.is_empty(),
     })
 }
 
 fn chat_daily_limit(user: &Option<SessionUser>) -> i64 {
-    if user
-        .as_ref()
-        .is_some_and(|item| item.unlimited || item.is_owner)
-    {
+    // 对齐 Go：只看会话的 unlimited（issue_session 给站长会话已置 unlimited=true）。
+    if user.as_ref().is_some_and(|item| item.unlimited) {
         -1
     } else if user.is_some() {
         crate::chat_quota::USER_DAILY_LIMIT
@@ -1750,9 +1950,10 @@ async fn quota_of(
         return Ok((limit, 0));
     };
     let used: i64 = sqlx::query_scalar(
-        "SELECT used::bigint FROM ai_chat_quota WHERE identity_key = $1 AND quota_date = CURRENT_DATE",
+        "SELECT used::bigint FROM ai_chat_quota WHERE identity_key = $1 AND quota_date = $2",
     )
     .bind(chat_quota_key(user, headers))
+    .bind(quota_date())
     .fetch_optional(pool)
     .await
     .map_err(|error| Box::new(query_failed(&error)))?
@@ -1769,35 +1970,49 @@ async fn claim_chat_turn(
     let Some(pool) = state.db.as_ref() else {
         return Ok(());
     };
-    let claimed = sqlx::query_as::<_, (i64, bool)>(
+    let claimed = sqlx::query_as::<_, (i64, bool, bool)>(
         "WITH existing AS (
-            SELECT used FROM ai_chat_quota WHERE identity_key = $1 AND quota_date = CURRENT_DATE
+            SELECT used, (last_request_at IS NULL OR last_request_at <= now() - interval '5 seconds') AS rate_ok
+            FROM ai_chat_quota WHERE identity_key = $1 AND quota_date = $2
          ), updated AS (
             INSERT INTO ai_chat_quota (identity_key, quota_date, used, last_request_at)
-            VALUES ($1, CURRENT_DATE, 0, now())
+            VALUES ($1, $2, 1, now())
             ON CONFLICT (identity_key, quota_date) DO UPDATE
-            SET last_request_at = now()
-            WHERE ai_chat_quota.last_request_at IS NULL
-               OR ai_chat_quota.last_request_at <= now() - interval '5 seconds'
+            SET used = ai_chat_quota.used + 1, last_request_at = now()
+            WHERE (ai_chat_quota.last_request_at IS NULL
+                OR ai_chat_quota.last_request_at <= now() - interval '5 seconds')
+              AND ($3::bigint < 0 OR ai_chat_quota.used < $3::bigint)
             RETURNING used
          )
-         SELECT used::bigint, true AS claimed FROM updated
+         SELECT used::bigint, true AS claimed, true AS rate_ok FROM updated
          UNION ALL
-         SELECT used::bigint, false AS claimed FROM existing
+         SELECT used::bigint, false AS claimed, rate_ok FROM existing
          WHERE NOT EXISTS (SELECT 1 FROM updated)",
     )
     .bind(chat_quota_key(user, headers))
+    .bind(quota_date())
+    .bind(limit)
     .fetch_one(pool)
     .await;
-    let (used, open) = match claimed {
+    let (used, open, rate_ok) = match claimed {
         Ok(row) => row,
         Err(error) => return Err(Box::new(query_failed(&error))),
     };
     if open {
         return Ok(());
     }
+    // Go reserveQuota 先判 5 秒间隔再判每日限额，两条都触发时报 RATE_LIMIT_EXCEEDED。
+    if rate_ok && limit >= 0 && used >= limit {
+        record_chat(state, user, ChatStat::QuotaDenied).await?;
+        let mut quota = quota_json(state, user, limit, used).await;
+        quota["error"] = json!("DAILY_LIMIT_EXCEEDED");
+        quota["message"] = json!("今日提问次数用完啦，明天再来问我吧～");
+        return Err(Box::new(
+            (StatusCode::TOO_MANY_REQUESTS, Json(quota)).into_response(),
+        ));
+    }
     record_chat(state, user, ChatStat::RateDenied).await?;
-    let mut quota = quota_json(state, user, limit, used);
+    let mut quota = quota_json(state, user, limit, used).await;
     quota["error"] = json!("RATE_LIMIT_EXCEEDED");
     quota["message"] = json!("提问太快啦，请稍等 5 秒再试～");
     Err(Box::new(
@@ -1805,30 +2020,30 @@ async fn claim_chat_turn(
     ))
 }
 
-async fn bump_quota(
+/// 配额日界按东八区算，和 Go 版的本地日界一致。
+fn quota_date() -> chrono::NaiveDate {
+    (Utc::now() + chrono::Duration::hours(8)).date_naive()
+}
+
+/// 模型失败后退回预占的次数。
+async fn release_chat_turn(
     state: &AppState,
     headers: &HeaderMap,
     user: &Option<SessionUser>,
-) -> Result<(), Box<Response>> {
+) {
     let Some(pool) = state.db.as_ref() else {
-        return Ok(());
+        return;
     };
-    let key = chat_quota_key(user, headers);
-    let updated = sqlx::query(
-        "UPDATE ai_chat_quota SET used = used + 1 WHERE identity_key = $1 AND quota_date = CURRENT_DATE",
+    if let Err(error) = sqlx::query(
+        "UPDATE ai_chat_quota SET used = GREATEST(used - 1, 0) WHERE identity_key = $1 AND quota_date = $2",
     )
-    .bind(key)
+    .bind(chat_quota_key(user, headers))
+    .bind(quota_date())
     .execute(pool)
     .await
-    .map_err(|error| Box::new(query_failed(&error)))?;
-    if updated.rows_affected() == 0 {
-        return Err(Box::new(fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "SERVER_ERROR",
-            "额度没有记上",
-        )));
+    {
+        tracing::warn!(%error, "chat quota release failed");
     }
-    Ok(())
 }
 
 enum ChatStat {
@@ -1854,11 +2069,15 @@ async fn record_chat(
         ChatStat::RateDenied => (0, 0, 0, 1, 0),
         ChatStat::NotConfigured => (0, 0, 0, 0, 1),
     };
-    let guest = i32::from(user.is_none());
-    let member = i32::from(user.is_some());
+    // Go 只在真实调用时区分游客/会员，not_configured 不计。
+    let (guest, member) = if missing == 1 {
+        (0, 0)
+    } else {
+        (i32::from(user.is_none()), i32::from(user.is_some()))
+    };
     let hour = Utc::now().format("%Y-%m-%dT%H").to_string();
     let day = Utc::now().date_naive();
-    sqlx::query(
+    let hourly = sqlx::query(
         "INSERT INTO ai_chat_hourly (bucket, success, upstream_error, quota_denied, rate_denied, not_configured, guest_calls, user_calls)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (bucket) DO UPDATE SET success = ai_chat_hourly.success + EXCLUDED.success, upstream_error = ai_chat_hourly.upstream_error + EXCLUDED.upstream_error,
@@ -1866,8 +2085,11 @@ async fn record_chat(
            not_configured = ai_chat_hourly.not_configured + EXCLUDED.not_configured, guest_calls = ai_chat_hourly.guest_calls + EXCLUDED.guest_calls, user_calls = ai_chat_hourly.user_calls + EXCLUDED.user_calls",
     )
     .bind(hour).bind(success).bind(upstream).bind(quota).bind(rate).bind(missing).bind(guest).bind(member)
-    .execute(pool).await.map_err(|error| Box::new(query_failed(&error)))?;
-    sqlx::query(
+    .execute(pool).await;
+    if let Err(error) = hourly {
+        tracing::warn!(%error, "chat hourly stat write failed");
+    }
+    let daily = sqlx::query(
         "INSERT INTO ai_chat_daily (bucket, success, upstream_error, quota_denied, rate_denied, not_configured, guest_calls, user_calls)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (bucket) DO UPDATE SET success = ai_chat_daily.success + EXCLUDED.success, upstream_error = ai_chat_daily.upstream_error + EXCLUDED.upstream_error,
@@ -1875,7 +2097,10 @@ async fn record_chat(
            not_configured = ai_chat_daily.not_configured + EXCLUDED.not_configured, guest_calls = ai_chat_daily.guest_calls + EXCLUDED.guest_calls, user_calls = ai_chat_daily.user_calls + EXCLUDED.user_calls",
     )
     .bind(day).bind(success).bind(upstream).bind(quota).bind(rate).bind(missing).bind(guest).bind(member)
-    .execute(pool).await.map_err(|error| Box::new(query_failed(&error)))?;
+    .execute(pool).await;
+    if let Err(error) = daily {
+        tracing::warn!(%error, "chat daily stat write failed");
+    }
     Ok(())
 }
 
@@ -1908,11 +2133,14 @@ fn chat_upstream(mut quota: Value, error: &str) -> Response {
 
 #[derive(Deserialize)]
 struct DaysQuery {
-    days: Option<i64>,
+    days: Option<String>,
 }
 
 async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery>) -> Response {
-    let days = query.days.unwrap_or(14).clamp(1, 90);
+    let days = match query.days.as_deref().and_then(|value| value.parse::<i64>().ok()) {
+        Some(n) if (1..=90).contains(&n) => n,
+        _ => 14,
+    };
     let today = Utc::now().date_naive();
     let since = today - chrono::Duration::days(days - 1);
     let (daily, hourly) = if let Some(pool) = state.db.as_ref() {
@@ -1954,7 +2182,7 @@ async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery
         (Vec::new(), Vec::new())
     };
     Json(chat_stats_json(
-        &state.cfg.deepseek_model,
+        &crate::ai_model::cached_or_default(&state),
         !state.cfg.deepseek_api_key.is_empty(),
         today,
         &daily,
@@ -2049,6 +2277,7 @@ fn chat_stats_json(
             "todayTotal": today_total,
             "periodSuccess": period_success,
             "periodTotal": period_total,
+            "successRate": if period_total > 0 { (period_success as f64) / (period_total as f64) } else { 0.0 },
             "successRateText": percent_text(period_success, period_total)
         },
         "daily": daily_items,
@@ -2099,17 +2328,17 @@ async fn image_quota_of(
     user: &Option<SessionUser>,
 ) -> Result<(i64, i64), Box<Response>> {
     const LIMIT: i64 = 3;
-    let Some(pool) = state.db.as_ref() else {
-        return Ok((LIMIT, 0));
-    };
     let Some(user) = user else {
+        return Ok((0, 0));
+    };
+    let Some(pool) = state.db.as_ref() else {
         return Ok((LIMIT, 0));
     };
     let used: i64 = sqlx::query_scalar(
         "SELECT used::bigint FROM ai_image_quota WHERE identity_key = $1 AND quota_date = $2",
     )
     .bind(format!("user:{}", user.id))
-    .bind(Utc::now().date_naive())
+    .bind(quota_date())
     .fetch_optional(pool)
     .await
     .map_err(|error| Box::new(query_failed(&error)))?
@@ -2117,21 +2346,79 @@ async fn image_quota_of(
     Ok((LIMIT, used))
 }
 
-async fn bump_image_quota(state: &AppState, user: &SessionUser) -> Result<(), Box<Response>> {
+/// 生成前原子预占一次额度；满额或 5 秒间隔不足时返回 429。
+async fn claim_image_quota(state: &AppState, user: &SessionUser, limit: i64) -> Result<(), Box<Response>> {
     let Some(pool) = state.db.as_ref() else {
         return Ok(());
     };
-    sqlx::query("INSERT INTO ai_image_quota (identity_key, quota_date, used) VALUES ($1, $2, 1) ON CONFLICT (identity_key, quota_date) DO UPDATE SET used = ai_image_quota.used + 1")
-        .bind(format!("user:{}", user.id))
-        .bind(Utc::now().date_naive())
-        .execute(pool)
-        .await
-        .map_err(|error| Box::new(query_failed(&error)))?;
-    Ok(())
+    let claimed = sqlx::query_as::<_, (i64, bool, bool)>(
+        "WITH existing AS (
+            SELECT used, (last_request_at IS NULL OR last_request_at <= now() - interval '5 seconds') AS rate_ok
+            FROM ai_image_quota WHERE identity_key = $1 AND quota_date = $2
+         ), updated AS (
+            INSERT INTO ai_image_quota (identity_key, quota_date, used, last_request_at)
+            VALUES ($1, $2, 1, now())
+            ON CONFLICT (identity_key, quota_date) DO UPDATE
+            SET used = ai_image_quota.used + 1, last_request_at = now()
+            WHERE (ai_image_quota.last_request_at IS NULL
+                OR ai_image_quota.last_request_at <= now() - interval '5 seconds')
+              AND ($3::bigint < 0 OR ai_image_quota.used < $3::bigint)
+            RETURNING used
+         )
+         SELECT used::bigint, true AS claimed, true AS rate_ok FROM updated
+         UNION ALL
+         SELECT used::bigint, false AS claimed, rate_ok FROM existing
+         WHERE NOT EXISTS (SELECT 1 FROM updated)",
+    )
+    .bind(format!("user:{}", user.id))
+    .bind(quota_date())
+    .bind(limit)
+    .fetch_one(pool)
+    .await;
+    let (used, open, rate_ok) = match claimed {
+        Ok(row) => row,
+        Err(error) => return Err(Box::new(query_failed(&error))),
+    };
+    if open {
+        return Ok(());
+    }
+    // 和 Go reserveQuota 一致：先判 5 秒间隔再判每日限额，两条都触发时报 RATE_LIMIT_EXCEEDED。
+    if rate_ok && limit >= 0 && used >= limit {
+        let mut body = image_quota_json(state, &Some(user.clone()), limit, used);
+        body["error"] = json!("DAILY_LIMIT_EXCEEDED");
+        body["message"] = json!("今日生图次数用完啦，明天再来画吧～");
+        return Err(Box::new(
+            (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response(),
+        ));
+    }
+    let mut body = image_quota_json(state, &Some(user.clone()), limit, used);
+    body["error"] = json!("RATE_LIMIT_EXCEEDED");
+    body["message"] = json!("提问太快啦，请稍等 5 秒再试～");
+    Err(Box::new(
+        (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response(),
+    ))
+}
+
+/// 生成失败后退回预占的额度。
+async fn release_image_quota(state: &AppState, user: &SessionUser) {
+    let Some(pool) = state.db.as_ref() else {
+        return;
+    };
+    if let Err(error) = sqlx::query(
+        "UPDATE ai_image_quota SET used = GREATEST(used - 1, 0) WHERE identity_key = $1 AND quota_date = $2",
+    )
+    .bind(format!("user:{}", user.id))
+    .bind(quota_date())
+    .execute(pool)
+    .await
+    {
+        tracing::warn!(%error, "image quota release failed");
+    }
 }
 
 #[derive(Deserialize)]
 struct ImageBody {
+    #[serde(default)]
     prompt: String,
     size: Option<String>,
 }
@@ -2139,7 +2426,7 @@ struct ImageBody {
 async fn image_create(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<ImageBody>,
+    AppJson(body): AppJson<ImageBody>,
 ) -> Response {
     if let Err(response) = admit(&state, &headers, &state.image_gate, "image", 6).await {
         return *response;
@@ -2150,19 +2437,20 @@ async fn image_create(
         Err(response) => return *response,
     };
     let quota = image_quota_json(&state, &user, limit, used);
-    if user.is_none() {
+    let Some(current) = user.as_ref() else {
         let mut body = quota;
         body["error"] = json!("LOGIN_REQUIRED");
         body["message"] = json!("请先登录后再生图，避免额度被刷爆。");
         return (StatusCode::UNAUTHORIZED, Json(body)).into_response();
-    }
+    };
     if !crate::image_gen::configured(&state.cfg) {
         let mut body = quota;
         body["error"] = json!("IMAGE_NOT_CONFIGURED");
         body["message"] = json!("生图还没配置 Agnes API Key，站长配好后就能用了。");
         return (StatusCode::SERVICE_UNAVAILABLE, Json(body)).into_response();
     }
-    let prompt = body.prompt.trim();
+    // 和 Go 的 normalizeAIImagePrompt 一致：压空白后再判空、判长度。
+    let prompt = crate::image_gen::normalize_prompt(&body.prompt);
     if prompt.is_empty() {
         return fail(
             StatusCode::BAD_REQUEST,
@@ -2177,16 +2465,37 @@ async fn image_create(
             "生图描述最多 1200 个字。",
         );
     }
-    let unlimited = user
-        .as_ref()
-        .is_some_and(|item| item.unlimited || item.is_owner);
+    let unlimited = current.unlimited || current.is_owner;
     if !unlimited && used >= limit {
         let mut body = quota;
         body["error"] = json!("DAILY_LIMIT_EXCEEDED");
         body["message"] = json!("今日生图次数用完啦，明天再来画吧～");
         return (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response();
     }
-    let size = crate::image_gen::normalize_size(body.size.as_deref().unwrap_or(""));
+    // unlimited 也走预占（limit 传 -1 不封顶），和 Go 一样计 used 并受 5 秒间隔约束。
+    if let Err(response) = claim_image_quota(&state, current, if unlimited { -1 } else { limit }).await {
+        return *response;
+    }
+    let response = image_generate_flow(&state, &headers, &user, &prompt, &body, &quota, limit, used).await;
+    if response.status() != StatusCode::OK {
+        release_image_quota(&state, current).await;
+    }
+    response
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn image_generate_flow(
+    state: &AppState,
+    headers: &HeaderMap,
+    user: &Option<SessionUser>,
+    prompt: &str,
+    request: &ImageBody,
+    quota: &Value,
+    limit: i64,
+    used: i64,
+) -> Response {
+    let quota = quota.clone();
+    let size = crate::image_gen::normalize_size(request.size.as_deref().unwrap_or(""));
     let generated = match crate::image_gen::generate(&state.http, &state.cfg, prompt, size).await {
         Ok(generated) => generated,
         Err(crate::image_gen::ImageGenError::PromptRejected) => {
@@ -2208,7 +2517,12 @@ async fn image_create(
             return (StatusCode::BAD_GATEWAY, Json(body)).into_response();
         }
     };
-    let stored = match crate::image_store::store_remote_image(&state, &generated.url).await {
+    // Cloudflare 直接给图片字节，不用再下载；Agnes/百炼给临时地址。
+    let stored = match &generated.bytes {
+        Some(bytes) => crate::image_store::store_image_bytes(state, bytes).await,
+        None => crate::image_store::store_remote_image(state, &generated.url).await,
+    };
+    let stored = match stored {
         Ok(stored) => stored,
         Err(error) => {
             let (status, code) = match error {
@@ -2229,19 +2543,23 @@ async fn image_create(
                 "IMAGE_DOWNLOAD_ERROR" => "生成图片下载失败，请稍后再试",
                 _ => "图片保存失败，请稍后再试",
             };
-            return fail(status, code, message);
+            // 和 Go 一致：失败响应也带上配额快照字段。
+            let mut body = quota;
+            body["error"] = json!(code);
+            body["message"] = json!(message);
+            return (status, Json(body)).into_response();
         }
     };
     let Some(pool) = state.db.as_ref() else {
-        return fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "DB_UNAVAILABLE",
-            "生成图已保存到 R2，但数据库还没有连上",
-        );
+        let mut body = quota;
+        body["error"] = json!("DB_UNAVAILABLE");
+        body["message"] = json!("生成图已保存到 R2，但数据库还没有连上");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
     };
+    // author 存邮箱作联表键（users.email 不可变更），画廊再 LEFT JOIN users 现算显示名。
     let author = user
         .as_ref()
-        .map(|item| item.display_name.as_str())
+        .map(|item| item.email.as_str())
         .unwrap_or("");
     if let Err(error) = sqlx::query(
         "INSERT INTO ai_images (prompt, image_url, size, author, object_key) VALUES ($1, $2, $3, $4, $5)",
@@ -2254,12 +2572,12 @@ async fn image_create(
     .execute(pool)
     .await
     {
-        return fail(StatusCode::INTERNAL_SERVER_ERROR, "SERVER_ERROR", &format!("生成图已保存到 R2，记录没有写上: {error}"));
-    }
-    if let Some(current) = user.as_ref().filter(|_| !unlimited) {
-        if let Err(response) = bump_image_quota(&state, current).await {
-            return *response;
-        }
+        // 原始错误只进日志，不回给客户端。
+        tracing::error!(error = %error, "image record insert failed");
+        let mut body = quota;
+        body["error"] = json!("SERVER_ERROR");
+        body["message"] = json!("生成图已保存到 R2，记录没有写上");
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
     }
     if let Err(response) = note_audit(
         &state,
@@ -2277,8 +2595,8 @@ async fn image_create(
     {
         return *response;
     }
-    let used = if unlimited { used } else { used + 1 };
-    let mut out = image_quota_json(&state, &user, limit, used);
+    // 预占已把 used 加一，成功响应直接展示预占后的口径。
+    let mut out = image_quota_json(&state, &user, limit, used + 1);
     out["image"] = json!({"url": stored.url, "path": stored.key, "mimeType": stored.mime, "size": stored.size, "width": generated.width, "height": generated.height});
     out["size"] = json!(generated.size);
     out["model"] = json!(generated.model);
@@ -2289,7 +2607,7 @@ async fn image_create(
 
 #[derive(Deserialize)]
 struct GalleryQuery {
-    limit: Option<i64>,
+    limit: Option<String>,
     before: Option<String>,
 }
 
@@ -2304,14 +2622,39 @@ async fn image_gallery(
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"items": [], "nextCursor": null})).into_response();
     };
-    let limit = query.limit.unwrap_or(60).clamp(1, 200);
-    let before = query
+    // 和 Go 一致地宽容解析：limit 不是数字就用默认值，不报 400。
+    let limit = match query
+        .limit
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        Some(value) => match value.parse::<i64>() {
+            Ok(count) => count.clamp(1, 200),
+            Err(_) => 60,
+        },
+        None => 60,
+    };
+    // before 解析不了时和 Go 一样只给空页，不回第一页。
+    let before = match query
         .before
         .as_deref()
-        .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
-        .map(|value| value.with_timezone(&Utc));
-    let rows = sqlx::query_as::<_, (String, String, String, String, DateTime<Utc>)>(
-        "SELECT prompt, image_url, size, author, created_at FROM ai_images WHERE ($1::timestamptz IS NULL OR created_at < $1) ORDER BY created_at DESC LIMIT $2",
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        None => None,
+        Some(value) => match DateTime::parse_from_rfc3339(value) {
+            Ok(parsed) => Some(parsed.with_timezone(&Utc)),
+            Err(_) => return Json(json!({"items": [], "nextCursor": null})).into_response(),
+        },
+    };
+    let rows = sqlx::query_as::<_, (String, String, String, DateTime<Utc>, String, String, String)>(
+        "SELECT g.prompt, g.image_url, g.size, g.created_at,
+                COALESCE(u.email, ''), COALESCE(u.display_name, ''), g.author
+         FROM ai_images g
+         LEFT JOIN users u ON u.email = g.author
+         WHERE ($1::timestamptz IS NULL OR g.created_at < $1)
+         ORDER BY g.created_at DESC LIMIT $2",
     )
     .bind(before)
     .bind(limit)
@@ -2322,7 +2665,24 @@ async fn image_gallery(
         Err(error) => return query_failed(&error),
     };
     let full = rows.len() as i64 == limit;
-    let items: Vec<Value> = rows.into_iter().map(|(prompt, url, size, author, created)| json!({"prompt": prompt, "imageUrl": url, "size": size, "author": author, "createdAt": created.to_rfc3339()})).collect();
+    let items: Vec<Value> = rows
+        .into_iter()
+        .map(|(prompt, url, size, created, email, display_name, stored_author)| {
+            // 和 Go 一样联表 users 现算 displayNameOrEmail：显示名空时用邮箱前缀，截 12 字。
+            let author = if email.is_empty() && display_name.is_empty() {
+                if stored_author.contains('@') {
+                    // 新行存邮箱，用户已注销时和 Go 一样显示「访客」。
+                    "访客".to_string()
+                } else {
+                    // 旧行是插入时的显示名快照，兜底直接展示。
+                    crate::account::display_name_or_email("", &stored_author)
+                }
+            } else {
+                crate::account::display_name_or_email(&email, &display_name)
+            };
+            json!({"prompt": prompt, "imageUrl": url, "size": size, "author": author, "createdAt": created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)})
+        })
+        .collect();
     let next = if full {
         items.last().and_then(|item| item.get("createdAt").cloned())
     } else {
@@ -2342,15 +2702,15 @@ async fn server_info(State(state): State<AppState>) -> Json<Value> {
         "os": host.os,
         "arch": std::env::consts::ARCH,
         "goVersion": "rust",
-        "runtime": "rust",
         "cpuCores": host.cpu_cores,
+        // Go 语义是活跃 goroutine 数，Rust 没有对应计数，用 tokio 工作线程规模近似。
         "goroutines": host.cpu_cores,
         "memory": {"usedMB": host.memory_used_mb, "totalMB": host.memory_total_mb, "usedRatio": host.memory_ratio, "source": host.memory_source},
         "cpuPercent": host.cpu_percent,
         "uptime": format_uptime(state.started.elapsed()),
         "uptimeSecs": state.started.elapsed().as_secs(),
         "status": "online",
-        "serverTime": Utc::now().to_rfc3339()
+        "serverTime": Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
     }))
 }
 
@@ -2384,26 +2744,24 @@ fn format_uptime(elapsed: Duration) -> String {
 
 async fn client_network(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let ip = client_ip(&headers);
+    // Go 这个接口永远 200：查地区失败只降级成空地区（label 回退「访客」），不报错。
     let region = match crate::guestbook::lookup_region(state.db.as_ref(), &state.http, &ip).await {
         Ok(region) => region,
-        Err(_) => {
-            return fail(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "SERVER_ERROR",
-                "地区没有查到",
-            )
+        Err(error) => {
+            tracing::warn!(%error, "client region lookup failed");
+            String::new()
         }
     };
     Json(json!({
         "regionLabel": crate::guestbook::compact_region_label(&region),
         "ipRegion": region,
         "ipMasked": crate::guestbook::mask_ip(&ip),
-        "serverTime": Utc::now().to_rfc3339()
+        "serverTime": Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
     }))
     .into_response()
 }
 
-fn client_ip(headers: &HeaderMap) -> String {
+pub(crate) fn client_ip(headers: &HeaderMap) -> String {
     if let Some(forwarded) = header_text(headers, "x-forwarded-for") {
         if let Some(first) = forwarded
             .split(',')
@@ -2431,16 +2789,21 @@ async fn require_owner(
     headers: &HeaderMap,
 ) -> Result<SessionUser, Box<Response>> {
     match session_user(state, headers).await {
-        Some(user) if user.is_owner => Ok(user),
+        Some(user) if user.is_owner && user.unlimited => Ok(user),
+        Some(user) if user.is_owner => Err(Box::new(fail(
+            StatusCode::FORBIDDEN,
+            "FORBIDDEN",
+            "需要站长权限。",
+        ))),
         Some(_) => Err(Box::new(fail(
             StatusCode::FORBIDDEN,
             "FORBIDDEN",
-            "只有站长可以操作",
+            "需要站长权限。",
         ))),
         None => Err(Box::new(fail(
             StatusCode::UNAUTHORIZED,
             "UNAUTHORIZED",
-            "请先登录",
+            "请先登录。",
         ))),
     }
 }
@@ -2499,7 +2862,7 @@ async fn owner_status(State(state): State<AppState>, headers: HeaderMap) -> Resp
         0
     };
     Json(json!({
-        "owner": {"id": user.id, "email": user.email, "displayName": user.display_name},
+        "owner": {"id": user.id, "email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name)},
         "users": {"total": user_total, "registeredTotal": registered_total},
         "notifications": {"total": notifications.len(), "items": notifications},
         "ai": {"today": today_success, "fixedAnswers": answers},
@@ -2533,8 +2896,7 @@ async fn owner_emails(State(state): State<AppState>, headers: HeaderMap) -> Resp
     };
     Json(json!({
         "registeredUsers": users.into_iter().map(|(id, email, name, created)| {
-            let display = if name.trim().is_empty() { email.clone() } else { name };
-            json!({"id": id, "email": email, "displayName": display, "createdAt": created.to_rfc3339()})
+            json!({"id": id, "email": email, "displayName": crate::account::display_name_or_email(&email, &name), "createdAt": go_timestamp(created)})
         }).collect::<Vec<_>>(),
         "guestbookContacts": contacts.into_iter().filter_map(|(id, channel, nickname, content, submitted, account, created)| {
             let submitted = submitted.trim().to_lowercase();
@@ -2543,7 +2905,7 @@ async fn owner_emails(State(state): State<AppState>, headers: HeaderMap) -> Resp
             if contact.is_empty() {
                 return None;
             }
-            Some(json!({"id": id, "source": channel, "nickname": nickname, "content": content, "contactEmail": contact, "accountEmail": account, "createdAt": created.to_rfc3339()}))
+            Some(json!({"id": id, "source": channel, "nickname": nickname, "content": content, "contactEmail": contact, "accountEmail": account, "createdAt": go_timestamp(created)}))
         }).collect::<Vec<_>>()
     })).into_response()
 }
@@ -2562,7 +2924,7 @@ async fn owner_drafts(State(state): State<AppState>, headers: HeaderMap) -> Resp
 async fn owner_draft_create(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<Value>,
+    AppJson(body): AppJson<Value>,
 ) -> Response {
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
@@ -2621,17 +2983,17 @@ async fn owner_draft_create(
         );
     };
     let _owner = owner;
-    Json(json!({"ok": true, "item": {"id": id, "kind": kind, "title": title, "body": text, "coverUrl": cover, "status": status, "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()}})).into_response()
+    Json(json!({"ok": true, "item": {"id": id, "kind": kind, "title": title, "body": text, "coverUrl": cover, "status": status, "createdAt": go_timestamp(created), "updatedAt": go_timestamp(updated)}})).into_response()
 }
 
 fn owner_payload(user: &SessionUser, item: Value) -> Value {
-    json!({"ok": true, "item": item, "owner": {"email": user.email, "displayName": user.display_name}})
+    json!({"ok": true, "item": item, "owner": {"email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name)}})
 }
 
 async fn owner_publish(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<Value>,
+    AppJson(body): AppJson<Value>,
 ) -> Response {
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
@@ -2670,11 +3032,17 @@ async fn owner_publish(
     ) {
         Ok(article) => article,
         Err(error) => {
-            return fail(
-                StatusCode::BAD_REQUEST,
-                "INVALID_PUBLISH",
-                &error.to_string(),
-            )
+            // Go 分 INVALID_TITLE / INVALID_BODY（owner_publish.go:93-131）：
+            // post_markdown 的文案「发布标题…」归标题，「发布正文…」归正文。
+            let message = error.to_string();
+            let code = if message.starts_with("发布标题") {
+                "INVALID_TITLE"
+            } else if message.starts_with("发布正文") {
+                "INVALID_BODY"
+            } else {
+                "INVALID_PUBLISH"
+            };
+            return fail(StatusCode::BAD_REQUEST, code, &message);
         }
     };
     let published = match crate::github_publish::publish_article(
@@ -2698,6 +3066,8 @@ async fn owner_publish(
                     target: &article.path,
                     invalid_code: "INVALID_PUBLISH",
                     github_code: "PUBLISH_FAILED",
+                    internal_status: StatusCode::INTERNAL_SERVER_ERROR,
+                    internal_code: "PUBLISH_FAILED",
                 },
                 error,
             )
@@ -2756,19 +3126,18 @@ async fn mark_draft_published(state: &AppState, draft_id: i64) -> Result<(), Box
         ))
     })?;
     if updated.rows_affected() == 0 {
-        return Err(Box::new(fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "DRAFT_UPDATE_FAILED",
-            "文章已写入仓库，但草稿不存在",
-        )));
+        tracing::warn!(draft_id, "draft not found after publish; ignoring");
     }
     Ok(())
 }
 
 #[derive(Deserialize)]
 struct FriendBody {
+    #[serde(default)]
     name: String,
+    #[serde(default)]
     desc: String,
+    #[serde(default)]
     url: String,
     #[serde(default)]
     avatar: String,
@@ -2794,7 +3163,7 @@ struct GalleryBody {
     album_id: String,
     #[serde(rename = "albumTitle", default)]
     album_title: String,
-    #[serde(rename = "imageUrl")]
+    #[serde(rename = "imageUrl", default)]
     image_url: String,
 }
 
@@ -2852,6 +3221,10 @@ struct PublishFailure<'a> {
     target: &'a str,
     invalid_code: &'a str,
     github_code: &'a str,
+    /// GitHub 之外的内部错误（Transport/Response）怎么回：
+    /// Go 对文章是纯文本 500，对友链/碎语/相册是 400 `INVALID_*_PUBLISH`。
+    internal_status: StatusCode,
+    internal_code: &'a str,
 }
 
 async fn publish_error(
@@ -2894,10 +3267,18 @@ async fn publish_error(
         crate::github_publish::PublishError::Invalid(message) => {
             fail(StatusCode::BAD_REQUEST, failure.invalid_code, message)
         }
-        crate::github_publish::PublishError::GitHub { message, .. }
-        | crate::github_publish::PublishError::Transport(message)
+        // Go 把 GitHub 409/422 映射成 409（owner_publish.go:149-152），其余 GitHub 状态 502。
+        crate::github_publish::PublishError::GitHub { status, message } => {
+            let mapped = if status == 409 || status == 422 {
+                StatusCode::CONFLICT
+            } else {
+                StatusCode::BAD_GATEWAY
+            };
+            fail(mapped, failure.github_code, &message)
+        }
+        crate::github_publish::PublishError::Transport(message)
         | crate::github_publish::PublishError::Response(message) => {
-            fail(StatusCode::BAD_GATEWAY, failure.github_code, &message)
+            fail(failure.internal_status, failure.internal_code, &message)
         }
     }
 }
@@ -2905,7 +3286,7 @@ async fn publish_error(
 async fn owner_gallery(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<GalleryBody>,
+    AppJson(body): AppJson<GalleryBody>,
 ) -> Response {
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
@@ -2969,6 +3350,8 @@ async fn owner_gallery(
                     target: crate::github_publish::GALLERY_PATH,
                     invalid_code: "INVALID_GALLERY_PUBLISH",
                     github_code: "GALLERY_PUBLISH_FAILED",
+                    internal_status: StatusCode::BAD_REQUEST,
+                    internal_code: "INVALID_GALLERY_PUBLISH",
                 },
                 error,
             )
@@ -2980,7 +3363,7 @@ async fn owner_gallery(
 async fn owner_friends(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<FriendBody>,
+    AppJson(body): AppJson<FriendBody>,
 ) -> Response {
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
@@ -3047,6 +3430,8 @@ async fn owner_friends(
                     target: crate::github_publish::FRIEND_CARDS_PATH,
                     invalid_code: "INVALID_FRIEND_PUBLISH",
                     github_code: "FRIEND_PUBLISH_FAILED",
+                    internal_status: StatusCode::BAD_REQUEST,
+                    internal_code: "INVALID_FRIEND_PUBLISH",
                 },
                 error,
             )
@@ -3058,7 +3443,7 @@ async fn owner_friends(
 async fn owner_moments(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<MomentBody>,
+    AppJson(body): AppJson<MomentBody>,
 ) -> Response {
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
@@ -3125,6 +3510,8 @@ async fn owner_moments(
                     target: crate::github_publish::MOMENTS_PATH,
                     invalid_code: "INVALID_MOMENT_PUBLISH",
                     github_code: "MOMENT_PUBLISH_FAILED",
+                    internal_status: StatusCode::BAD_REQUEST,
+                    internal_code: "INVALID_MOMENT_PUBLISH",
                 },
                 error,
             )
@@ -3140,8 +3527,8 @@ async fn fixed_answers(State(state): State<AppState>, headers: HeaderMap) -> Res
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"items": []})).into_response();
     };
-    let rows = sqlx::query_as::<_, (i64, String, String, String)>(
-        "SELECT id, question, answer, status FROM ai_fixed_answers WHERE status = 'active' ORDER BY updated_at DESC, id DESC LIMIT 50",
+    let rows = sqlx::query_as::<_, (i64, String, String, String, DateTime<Utc>, DateTime<Utc>)>(
+        "SELECT id, question, answer, status, created_at, updated_at FROM ai_fixed_answers WHERE status = 'active' ORDER BY updated_at DESC, id DESC LIMIT 50",
     )
     .fetch_all(pool)
     .await;
@@ -3149,14 +3536,14 @@ async fn fixed_answers(State(state): State<AppState>, headers: HeaderMap) -> Res
         Ok(rows) => rows,
         Err(error) => return query_failed(&error),
     };
-    let items: Vec<Value> = rows.into_iter().map(|(id, question, answer, status)| json!({"id": id, "question": question, "answer": answer, "status": status})).collect();
+    let items: Vec<Value> = rows.into_iter().map(|(id, question, answer, status, created, updated)| json!({"id": id, "question": question, "answer": answer, "status": status, "createdAt": go_timestamp(created), "updatedAt": go_timestamp(updated)})).collect();
     Json(json!({"items": items})).into_response()
 }
 
 async fn fixed_answer_create(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<Value>,
+    AppJson(body): AppJson<Value>,
 ) -> Response {
     if let Err(response) = require_owner(&state, &headers).await {
         return *response;
@@ -3195,7 +3582,7 @@ async fn fixed_answer_create(
             "固定答案没有保存",
         );
     };
-    Json(json!({"ok": true, "item": {"id": id, "question": question, "answer": answer, "status": "active", "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()}})).into_response()
+    Json(json!({"ok": true, "item": {"id": id, "question": question, "answer": answer, "status": "active", "createdAt": go_timestamp(created), "updatedAt": go_timestamp(updated)}})).into_response()
 }
 
 async fn notification_read(
@@ -3213,12 +3600,12 @@ async fn notification_read(
             "数据库还没有连上",
         );
     };
-    let updated = sqlx::query("UPDATE guestbook_messages SET owner_read_at = now() WHERE id = $1 AND status = 'visible' AND owner_read_at IS NULL")
+    let updated = sqlx::query("UPDATE guestbook_messages SET owner_read_at = now() WHERE id = $1 AND status = 'visible'")
         .bind(id).execute(pool).await;
     if updated.map(|result| result.rows_affected()).unwrap_or(0) == 0 {
         return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "提醒不存在。");
     }
-    Json(json!({"ok": true, "id": id, "ownerReadAt": Utc::now().to_rfc3339()})).into_response()
+    Json(json!({"ok": true, "id": id, "ownerReadAt": go_timestamp(Utc::now())})).into_response()
 }
 
 #[derive(Deserialize)]
@@ -3231,7 +3618,7 @@ struct PresignBody {
 async fn owner_presign(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(body): Json<PresignBody>,
+    AppJson(body): AppJson<PresignBody>,
 ) -> Response {
     if require_owner(&state, &headers).await.is_err() {
         return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
@@ -3345,7 +3732,18 @@ async fn owner_asset(
             "相册上传必须选择相册。",
         );
     }
-    match put_bytes(&state, &format!("{kind}/{album}"), &name, bytes).await {
+    // 相册名消毒，避免把 / \ 带进对象键。
+    let album_slug: String = album
+        .trim()
+        .chars()
+        .map(|ch| if ch == '/' || ch == '\\' { '-' } else { ch })
+        .collect();
+    let folder = if kind == "gallery" {
+        format!("gallery/{album_slug}")
+    } else {
+        format!("articles/{album_slug}")
+    };
+    match put_bytes(&state, &folder, &name, bytes).await {
         Ok((public, key, name, size, mime)) => Json(json!({"ok": true, "item": {"kind": kind, "url": public, "path": key, "name": name, "size": size, "mimeType": mime}})).into_response(),
         Err(response) => *response,
     }
@@ -3392,7 +3790,7 @@ async fn store_upload(
 async fn put_bytes(
     state: &AppState,
     folder: &str,
-    name: &str,
+    _name: &str,
     bytes: Bytes,
 ) -> Result<(String, String, String, usize, &'static str), Box<Response>> {
     if !state.cfg.r2_ready() {
@@ -3409,25 +3807,55 @@ async fn put_bytes(
             "请选择要上传的文件。",
         )));
     }
-    if bytes.len() > 8 * 1024 * 1024 {
-        return Err(Box::new(fail(
-            StatusCode::BAD_REQUEST,
+    // 头像走 Go 的 2MB 上限和专用错误码，其它上传 8MB。
+    let (max_bytes, too_large_code, too_large_msg, invalid_code, invalid_msg) = if folder == "avatars"
+    {
+        (
+            2 * 1024 * 1024,
+            "IMAGE_TOO_LARGE",
+            "头像图片不能超过 2MB",
+            "INVALID_IMAGE_TYPE",
+            "仅支持 PNG / JPEG / WebP / GIF",
+        )
+    } else {
+        (
+            8 * 1024 * 1024,
             "FILE_TOO_LARGE",
             "上传文件超过 8 MiB 限制。",
+            "INVALID_FILE_TYPE",
+            "当前只支持上传图片。",
+        )
+    };
+    if bytes.len() > max_bytes {
+        return Err(Box::new(fail(
+            StatusCode::BAD_REQUEST,
+            too_large_code,
+            too_large_msg,
         )));
     }
     let Some(mime) = image_mime(&bytes) else {
         return Err(Box::new(fail(
             StatusCode::BAD_REQUEST,
-            "INVALID_FILE_TYPE",
-            "当前只支持上传图片。",
+            invalid_code,
+            invalid_msg,
         )));
     };
-    let safe_name = name.replace(['/', '\\'], "-");
-    let key = format!("{folder}/{}/{}", Utc::now().format("%Y%m%d"), safe_name);
-    let hash = hex::encode(Sha256::digest(&bytes));
+    // 文件名重命名为时间戳+随机串，避免同名覆盖；扩展名按嗅探结果定。
+    let ext = match mime {
+        "image/png" => ".png",
+        "image/jpeg" => ".jpg",
+        "image/webp" => ".webp",
+        _ => ".gif",
+    };
+    let safe_name = format!(
+        "{}-{}{ext}",
+        Utc::now().format("%Y%m%d%H%M%S"),
+        hex::encode(rand::random::<[u8; 4]>())
+    );
+    let key = format!("{folder}/{}", safe_name);
     let size = bytes.len();
-    let url = signed_put_url(&state.cfg, &key, &hash, 300);
+    // R2 预签名只认 UNSIGNED-PAYLOAD，正文哈希进签名会 403（和 image_store 同款坑）。
+    let url = presign_put(&state.cfg, &key, 300);
     let sent = state
         .http
         .put(url)
@@ -3465,7 +3893,7 @@ async fn owner_draft_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, sq
     };
     let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>, DateTime<Utc>)>("SELECT id, kind, title, body, cover_url, status, created_at, updated_at FROM owner_drafts ORDER BY updated_at DESC, id DESC LIMIT 20")
         .fetch_all(pool).await?;
-    Ok(rows.into_iter().map(|(id, kind, title, body, cover, status, created, updated)| json!({"id": id, "kind": kind, "title": title, "body": body, "coverUrl": cover, "status": status, "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()})).collect())
+    Ok(rows.into_iter().map(|(id, kind, title, body, cover, status, created, updated)| json!({"id": id, "kind": kind, "title": title, "body": body, "coverUrl": cover, "status": status, "createdAt": go_timestamp(created), "updatedAt": go_timestamp(updated)})).collect())
 }
 
 async fn fixed_answer_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, sqlx::Error> {
@@ -3477,7 +3905,7 @@ async fn fixed_answer_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows.into_iter().map(|(id, question, answer, status, created, updated)| json!({"id": id, "question": question, "answer": answer, "status": status, "createdAt": created.to_rfc3339(), "updatedAt": updated.to_rfc3339()})).collect())
+    Ok(rows.into_iter().map(|(id, question, answer, status, created, updated)| json!({"id": id, "question": question, "answer": answer, "status": status, "createdAt": go_timestamp(created), "updatedAt": go_timestamp(updated)})).collect())
 }
 
 async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, sqlx::Error> {
@@ -3531,6 +3959,22 @@ async fn maintain(
             "MAINTENANCE_FAILED",
             &error.to_string(),
         ),
+    }
+}
+
+/// QStash 每天调一次：重新检测 OpenRouter 免费模型并随机换一个。
+async fn refresh_ai_model(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+        return *response;
+    }
+    match crate::ai_model::refresh(&state).await {
+        Ok(model) => Json(json!({"ok": true, "model": model})).into_response(),
+        Err(error) => fail(StatusCode::BAD_GATEWAY, "MODEL_REFRESH_FAILED", &error),
     }
 }
 
@@ -3652,8 +4096,9 @@ async fn admit(
 ) -> Result<(), Box<Response>> {
     let ip = client_ip(headers);
     if state.cfg.redis_ready() {
-        let key = format!("rl:{bucket}:{ip}:{}", Utc::now().format("%Y%m%d%H%M"));
-        return match crate::rate_limit::allow_fixed_window(
+        // 滑动窗口按分数记时间戳，key 不再带分钟桶。
+        let key = format!("rl:{bucket}:{ip}");
+        return match crate::rate_limit::allow_sliding_window(
             &state.http,
             &state.cfg.redis_url,
             &state.cfg.redis_token,
@@ -3664,11 +4109,12 @@ async fn admit(
         {
             Ok(true) => Ok(()),
             Ok(false) => Err(Box::new(rate_limited())),
-            Err(error) => Err(Box::new(fail(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "RATE_BACKEND",
-                &error,
-            ))),
+            Err(error) => {
+                // Redis 故障时不能把用户挡在门外（Go 的内存限流从不失败）：
+                // 降级放行，只记警告。
+                tracing::warn!(%error, bucket, "rate limit backend failed; allowing request");
+                Ok(())
+            }
         };
     }
     if gate.allow(&ip) {
@@ -3713,12 +4159,10 @@ async fn note_audit(
     headers: &HeaderMap,
     note: AuditNote<'_>,
 ) -> Result<(), Box<Response>> {
+    // Go 的安全审计从不影响业务响应；这里失败也只记日志。
     let Some(pool) = state.db.as_ref() else {
-        return Err(Box::new(fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "AUDIT_FAILED",
-            "安全审计没有写上：数据库还没有连上",
-        )));
+        tracing::warn!(event = note.event, "audit skipped: database not connected");
+        return Ok(());
     };
     let user_agent = match headers.get(header::USER_AGENT) {
         None => String::new(),
@@ -3728,7 +4172,7 @@ async fn note_audit(
             .unwrap_or_else(|_| "invalid-user-agent".to_string()),
     };
     let ip = client_ip(headers);
-    crate::audit::record(
+    if let Err(error) = crate::audit::record(
         pool,
         crate::audit::AuditEvent {
             event: note.event,
@@ -3742,13 +4186,10 @@ async fn note_audit(
         },
     )
     .await
-    .map_err(|error| {
-        Box::new(fail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "AUDIT_FAILED",
-            &error.to_string(),
-        ))
-    })
+    {
+        tracing::warn!(%error, event = note.event, "audit write failed");
+    }
+    Ok(())
 }
 
 #[allow(dead_code)]

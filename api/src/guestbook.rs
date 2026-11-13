@@ -15,7 +15,8 @@ use sqlx::PgPool;
 const CONTENT_MAX: usize = 300;
 const NICK_MAX: usize = 12;
 const EMAIL_MAX: usize = 254;
-const THREAD_DEPTH: usize = 8;
+// Go 的回复树不限层数；这里给个远超实际的上限防失控数据。
+const THREAD_DEPTH: usize = 256;
 
 /// 一条已经落库的留言。
 #[derive(Clone)]
@@ -67,6 +68,8 @@ pub struct ComposeInput<'a> {
     pub email: &'a str,
     /// 已登录用户的显示名。
     pub account_name: Option<&'a str>,
+    /// 已登录用户的邮箱，昵称空时兜底用。
+    pub account_email: Option<&'a str>,
     /// 已登录用户的头像。
     pub account_avatar: &'a str,
 }
@@ -182,7 +185,11 @@ pub fn compose(input: ComposeInput<'_>) -> Result<Compose, GuestError> {
     let (nickname, email) = if friends_root {
         (accept_nickname(input.nickname)?, accept_email(input.email)?)
     } else if let Some(name) = input.account_name {
-        (name.trim().to_string(), String::new())
+        // 登录用户沿用 Go 的 displayNameOrEmail：空昵称回退邮箱前缀，超 12 字截断。
+        (
+            crate::account::display_name_or_email(input.account_email.unwrap_or(""), name),
+            String::new(),
+        )
     } else {
         (accept_nickname(input.nickname)?, String::new())
     };
@@ -388,7 +395,7 @@ pub async fn load_page(
     Ok((thread_json(roots, replies, admin), total))
 }
 
-/// 把顶层和后代排成前端要的回复树。`reveal_client` 为真时带上掩码 IP 和 UA 哈希。
+/// 把顶层和后代排成前端要的回复树。`reveal_client` 为真时带上 status、掩码 IP 和 UA 哈希。
 pub fn thread_json(
     roots: Vec<StoredMessage>,
     replies: Vec<StoredMessage>,
@@ -516,22 +523,30 @@ fn item_json(
     } else {
         item.ip_region.clone()
     };
+    // 对齐 Go 的 omitempty：空的 replies/replyCount/status/isAdminUser 不输出，
+    // name 字段 Go 的消息行根本没有（guestbook_messages.go:22-37）。
     let mut value = json!({
         "id": item.id,
         "parentId": item.parent_id,
         "nickname": item.nickname,
-        "name": item.nickname,
         "avatar": item.avatar,
         "content": item.content,
         "ipRegion": region,
         "isLoginUser": item.is_login_user,
-        "isAdminUser": item.is_admin_user,
-        "status": item.status,
-        "createdAt": item.created_at.to_rfc3339(),
-        "replies": replies,
-        "replyCount": reply_count
+        "createdAt": china_clock(item.created_at)
     });
+    if item.is_admin_user {
+        value["isAdminUser"] = json!(true);
+    }
+    if !replies.is_empty() {
+        value["replies"] = json!(replies);
+    }
+    if reply_count > 0 {
+        value["replyCount"] = json!(reply_count);
+    }
     if reveal_client {
+        // Go 只在站长列表里带 status、掩码 IP 和 UA 哈希（scanGuestbookRow）。
+        value["status"] = json!(item.status);
         if !item.ip_masked.is_empty() {
             value["ipMasked"] = json!(item.ip_masked);
         }

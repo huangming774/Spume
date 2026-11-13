@@ -42,6 +42,36 @@ pub fn display_name_message(name: &str) -> Option<&'static str> {
     }
 }
 
+/// 邮箱 @ 前缀当昵称，最多 12 个字。空邮箱显示「访客」。
+pub fn nickname_from_email(email: &str) -> String {
+    let email = email.trim();
+    let local = match email.split_once('@') {
+        Some((local, _)) if !local.is_empty() => local,
+        _ => "访客",
+    };
+    local.chars().take(12).collect()
+}
+
+/// 显示名：昵称为空时回退邮箱前缀，超过 12 个字截断。
+pub fn display_name_or_email(email: &str, display_name: &str) -> String {
+    let name = display_name.trim();
+    if name.is_empty() {
+        return nickname_from_email(email);
+    }
+    name.chars().take(12).collect()
+}
+
+/// 站长可以用登录名代替邮箱：输入不带 @ 且等于 `login_name`（忽略大小写）
+/// 时映射到 `owner_email`；其余输入按邮箱处理（原样转小写）。
+pub fn resolve_login_email(input: &str, login_name: &str, owner_email: &str) -> String {
+    let input = input.trim();
+    let login_name = login_name.trim();
+    if !input.contains('@') && !login_name.is_empty() && input.eq_ignore_ascii_case(login_name) {
+        return owner_email.trim().to_lowercase();
+    }
+    input.to_lowercase()
+}
+
 /// 站长账号播种结果。
 pub enum OwnerSeed {
     /// 库里已经是站长。
@@ -71,7 +101,8 @@ pub async fn ensure_owner(pool: &PgPool, email: &str) -> Result<OwnerSeed, sqlx:
     }
     let password = std::env::var("AUTH_OWNER_PASSWORD").unwrap_or_default();
     let password = password.trim();
-    if password_message(password).is_some() {
+    // 种子密码是运维配置的，不受注册侧 8 位下限约束（用户注册仍走 password_message）。
+    if password.is_empty() {
         return Ok(OwnerSeed::PasswordMissing);
     }
     let hash = bcrypt::hash(password, bcrypt::DEFAULT_COST)
@@ -102,5 +133,21 @@ mod tests {
             display_name_message(&"名".repeat(13)),
             Some("昵称最多 12 个字")
         );
+    }
+
+    #[test]
+    fn login_name_maps_to_the_owner_email() {
+        assert_eq!(
+            resolve_login_email("Admin", "admin", "Owner@Example.com"),
+            "owner@example.com"
+        );
+        // 带 @ 的一律按邮箱处理，不做映射。
+        assert_eq!(resolve_login_email("admin@", "admin", "o@e.com"), "admin@");
+        assert_eq!(
+            resolve_login_email("guest@e.com", "admin", "o@e.com"),
+            "guest@e.com"
+        );
+        // 登录名为空时映射关闭。
+        assert_eq!(resolve_login_email("admin", "", "o@e.com"), "admin");
     }
 }

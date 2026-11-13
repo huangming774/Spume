@@ -227,7 +227,8 @@ pub async fn seed_defaults(pool: &sqlx::PgPool) -> Result<(bool, bool), sqlx::Er
 /// 投稿是否落在现在往前 24 小时内。
 pub fn is_fresh(published: DateTime<Utc>, now: DateTime<Utc>) -> bool {
     let age = now.signed_duration_since(published);
-    age >= chrono::Duration::zero() && age <= chrono::Duration::hours(24)
+    // Go 把未来时间戳也算新，只判 24 小时内。
+    age <= chrono::Duration::hours(24)
 }
 
 struct LatestPost {

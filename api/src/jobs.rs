@@ -17,7 +17,7 @@ const CHUNK_CHARS: usize = 700;
 pub struct ContentDoc {
     /// `blog:slug:0` 这种稳定 id。
     pub id: String,
-    /// 交给 Upstash 内置模型的文本。
+    /// 交给 BM25 分词索引的文本（标题 + 正文块）。
     pub data: String,
     /// 搜索结果标题。
     pub title: String,
@@ -73,7 +73,8 @@ pub async fn maintain(state: &AppState) -> Result<Value, JobError> {
     Ok(json!({"sessions": sessions, "challenges": challenges, "hourly": hourly}))
 }
 
-/// 把文章和建站日志写入 Upstash Vector。先按前缀删掉旧条目，再整批写入。
+/// 把文章和建站日志写入 Zilliz Cloud（Milvus BM25 全文检索）。
+/// 先建好 collection 并按前缀删掉旧条目，再整批写入。
 pub async fn index_content(state: &AppState) -> Result<usize, JobError> {
     if !state.cfg.vector_ready() {
         return Err(JobError::Vector("向量库还没有配置".into()));
@@ -87,12 +88,13 @@ pub async fn index_content(state: &AppState) -> Result<usize, JobError> {
         "/build/post",
         &mut docs,
     )?;
+    ensure_collection(state).await?;
     delete_prefix(state, "blog:").await?;
     delete_prefix(state, "journal:").await?;
     if docs.is_empty() {
         return Ok(0);
     }
-    upsert(state, &docs).await?;
+    insert_docs(state, &docs).await?;
     Ok(docs.len())
 }
 
@@ -244,24 +246,107 @@ fn collect_dir(
     Ok(())
 }
 
+/// 建 collection（幂等）并加载。BM25 检索需要：text 开启分词、
+/// SparseFloatVector 承载稀疏向量、BM25 Function 自动把文本编成稀疏向量。
+async fn ensure_collection(state: &AppState) -> Result<(), JobError> {
+    let name = &state.cfg.vector_collection;
+    let create = json!({
+        "collectionName": name,
+        "schema": {
+            "autoId": false,
+            "enabledDynamicField": false,
+            "fields": [
+                {"fieldName": "id", "dataType": "VarChar", "isPrimary": true,
+                 "elementTypeParams": {"max_length": 128}},
+                // analyzer_params 在 elementTypeParams 里是字符串值（JSON 编码），
+                // 用内置 chinese 分词器，中文正文才拆得开词。
+                {"fieldName": "text", "dataType": "VarChar",
+                 "elementTypeParams": {"max_length": 8192, "enable_analyzer": true,
+                    "analyzer_params": "{\"type\":\"chinese\"}"}},
+                {"fieldName": "title", "dataType": "VarChar",
+                 "elementTypeParams": {"max_length": 512}},
+                {"fieldName": "url", "dataType": "VarChar",
+                 "elementTypeParams": {"max_length": 512}},
+                {"fieldName": "excerpt", "dataType": "VarChar",
+                 "elementTypeParams": {"max_length": 2048}},
+                {"fieldName": "type", "dataType": "VarChar",
+                 "elementTypeParams": {"max_length": 32}},
+                {"fieldName": "sparse", "dataType": "SparseFloatVector"}
+            ],
+            "functions": [
+                {"name": "text_bm25", "type": "BM25",
+                 "inputFieldNames": ["text"], "outputFieldNames": ["sparse"], "params": {}}
+            ]
+        },
+        "indexParams": [
+            {"fieldName": "sparse", "indexName": "sparse_idx", "metricType": "BM25",
+             "indexType": "SPARSE_INVERTED_INDEX", "params": {}}
+        ]
+    });
+    if let Err(error) = vector_post(state, "v2/vectordb/collections/create", &create).await {
+        // 已经建过就继续；其它建表失败直接抛给调用方记日志。
+        let message = error.to_string();
+        if !message.contains("already exist") && !message.contains("duplicated") {
+            return Err(error);
+        }
+    }
+    // 加载失败不影响写入；重复 load 服务端也可能报错，记日志即可。
+    if let Err(error) = vector_post(
+        state,
+        "v2/vectordb/collections/load",
+        &json!({"collectionName": name}),
+    )
+    .await
+    {
+        tracing::warn!(error = %error, "zilliz load collection failed");
+    }
+    Ok(())
+}
+
+/// 按 id 前缀删掉旧条目。`prefix` 由调用方固定为 `blog:` / `journal:`。
 async fn delete_prefix(state: &AppState, prefix: &str) -> Result<(), JobError> {
-    vector_post(state, "delete", &json!({"prefix": prefix}))
-        .await
-        .map(|_| ())
+    let filter = format!("id like \"{prefix}%\"");
+    vector_post(
+        state,
+        "v2/vectordb/entities/delete",
+        &json!({"collectionName": state.cfg.vector_collection, "filter": filter}),
+    )
+    .await
+    .map(|_| ())
 }
 
-async fn upsert(state: &AppState, docs: &[ContentDoc]) -> Result<(), JobError> {
-    let payload: Vec<Value> = docs
+/// 整批插入文档。稀疏向量由 BM25 Function 在服务端生成，不用传。
+async fn insert_docs(state: &AppState, docs: &[ContentDoc]) -> Result<(), JobError> {
+    let rows: Vec<Value> = docs
         .iter()
-        .map(|doc| json!({"id": doc.id, "data": doc.data, "metadata": {"title": doc.title, "url": doc.url, "excerpt": doc.excerpt, "type": doc.kind}}))
+        .map(|doc| {
+            json!({"id": doc.id, "text": doc.data, "title": doc.title, "url": doc.url,
+                   "excerpt": doc.excerpt, "type": doc.kind})
+        })
         .collect();
-    vector_post(state, "upsert", &json!(payload))
-        .await
-        .map(|_| ())
+    vector_post(
+        state,
+        "v2/vectordb/entities/insert",
+        &json!({"collectionName": state.cfg.vector_collection, "data": rows}),
+    )
+    .await
+    .map(|_| ())
 }
 
+/// 健康探测：列出 collection 成功就算 up。
+pub async fn vector_probe(state: &AppState) -> &'static str {
+    if !state.cfg.vector_ready() {
+        return "missing";
+    }
+    match vector_post(state, "v2/vectordb/collections/list", &json!({})).await {
+        Ok(_) => "up",
+        Err(_) => "down",
+    }
+}
+
+/// 调 Zilliz Cloud（Milvus REST v2）。`path` 形如 `v2/vectordb/entities/insert`。
 async fn vector_post(state: &AppState, path: &str, body: &Value) -> Result<Value, JobError> {
-    let url = format!("{}/{}", state.cfg.vector_url.trim_end_matches('/'), path);
+    let url = format!("{}/{}", state.cfg.vector_uri.trim_end_matches('/'), path);
     let response = state
         .http
         .post(url)
@@ -285,7 +370,21 @@ async fn vector_post(state: &AppState, path: &str, body: &Value) -> Result<Value
     if text.trim().is_empty() {
         return Ok(json!({}));
     }
-    serde_json::from_str(&text).map_err(|error| JobError::Vector(error.to_string()))
+    let value: Value =
+        serde_json::from_str(&text).map_err(|error| JobError::Vector(error.to_string()))?;
+    // Milvus REST v2 的业务错误也可能走 HTTP 200，靠 body 里的 code/message 区分。
+    if let Some(code) = value.get("code").and_then(Value::as_i64) {
+        if code != 0 && code != 200 {
+            let message = value
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or("未知错误");
+            return Err(JobError::Vector(format!(
+                "向量库返回 code {code}: {message}"
+            )));
+        }
+    }
+    Ok(value)
 }
 
 fn title_and_body(markdown: &str, slug: &str) -> (String, String) {

@@ -13,7 +13,7 @@ cd api
 cargo run
 ```
 
-默认监听 `0.0.0.0:8080`。用 `ACG_API_ADDR` 修改地址，例如 `:8080`。示例变量在 `.env.example`。
+默认监听 `0.0.0.0:8080`。用 `ACG_API_ADDR` 修改地址，例如 `:8080`。示例变量在 `.env.example`。启动时会按顺序读取 `/opt/acg-api/.env` 和 `.env`（已有的环境变量不会被覆盖，和 Go 版行为一致），把 `.env.example` 拷成 `.env` 填上即可。
 
 ```text
 cargo fmt --all
@@ -33,7 +33,7 @@ cargo test
 | `AGNES_API_KEY`、`DASHSCOPE_API_KEY` | 生图。Agnes 优先，没有时用百炼。`ALIYUN_BAILIAN_API_KEY` 也可以代替百炼密钥 |
 | `R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`、`R2_BUCKET`、`R2_PUBLIC_BASE` | 图片对象存储 |
 | `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN` | 配置后，限流计数走 Redis |
-| `UPSTASH_VECTOR_REST_URL`、`UPSTASH_VECTOR_REST_TOKEN` | 站内内容检索 |
+| `ZILLIZ_URI`、`ZILLIZ_TOKEN`、`ZILLIZ_COLLECTION` | 站内内容检索（Zilliz Cloud，BM25 全文检索） |
 | `QSTASH_CURRENT_SIGNING_KEY`、`QSTASH_NEXT_SIGNING_KEY` | 校验内部调度请求 |
 | `GITHUB_TOKEN`、`GITHUB_REPO`、`OWNER_PUBLISH_GITHUB_BRANCH` | 站长把文章、友链、动态和图册写回仓库 |
 | `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM`、`MAIL_NOTIFY_TO` | 留言邮件 |
@@ -87,7 +87,7 @@ Cookie 名是 `acg_session`，HttpOnly，SameSite=Lax。
 | GET | `/api/v1/radar/feed` | UP 主动态 |
 | GET | `/api/v1/bili/videos` | 投稿列表。封面走 `/api/v1/acg/image/{name}` |
 | GET | `/api/v1/wallpapers/draw` | 抽一张壁纸。`source=api` 时只抽接口壁纸 |
-| GET | `/api/v1/search` | 向量检索。未配置时返回空列表 |
+| GET | `/api/v1/search` | Zilliz BM25 检索。未配置时返回空列表 |
 
 `POST /api/v1/sync/trigger` 由部署口令或站长会话触发，立即返回。同一时间只跑一次，内容是投稿、番剧和雷达。
 
@@ -133,5 +133,5 @@ Cookie 名是 `acg_session`，HttpOnly，SameSite=Lax。
 | POST | `/api/internal/sync/radar` | 同步雷达 |
 | POST | `/api/internal/sync/wallpaper` | 从壁纸接口补图 |
 | POST | `/api/internal/maintenance` | 清理过期会话和旧的小时统计 |
-| POST | `/api/internal/index-content` | 把文章和日志写入向量库 |
+| POST | `/api/internal/index-content` | 把文章和日志写入 Zilliz 向量库 |
 | POST | `/api/internal/jobs/image/{id}` | 补存一张已经生成的图片 |

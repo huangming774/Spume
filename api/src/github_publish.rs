@@ -98,7 +98,7 @@ pub enum PublishError {
     /// Token、仓库或分支没有配全。
     #[error("站长发布尚未在服务器配置。")]
     NotConfigured,
-    /// 草稿或数据文件不能改。
+    /// 草稿或数据文件不能改，或 GitHub 响应结构不符合预期（对应 Go 的 400 INVALID_*）。
     #[error("{0}")]
     Invalid(&'static str),
     /// GitHub 返回了 4xx 或 5xx。
@@ -106,7 +106,7 @@ pub enum PublishError {
     GitHub {
         /// HTTP 状态码。
         status: u16,
-        /// GitHub `message`，过长时截断。
+        /// GitHub `message`，原样透传。
         message: String,
     },
     /// 连接 GitHub 失败。
@@ -358,9 +358,6 @@ fn friend_branch(name: &str, now: DateTime<Utc>) -> String {
             slug.push('-');
             last_dash = true;
         }
-        if slug.len() >= 40 {
-            break;
-        }
     }
     let slug = slug.trim_matches('-');
     let slug = if slug.is_empty() { "link" } else { slug };
@@ -404,15 +401,15 @@ async fn get_file(
         .get("sha")
         .and_then(Value::as_str)
         .filter(|item| !item.is_empty())
-        .ok_or_else(|| PublishError::Response("GitHub 文件响应缺少 sha".into()))?
+        .ok_or(PublishError::Invalid("GitHub 文件响应缺少 sha"))?
         .to_string();
     let encoded = value.get("content").and_then(Value::as_str).unwrap_or("");
     let compact: String = encoded.chars().filter(|ch| !ch.is_whitespace()).collect();
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(compact)
-        .map_err(|error| PublishError::Response(error.to_string()))?;
+        .map_err(|_| PublishError::Invalid("GitHub 文件内容 base64 解码失败"))?;
     let content =
-        String::from_utf8(bytes).map_err(|error| PublishError::Response(error.to_string()))?;
+        String::from_utf8(bytes).map_err(|_| PublishError::Invalid("GitHub 文件内容不是 UTF-8"))?;
     Ok(RemoteFile { sha, content })
 }
 
@@ -439,7 +436,7 @@ fn commit_result(value: Value, fallback: &str) -> Result<PutResult, PublishError
         .and_then(|item| item.get("sha"))
         .and_then(Value::as_str)
         .filter(|item| !item.is_empty())
-        .ok_or_else(|| PublishError::Response("GitHub 提交响应缺少 sha".into()))?
+        .ok_or(PublishError::Invalid("GitHub 提交响应缺少 sha"))?
         .to_string();
     Ok(PutResult { path, sha })
 }
@@ -499,7 +496,7 @@ async fn put_file(
         .unwrap_or("")
         .to_string();
     if sha.is_empty() {
-        return Err(PublishError::Response("GitHub 提交响应缺少 sha".into()));
+        return Err(PublishError::Invalid("GitHub 提交响应缺少 sha"));
     }
     Ok(PutResult { path, sha })
 }
@@ -523,7 +520,7 @@ async fn branch_sha(
         .and_then(Value::as_str)
         .filter(|item| !item.is_empty())
         .map(str::to_string)
-        .ok_or_else(|| PublishError::Response("GitHub 分支响应缺少 sha".into()))
+        .ok_or(PublishError::Invalid("GitHub 分支响应缺少 sha"))
 }
 
 async fn create_branch(
@@ -575,12 +572,12 @@ async fn create_pull_request(
     let number = value
         .get("number")
         .and_then(Value::as_i64)
-        .ok_or_else(|| PublishError::Response("GitHub PR 响应缺少编号".into()))?;
+        .ok_or(PublishError::Invalid("GitHub PR 响应缺少编号"))?;
     let url = value
         .get("html_url")
         .and_then(Value::as_str)
         .filter(|item| !item.is_empty())
-        .ok_or_else(|| PublishError::Response("GitHub PR 响应缺少地址".into()))?
+        .ok_or(PublishError::Invalid("GitHub PR 响应缺少地址"))?
         .to_string();
     Ok(PullResult { number, url })
 }
@@ -615,36 +612,23 @@ async fn send(
             message: github_message(&text, status),
         });
     }
-    serde_json::from_str(&text).map_err(|error| PublishError::Response(error.to_string()))
+    serde_json::from_str(&text).map_err(|_| PublishError::Invalid("GitHub 响应无法解析"))
 }
 
 fn github_message(body: &str, status: u16) -> String {
-    let parsed = serde_json::from_str::<Value>(body);
-    let message = match parsed {
-        Ok(value) => value
-            .get("message")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
-        Err(error) => format!("HTTP {status}: {error}; {}", truncate(body)),
-    };
-    if message.is_empty() {
-        format!("HTTP {status}")
-    } else {
-        truncate(&message)
-    }
-}
-
-fn truncate(value: &str) -> String {
-    let mut out = String::new();
-    for (index, ch) in value.chars().enumerate() {
-        if index == 180 {
-            out.push('…');
-            break;
+    if let Ok(value) = serde_json::from_str::<Value>(body) {
+        if let Some(message) = value.get("message").and_then(Value::as_str) {
+            if !message.trim().is_empty() {
+                return message.to_string();
+            }
         }
-        out.push(ch);
     }
-    out
+    let trimmed = body.trim();
+    if trimmed.is_empty() {
+        format!("GitHub 发布失败，HTTP {status}")
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn safe_branch(branch: &str) -> bool {
