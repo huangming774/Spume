@@ -624,7 +624,8 @@ async fn auth_avatar(
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
     }
-    let (public, key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await {
+    let (public, key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await
+    {
         Ok(saved) => saved,
         Err(response) => return *response,
     };
@@ -3893,7 +3894,13 @@ mod tests {
     fn quota_counts_fill_days_the_hourly_log_missed() {
         let today = NaiveDate::from_ymd_opt(2026, 11, 12).unwrap();
         let mut daily = vec![(today, 1, 0, 0, 0, 0, 0, 1)];
-        merge_quota_daily(&mut daily, &[(today, 4, 1, 3), (today - chrono::Duration::days(1), 2, 2, 0)]);
+        merge_quota_daily(
+            &mut daily,
+            &[
+                (today, 4, 1, 3),
+                (today - chrono::Duration::days(1), 2, 2, 0),
+            ],
+        );
         assert_eq!(daily[0].1, 2);
         assert_eq!(daily[1], (today, 4, 0, 0, 0, 0, 1, 3));
     }

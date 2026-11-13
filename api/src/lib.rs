@@ -67,7 +67,9 @@ impl AppState {
                         Err(error) => tracing::warn!(%error, "owner account was not seeded"),
                     }
                     match crate::feed::seed_defaults(&pool).await {
-                        Ok((true, _)) | Ok((_, true)) => tracing::info!("seeded empty bangumi or radar lists"),
+                        Ok((true, _)) | Ok((_, true)) => {
+                            tracing::info!("seeded empty bangumi or radar lists")
+                        }
                         Ok((false, false)) => {}
                         Err(error) => tracing::warn!(%error, "default acg lists were not seeded"),
                     }
