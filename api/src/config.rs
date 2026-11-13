@@ -53,7 +53,9 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Self {
         Self {
-            bind: env("ACG_API_ADDR", ":8080"),
+            bind: nonempty("PORT")
+                .map(|port| format!(":{port}"))
+                .unwrap_or_else(|| env("ACG_API_ADDR", ":8080")),
             database_url: nonempty("DATABASE_URL"),
             session_secret: env("SESSION_SECRET", "dev-session-secret"),
             owner_email: env("OWNER_EMAIL", "").to_lowercase(),
