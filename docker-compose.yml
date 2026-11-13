@@ -1,0 +1,72 @@
+# Taozhiyy 全站 Docker 编排：Rust API + 前端静态站（nginx）。
+#
+# 用法：
+#   生产（拉取 GitHub Actions 推到 GHCR 的镜像）：
+#     docker compose pull && docker compose up -d
+#   本地构建测试：
+#     docker compose up -d --build
+#
+# 环境变量（数据库连接串、API 密钥等）放在 api/.env
+# （从 api/.env.example 复制后填写），通过 env_file 注入 api 容器。
+# 数据库是外部托管的 Postgres（如 Supabase），不在本编排里起 db 容器。
+#
+# TLS 证书：默认从宿主机 /etc/letsencrypt/live/taozhiyy.top 挂载（certbot
+# 在宿主机上签发/续期）。本地测试想用自签证书时：
+#   TLS_CERT_DIR=./deploy/docker/certs docker compose up -d
+
+name: taozhiyy
+
+services:
+  api:
+    image: ghcr.io/huangming774/spume-api:latest
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: taozhiyy-api
+    restart: unless-stopped
+    env_file:
+      - ./api/.env
+    # 不映射宿主机端口，只在 Docker 内部网络里给 web 服务反代用。
+    expose:
+      - "8080"
+    networks:
+      - taozhiyy-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/v1/health | grep -q '\"status\":\"ok\"'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  web:
+    image: ghcr.io/huangming774/spume-web:latest
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+    container_name: taozhiyy-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # TLS 证书：fullchain.pem / privkey.pem 放在这个目录下。
+      - ${TLS_CERT_DIR:-/etc/letsencrypt/live/taozhiyy.top}:/etc/nginx/certs:ro
+      # certbot --webroot 验证目录（宿主机跑 certbot 时用 -w 指向
+      # ./deploy/docker/cert-webroot 的宿主机绝对路径，比如 /opt/taozhiyy/deploy/docker/cert-webroot，
+      # 对应容器内 nginx.conf 里 /.well-known/acme-challenge/ 的 root）。
+      - ./deploy/docker/cert-webroot:/var/www/certbot:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - taozhiyy-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  taozhiyy-net:
+    driver: bridge

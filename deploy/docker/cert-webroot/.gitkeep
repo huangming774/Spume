@@ -1,0 +1,2 @@
+# certbot --webroot 验证目录占位文件（nginx.conf 里 /.well-known/acme-challenge/ 指向这里）。
+# 宿主机跑 certbot 时用 -w 指向本目录即可，不需要手动往里面放东西。

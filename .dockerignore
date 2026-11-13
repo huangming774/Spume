@@ -1,0 +1,30 @@
+# 前端镜像（deploy/docker/Dockerfile.web）的构建上下文过滤。
+# 构建上下文是仓库根目录，这里排除与镜像无关、或会在镜像内重新生成的东西。
+
+# 版本控制 / IDE
+.git
+.github
+.idea
+
+# 依赖目录（宿主机是 Windows，里面的平台相关二进制不能带进 Linux 镜像；
+# 镜像内会自己跑 npm ci 重新装）
+**/node_modules
+
+# 构建产物（镜像内会重新生成）
+**/dist
+out/
+api/target
+
+# 与前端镜像无关的子项目 / 文档
+acg-api/
+build/
+docs/
+blog/public/
+blog/themes/
+blog/.deploy_git/
+
+# 测试文件和说明文档，不参与镜像构建
+**/*.test.cjs
+**/*.test.js
+**/*.test.py
+**/README.md

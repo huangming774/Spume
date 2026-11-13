@@ -1,0 +1,7 @@
+# 构建镜像不需要的东西，缩小 docker build 的上下文传输体积。
+target/
+.env
+.env.example
+tests/
+README.md
+**/*.md
