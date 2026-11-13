@@ -6,6 +6,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://api.miku.coffee/api/:path*"
+    },
+    {
       "source": "/((?!api|ai-assistant).*)",
       "destination": "/index.html"
     }
