@@ -175,8 +175,9 @@ pub async fn sync_bangumi(state: &AppState) -> Result<usize, FeedError> {
 pub async fn seed_defaults(pool: &sqlx::PgPool) -> Result<(bool, bool), sqlx::Error> {
     let mut bangumi_seeded = false;
     let mut radar_seeded = false;
-    let bangumi_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM bangumi_items").fetch_one(pool).await?;
+    let bangumi_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM bangumi_items")
+        .fetch_one(pool)
+        .await?;
     if bangumi_count == 0 {
         for (id, title, watched, total, latest) in [
             ("b1", "A Certain Scientific Railgun", 12, 24, 24),
@@ -197,15 +198,44 @@ pub async fn seed_defaults(pool: &sqlx::PgPool) -> Result<(bool, bool), sqlx::Er
         }
         bangumi_seeded = true;
     }
-    let radar_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM radar_feed").fetch_one(pool).await?;
+    let radar_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM radar_feed")
+        .fetch_one(pool)
+        .await?;
     if radar_count == 0 {
         let now = Utc::now();
         for (id, uid, name, text, is_new, hours) in [
-            ("seed_r1", "seed_tech_lullaby", "UP · TechLullaby", "Posted a calm devlog with a fresh cover — worth a peek tonight.", true, 2),
-            ("seed_r2", "seed_systems_garden", "UP · SystemsGarden", "New video: stream caches, latency tuning, no ads.", false, 26),
-            ("seed_r3", "seed_mythic_coder", "UP · MythicCoder", "Radar sync: 3 creators added to the watch list.", true, 5),
-            ("seed_r4", "seed_calm_canvas", "UP · CalmCanvas", "Mobile grid polish for ACG navigation cards.", false, 48),
+            (
+                "seed_r1",
+                "seed_tech_lullaby",
+                "UP · TechLullaby",
+                "Posted a calm devlog with a fresh cover — worth a peek tonight.",
+                true,
+                2,
+            ),
+            (
+                "seed_r2",
+                "seed_systems_garden",
+                "UP · SystemsGarden",
+                "New video: stream caches, latency tuning, no ads.",
+                false,
+                26,
+            ),
+            (
+                "seed_r3",
+                "seed_mythic_coder",
+                "UP · MythicCoder",
+                "Radar sync: 3 creators added to the watch list.",
+                true,
+                5,
+            ),
+            (
+                "seed_r4",
+                "seed_calm_canvas",
+                "UP · CalmCanvas",
+                "Mobile grid polish for ACG navigation cards.",
+                false,
+                48,
+            ),
         ] {
             sqlx::query(
                 "INSERT INTO radar_feed (id, up_uid, creator_name, latest_text, link_url, is_new, published_at) VALUES ($1, $2, $3, $4, 'https://space.bilibili.com/', $5, $6)",

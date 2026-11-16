@@ -71,7 +71,13 @@ function copy(label, from, to) {
 // 文章、建站日志、星空馆都在 main 的 SPA 路由里，不再单独产出 HTML 子站。
 if (should("main")) {
   const dir = join(root, "main");
-  if (!skipInstall) npm(["ci"], dir);
+  const gallery = join(root, "previews", "project-gallery");
+  if (!skipInstall) {
+    npm(["ci"], dir);
+    // 星空馆源码被 CosmosPage 直接 import，但 three/lucide 声明在它自己的 package.json 里，
+    // 只能从 previews/project-gallery/node_modules 解析，所以必须单独安装。
+    npm(["ci"], gallery);
+  }
   npm(["run", "build"], dir);
 }
 

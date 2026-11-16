@@ -26,10 +26,7 @@ where
 {
     type Rejection = Response;
 
-    async fn from_request(
-        req: axum::extract::Request,
-        state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: axum::extract::Request, state: &S) -> Result<Self, Self::Rejection> {
         match axum::Json::<T>::from_request(req, state).await {
             Ok(axum::Json(value)) => Ok(AppJson(value)),
             Err(_) => Err(fail(
@@ -129,9 +126,10 @@ async fn inject_remote_ip(
         .or_else(|| header_text(request.headers(), "x-real-ip"))
         .is_some();
     if !has_proxy_header {
-        if let Some(axum::extract::ConnectInfo(addr)) = request
-            .extensions()
-            .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        if let Some(axum::extract::ConnectInfo(addr)) =
+            request
+                .extensions()
+                .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
         {
             if let Ok(value) = HeaderValue::from_str(&addr.ip().to_string()) {
                 request.headers_mut().insert("x-real-ip", value);
@@ -685,11 +683,7 @@ async fn auth_verify_security(
         {
             return *response;
         }
-        return fail(
-            StatusCode::UNAUTHORIZED,
-            "WRONG_ANSWER",
-            "学号回答不正确",
-        );
+        return fail(StatusCode::UNAUTHORIZED, "WRONG_ANSWER", "学号回答不正确");
     }
     if let Err(response) = note_audit(
         &state,
@@ -721,7 +715,8 @@ async fn auth_avatar(
     if let Some(response) = auth_limited(&state, &headers) {
         return response;
     }
-    let (public, _key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await {
+    let (public, _key, _name, _size, _mime) = match store_upload(&state, multipart, "avatars").await
+    {
         Ok(saved) => saved,
         Err(response) => return *response,
     };
@@ -1133,7 +1128,11 @@ async fn guestbook_delete(
         Ok(updated) => updated,
         Err(error) => {
             tracing::warn!(%error, "guestbook delete failed");
-            return fail(StatusCode::INTERNAL_SERVER_ERROR, "SERVER_ERROR", "删除失败");
+            return fail(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "SERVER_ERROR",
+                "删除失败",
+            );
         }
     };
     if updated.rows_affected() == 0 {
@@ -1185,13 +1184,13 @@ async fn guestbook_patch(
         );
     };
     // Go 会 trim 后再比对（guestbook_messages.go:686-691）。
-    let status = body.get("status").and_then(Value::as_str).unwrap_or("").trim();
+    let status = body
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
     if !matches!(status, "visible" | "hidden" | "deleted") {
-        return fail(
-            StatusCode::BAD_REQUEST,
-            "INVALID_CONTENT",
-            "无效的状态",
-        );
+        return fail(StatusCode::BAD_REQUEST, "INVALID_CONTENT", "无效的状态");
     }
     let updated = match sqlx::query("UPDATE guestbook_messages SET status = $1 WHERE id = $2")
         .bind(status)
@@ -1202,7 +1201,11 @@ async fn guestbook_patch(
         Ok(updated) => updated,
         Err(error) => {
             tracing::warn!(%error, "guestbook status update failed");
-            return fail(StatusCode::INTERNAL_SERVER_ERROR, "SERVER_ERROR", "更新失败");
+            return fail(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "SERVER_ERROR",
+                "更新失败",
+            );
         }
     };
     if updated.rows_affected() == 0 {
@@ -1606,7 +1609,11 @@ async fn sync_bili(
         }
     }
     let Some(_sync) = try_begin_sync(&state) else {
-        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+        return (
+            StatusCode::ACCEPTED,
+            Json(json!({"queued": "already_running"})),
+        )
+            .into_response();
     };
     let count = match crate::bili::sync_owner(&state).await {
         Ok(count) => count,
@@ -1633,7 +1640,11 @@ async fn sync_wallpaper(
         return *response;
     }
     let Some(_sync) = try_begin_sync(&state) else {
-        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+        return (
+            StatusCode::ACCEPTED,
+            Json(json!({"queued": "already_running"})),
+        )
+            .into_response();
     };
     match crate::wallpaper::sync_pool(&state).await {
         Ok(count) => Json(json!({"ok": true, "count": count})).into_response(),
@@ -1658,7 +1669,11 @@ async fn sync_radar(
         return *response;
     }
     let Some(_sync) = try_begin_sync(&state) else {
-        return (StatusCode::ACCEPTED, Json(json!({"queued": "already_running"}))).into_response();
+        return (
+            StatusCode::ACCEPTED,
+            Json(json!({"queued": "already_running"})),
+        )
+            .into_response();
     };
     match crate::feed::sync_radar(&state, Utc::now()).await {
         Ok(report) => Json(json!({"ok": true, "saved": report.saved, "failed": report.failed}))
@@ -1886,7 +1901,11 @@ async fn chat_post(
         return *response;
     }
     quota["used"] = json!(used + 1);
-    quota["remaining"] = json!(if limit < 0 { -1 } else { (limit - used - 1).max(0) });
+    quota["remaining"] = json!(if limit < 0 {
+        -1
+    } else {
+        (limit - used - 1).max(0)
+    });
     quota["reply"] = json!(reply);
     Json(quota).into_response()
 }
@@ -2026,11 +2045,7 @@ fn quota_date() -> chrono::NaiveDate {
 }
 
 /// 模型失败后退回预占的次数。
-async fn release_chat_turn(
-    state: &AppState,
-    headers: &HeaderMap,
-    user: &Option<SessionUser>,
-) {
+async fn release_chat_turn(state: &AppState, headers: &HeaderMap, user: &Option<SessionUser>) {
     let Some(pool) = state.db.as_ref() else {
         return;
     };
@@ -2137,7 +2152,11 @@ struct DaysQuery {
 }
 
 async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery>) -> Response {
-    let days = match query.days.as_deref().and_then(|value| value.parse::<i64>().ok()) {
+    let days = match query
+        .days
+        .as_deref()
+        .and_then(|value| value.parse::<i64>().ok())
+    {
         Some(n) if (1..=90).contains(&n) => n,
         _ => 14,
     };
@@ -2347,7 +2366,11 @@ async fn image_quota_of(
 }
 
 /// 生成前原子预占一次额度；满额或 5 秒间隔不足时返回 429。
-async fn claim_image_quota(state: &AppState, user: &SessionUser, limit: i64) -> Result<(), Box<Response>> {
+async fn claim_image_quota(
+    state: &AppState,
+    user: &SessionUser,
+    limit: i64,
+) -> Result<(), Box<Response>> {
     let Some(pool) = state.db.as_ref() else {
         return Ok(());
     };
@@ -2473,10 +2496,13 @@ async fn image_create(
         return (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response();
     }
     // unlimited 也走预占（limit 传 -1 不封顶），和 Go 一样计 used 并受 5 秒间隔约束。
-    if let Err(response) = claim_image_quota(&state, current, if unlimited { -1 } else { limit }).await {
+    if let Err(response) =
+        claim_image_quota(&state, current, if unlimited { -1 } else { limit }).await
+    {
         return *response;
     }
-    let response = image_generate_flow(&state, &headers, &user, &prompt, &body, &quota, limit, used).await;
+    let response =
+        image_generate_flow(&state, &headers, &user, &prompt, &body, &quota, limit, used).await;
     if response.status() != StatusCode::OK {
         release_image_quota(&state, current).await;
     }
@@ -2557,10 +2583,7 @@ async fn image_generate_flow(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
     };
     // author 存邮箱作联表键（users.email 不可变更），画廊再 LEFT JOIN users 现算显示名。
-    let author = user
-        .as_ref()
-        .map(|item| item.email.as_str())
-        .unwrap_or("");
+    let author = user.as_ref().map(|item| item.email.as_str()).unwrap_or("");
     if let Err(error) = sqlx::query(
         "INSERT INTO ai_images (prompt, image_url, size, author, object_key) VALUES ($1, $2, $3, $4, $5)",
     )
@@ -2648,7 +2671,18 @@ async fn image_gallery(
             Err(_) => return Json(json!({"items": [], "nextCursor": null})).into_response(),
         },
     };
-    let rows = sqlx::query_as::<_, (String, String, String, DateTime<Utc>, String, String, String)>(
+    let rows = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            DateTime<Utc>,
+            String,
+            String,
+            String,
+        ),
+    >(
         "SELECT g.prompt, g.image_url, g.size, g.created_at,
                 COALESCE(u.email, ''), COALESCE(u.display_name, ''), g.author
          FROM ai_images g
@@ -3600,8 +3634,12 @@ async fn notification_read(
             "数据库还没有连上",
         );
     };
-    let updated = sqlx::query("UPDATE guestbook_messages SET owner_read_at = now() WHERE id = $1 AND status = 'visible'")
-        .bind(id).execute(pool).await;
+    let updated = sqlx::query(
+        "UPDATE guestbook_messages SET owner_read_at = now() WHERE id = $1 AND status = 'visible'",
+    )
+    .bind(id)
+    .execute(pool)
+    .await;
     if updated.map(|result| result.rows_affected()).unwrap_or(0) == 0 {
         return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "提醒不存在。");
     }
@@ -3808,24 +3846,24 @@ async fn put_bytes(
         )));
     }
     // 头像走 Go 的 2MB 上限和专用错误码，其它上传 8MB。
-    let (max_bytes, too_large_code, too_large_msg, invalid_code, invalid_msg) = if folder == "avatars"
-    {
-        (
-            2 * 1024 * 1024,
-            "IMAGE_TOO_LARGE",
-            "头像图片不能超过 2MB",
-            "INVALID_IMAGE_TYPE",
-            "仅支持 PNG / JPEG / WebP / GIF",
-        )
-    } else {
-        (
-            8 * 1024 * 1024,
-            "FILE_TOO_LARGE",
-            "上传文件超过 8 MiB 限制。",
-            "INVALID_FILE_TYPE",
-            "当前只支持上传图片。",
-        )
-    };
+    let (max_bytes, too_large_code, too_large_msg, invalid_code, invalid_msg) =
+        if folder == "avatars" {
+            (
+                2 * 1024 * 1024,
+                "IMAGE_TOO_LARGE",
+                "头像图片不能超过 2MB",
+                "INVALID_IMAGE_TYPE",
+                "仅支持 PNG / JPEG / WebP / GIF",
+            )
+        } else {
+            (
+                8 * 1024 * 1024,
+                "FILE_TOO_LARGE",
+                "上传文件超过 8 MiB 限制。",
+                "INVALID_FILE_TYPE",
+                "当前只支持上传图片。",
+            )
+        };
     if bytes.len() > max_bytes {
         return Err(Box::new(fail(
             StatusCode::BAD_REQUEST,
@@ -4334,7 +4372,13 @@ mod tests {
     fn quota_counts_fill_days_the_hourly_log_missed() {
         let today = NaiveDate::from_ymd_opt(2026, 11, 12).unwrap();
         let mut daily = vec![(today, 1, 0, 0, 0, 0, 0, 1)];
-        merge_quota_daily(&mut daily, &[(today, 4, 1, 3), (today - chrono::Duration::days(1), 2, 2, 0)]);
+        merge_quota_daily(
+            &mut daily,
+            &[
+                (today, 4, 1, 3),
+                (today - chrono::Duration::days(1), 2, 2, 0),
+            ],
+        );
         assert_eq!(daily[0].1, 2);
         assert_eq!(daily[1], (today, 4, 0, 0, 0, 0, 1, 3));
     }
