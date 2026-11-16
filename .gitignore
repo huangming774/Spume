@@ -33,6 +33,7 @@ build/cos_upload.py
 # 旧 Go 后端留在本地，不进入 Spume 仓库。
 acg-api/
 .idea/
+/target/
 api/target/
 api/.env
 main/.env

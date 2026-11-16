@@ -1,0 +1,22 @@
+[package]
+name = "taozhiyy-vercel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+taozhiyy-api = { path = "api" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+vercel_runtime = { version = "2.4", features = ["axum"] }
+
+[[bin]]
+name = "index"
+path = "api/index.rs"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3

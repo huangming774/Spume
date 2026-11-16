@@ -21,6 +21,16 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
+## Vercel
+
+仓库根目录的 `Cargo.toml` 是 Vercel Rust 构建入口，`api/index.rs` 把这里相同的 `router` 通过 `VercelLayer` 交给 `vercel_runtime`。`vercel.json` 将 `/api/:path*` 重写到 `/api/index`，前端仍使用原来的 `/api/...` 地址。
+
+本地常驻服务仍用上面的 `cargo run`，它继续监听端口并启动健康快照后台任务；Vercel 入口使用 Fluid compute 复用函数实例，不启动常驻定时任务。部署前在 Vercel 项目中配置同样的环境变量，然后运行 `vercel deploy`。
+
+```text
+cargo check --manifest-path ../Cargo.toml --bin index
+```
+
 ## 配置
 
 | 变量 | 作用 |

@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.miku.coffee/api/:path*"
+      "destination": "/api/index"
     },
     {
       "source": "/((?!api|ai-assistant).*)",
