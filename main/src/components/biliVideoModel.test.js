@@ -45,14 +45,8 @@ test("publication dates use the site's Shanghai timezone and reject invalid date
   assert.equal(formatVideoDate(null), "");
 });
 
-test("the preview includes the actual public video for the confirmed owner", async () => {
+test("the preview has no bundled owner videos until the owner publishes them", async () => {
   const { biliOwner, ownerVideos } = await import("../data/biliOwnerVideos.js");
   assert.equal(biliOwner.uid, "1061280173");
-  assert.equal(ownerVideos.length, 1);
-  assert.equal(ownerVideos[0].bvid, "BV1jK7W6MEAj");
-  assert.match(
-    ownerVideos[0].cover,
-    /^https:\/\/i0\.hdslb\.com\/bfs\/archive\//,
-  );
-  assert.equal(ownerVideos[0].duration, "04:36");
+  assert.deepEqual(ownerVideos, []);
 });

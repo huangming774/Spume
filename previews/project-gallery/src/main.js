@@ -1,11 +1,12 @@
 import { createIcons, Aperture, Box, LayoutGrid, Search, Scan, Plus, Minus, Orbit, ArrowUpRight, ArrowLeft, ArrowRight, Sparkle, Sparkles, Sun, House, ChevronDown, X, SearchX, ExternalLink, CodeXml, BookOpen, FileText, Copy, Play } from 'lucide';
-import { projects, filterProjects, projectPage } from './catalog.js';
+import { projects as catalogProjects, filterProjects, projectPage } from './catalog.js';
 import { renderProjectDetail, escapeHTML as e } from './detail.js';
 import { GALLERY_THEME_STORAGE, resolveGalleryTheme } from './gallery-themes.js';
 
 const icons = { Aperture, Box, LayoutGrid, Search, Scan, Plus, Minus, Orbit, ArrowUpRight, ArrowLeft, ArrowRight, Sparkle, Sparkles, Sun, House, ChevronDown, X, SearchX, ExternalLink, CodeXml, BookOpen, FileText, Copy, Play };
 
-export function mountProjectGallery(mountRoot = document) {
+export function mountProjectGallery(mountRoot = document, incoming) {
+  const projects = Array.isArray(incoming) ? incoming : catalogProjects;
   const $ = selector => mountRoot.querySelector(selector);
   const iconize = () => createIcons({ icons, attrs: { 'aria-hidden': 'true' }, root: mountRoot });
   const activeElement = () => {
@@ -92,6 +93,11 @@ export function mountProjectGallery(mountRoot = document) {
     noticeTimer = setTimeout(() => $('#notice').classList.remove('visible'), 4000);
   }
   function renderSelection() {
+    if (!selected) {
+      $('#selected-info').textContent = '还没有项目';
+      $('.exhibit-meta strong').innerHTML = '00 <i>/</i> 00';
+      return;
+    }
     const focusedProject = activeElement()?.closest?.('.dock-item')?.dataset.project;
     const number = String(projects.indexOf(selected) + 1).padStart(2, '0');
     if($('#selected-info').dataset.selection!==selected.id){
@@ -212,7 +218,7 @@ export function mountProjectGallery(mountRoot = document) {
   on(dialog, 'change', event => {
     if (event.target.id === 'reader-section-select') jumpReaderSection(event.target.value);
   });
-  on($('#open-project'), 'click', () => openDetail(selected.id));
+  on($('#open-project'), 'click', () => { if (selected) openDetail(selected.id); });
   on(dialog, 'click', event => {
     if (!event.target.closest('[data-guide-browse]')) return;
     browseAfterReader = true;
@@ -279,10 +285,10 @@ export function mountProjectGallery(mountRoot = document) {
       scene = await createGallery($('#gallery-canvas'), visible, id => select(id), onBrowse);
       if (disposed) { scene.dispose(); scene = null; return; }
       scene.setTheme(galleryTheme);
-      scene.focus(selected.id, false);
+      if (selected) scene.focus(selected.id, false);
       syncOrbitButton(scene.orbit(true));
       scene.setPaused(view !== 'scene' || dialog.open);
-      window.__galleryDebug = () => ({ ...scene.debug(), view, selected: selected.id, query, visible: visible.map(p => p.id) });
+      window.__galleryDebug = () => ({ ...scene.debug(), view, selected: selected?.id, query, visible: visible.map(p => p.id) });
       if (themeNode) themeNode.dataset.sceneReady = 'true';
     } catch (error) { console.error(error); if (!disposed) failScene(); }
   })();

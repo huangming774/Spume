@@ -61,3 +61,15 @@ export async function authUpdateProfile(displayName) {
   });
   return parseJson(res);
 }
+
+export async function authUploadAvatar(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/auth/avatar", {
+    method: "POST",
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    body: form,
+  });
+  return parseJson(res);
+}

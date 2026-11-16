@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[derive(Clone, Debug)]
 pub struct Config {
     pub bind: String,
@@ -58,6 +60,8 @@ pub struct Config {
     pub guestbook_main_posts: bool,
     /// 手动同步口令。空字符串时只接受站长会话。
     pub sync_trigger_token: String,
+    /// 会话、数据库和外部请求的截止时间。
+    pub timeouts: Timeouts,
 }
 
 impl Config {
@@ -86,15 +90,18 @@ impl Config {
             session_secret: env("SESSION_SECRET", "dev-session-secret"),
             owner_email: env("OWNER_EMAIL", "").to_lowercase(),
             owner_security_question: env("OWNER_SECURITY_QUESTION", "你现在的学号"),
-            owner_security_answer: env_first(&["OWNER_SECURITY_ANSWER", "AUTH_OWNER_SECURITY_ANSWER"]),
+            owner_security_answer: env_first(&[
+                "OWNER_SECURITY_ANSWER",
+                "AUTH_OWNER_SECURITY_ANSWER",
+            ]),
             owner_login_name: env("OWNER_LOGIN_NAME", "admin"),
             cookie_secure: env("AUTH_COOKIE_SECURE", "true") != "false",
             // 分隔符和 Go 的 configuredCORSOrigins 一致：逗号、空格、换行、制表符。
             allowed_origins: env(
                 "ACG_ALLOWED_ORIGINS",
-                "https://taozhiyy.top,https://www.taozhiyy.top,http://localhost:5173,http://127.0.0.1:5173",
+                "https://www.miku.coffee,http://localhost:5173,http://127.0.0.1:5173",
             )
-            .split(|item| matches!(item, ',' | ' ' | '\n' | '\t'))
+            .split([',', ' ', '\n', '\t'])
             .filter(|item| !item.is_empty())
             .map(str::to_string)
             .collect(),
@@ -127,7 +134,7 @@ impl Config {
             r2_access_key: env("R2_ACCESS_KEY_ID", ""),
             r2_secret_key: env("R2_SECRET_ACCESS_KEY", ""),
             r2_bucket: env("R2_BUCKET", "taozhiyy"),
-            r2_public_base: env("R2_PUBLIC_BASE", "https://images.taozhiyy.top")
+            r2_public_base: env("R2_PUBLIC_BASE", "https://fs.964643.xyz")
                 .trim_end_matches('/')
                 .to_string(),
             redis_url: env("UPSTASH_REDIS_REST_URL", ""),
@@ -137,7 +144,7 @@ impl Config {
             vector_collection: env("ZILLIZ_COLLECTION", "taozhiyy_search"),
             qstash_signing_key: env("QSTASH_CURRENT_SIGNING_KEY", ""),
             qstash_next_signing_key: env("QSTASH_NEXT_SIGNING_KEY", ""),
-            public_origin: env("ACG_PUBLIC_ORIGIN", "https://taozhiyy.top")
+            public_origin: env("ACG_PUBLIC_ORIGIN", "https://www.miku.coffee")
                 .trim_end_matches('/')
                 .to_string(),
             allow_unsigned_internal: env("ACG_ALLOW_UNSIGNED_INTERNAL", "false") == "true",
@@ -156,6 +163,7 @@ impl Config {
                 &std::env::var("GUESTBOOK_MAIN_POSTS_ENABLED").unwrap_or_default(),
             ),
             sync_trigger_token: env("SYNC_TRIGGER_TOKEN", ""),
+            timeouts: Timeouts::from_env(),
         }
     }
 
@@ -187,7 +195,7 @@ impl Config {
             r2_access_key: "access".into(),
             r2_secret_key: "secret".into(),
             r2_bucket: "taozhiyy".into(),
-            r2_public_base: "https://images.taozhiyy.top".into(),
+            r2_public_base: "https://fs.964643.xyz".into(),
             redis_url: String::new(),
             redis_token: String::new(),
             vector_uri: String::new(),
@@ -195,7 +203,7 @@ impl Config {
             vector_collection: "taozhiyy_search".into(),
             qstash_signing_key: String::new(),
             qstash_next_signing_key: String::new(),
-            public_origin: "https://taozhiyy.top".into(),
+            public_origin: "https://www.miku.coffee".into(),
             allow_unsigned_internal: false,
             github_token: String::new(),
             github_repo: String::new(),
@@ -210,6 +218,7 @@ impl Config {
             content_root: String::new(),
             guestbook_main_posts: true,
             sync_trigger_token: String::new(),
+            timeouts: Timeouts::for_test(),
         }
     }
 
@@ -234,6 +243,50 @@ pub fn bind_addr(raw: &str) -> String {
     } else {
         raw.to_string()
     }
+}
+
+/// 请求截止时间。已开始的请求沿用启动时读到的值。
+#[derive(Clone, Debug)]
+pub struct Timeouts {
+    /// `/api/auth/me` 查会话的上限。
+    pub session: Duration,
+    /// 从连接池取连接的上限。
+    pub db_acquire: Duration,
+    /// 单条 SQL 在 Postgres 侧的上限。
+    pub db_statement: Duration,
+    /// 单个天气数据源的上限。
+    pub weather: Duration,
+    /// 健康快照的刷新间隔。
+    pub health_refresh: Duration,
+}
+
+impl Timeouts {
+    pub fn from_env() -> Self {
+        Self {
+            session: duration_ms("ACG_SESSION_TIMEOUT_MS", 4_000, 500, 15_000),
+            db_acquire: duration_ms("ACG_DB_ACQUIRE_TIMEOUT_MS", 10_000, 1_000, 30_000),
+            db_statement: duration_ms("ACG_DB_STATEMENT_TIMEOUT_MS", 15_000, 1_000, 60_000),
+            weather: duration_ms("ACG_WEATHER_TIMEOUT_MS", 4_000, 500, 15_000),
+            health_refresh: duration_ms("ACG_HEALTH_REFRESH_MS", 15_000, 5_000, 120_000),
+        }
+    }
+
+    pub fn for_test() -> Self {
+        Self {
+            session: Duration::from_secs(4),
+            db_acquire: Duration::from_secs(10),
+            db_statement: Duration::from_secs(15),
+            weather: Duration::from_secs(4),
+            health_refresh: Duration::from_secs(15),
+        }
+    }
+}
+
+fn duration_ms(key: &str, default_ms: u64, min_ms: u64, max_ms: u64) -> Duration {
+    let parsed = std::env::var(key)
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok());
+    Duration::from_millis(parsed.unwrap_or(default_ms).clamp(min_ms, max_ms))
 }
 
 fn env(key: &str, fallback: &str) -> String {

@@ -224,6 +224,13 @@ body:has(.site-console-layer) #blog-ai-root {
   font-size: 11px;
   line-height: 1.95;
 }
+
+.console-journal-empty {
+  margin: 0.4rem 0 0;
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.92rem;
+}
 .console-journal-entry a {
   display: inline-flex;
   align-items: center;

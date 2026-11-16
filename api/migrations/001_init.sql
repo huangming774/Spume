@@ -142,6 +142,18 @@ CREATE TABLE IF NOT EXISTS security_audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS site_entries (
+  id BIGSERIAL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  image_url TEXT NOT NULL DEFAULT '',
+  extra JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS site_entries_kind_created_idx ON site_entries (kind, created_at DESC, id DESC);
+
 ALTER TABLE guestbook_messages ADD COLUMN IF NOT EXISTS parent_id BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE guestbook_messages ADD COLUMN IF NOT EXISTS owner_read_at TIMESTAMPTZ;
 ALTER TABLE bilibili_videos ADD COLUMN IF NOT EXISTS cover_remote TEXT NOT NULL DEFAULT '';

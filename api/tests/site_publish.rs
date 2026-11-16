@@ -12,7 +12,7 @@ fn friend_card_is_inserted_once() {
     let input = FriendInput {
         name: "Spume",
         desc: "个人站",
-        url: "https://taozhiyy.top",
+        url: "https://www.miku.coffee",
         avatar: "",
     };
     let first = update_friend_cards(FRIENDS, input).expect("insert");
@@ -20,7 +20,7 @@ fn friend_card_is_inserted_once() {
     assert!(first.source.contains("name: \"Spume\""));
     assert!(first
         .source
-        .contains("https://www.google.com/s2/favicons?sz=128&domain=taozhiyy.top"));
+        .contains("https://www.google.com/s2/favicons?sz=128&domain=www.miku.coffee"));
     let again = update_friend_cards(&first.source, input).expect("duplicate");
     assert!(!again.changed);
     assert_eq!(again.source, first.source);

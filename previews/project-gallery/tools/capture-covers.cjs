@@ -4,9 +4,9 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const targets = [
-  ['taozhiyy', 'https://taozhiyy.top/'],
-  ['chronicle', 'https://taozhiyy.top/build/'],
-  ['glimmer', 'https://taozhiyy.top/glimmer'],
+  ['taozhiyy', 'https://www.miku.coffee/'],
+  ['chronicle', 'https://www.miku.coffee/build/'],
+  ['glimmer', 'https://www.miku.coffee/glimmer'],
   ['magic', 'https://magic-portfolio-demo.vercel.app/'],
   ['fiber', 'https://pmndrs.github.io/examples/image-gallery/'],
   ['starlight', 'https://starlight.astro.build/'],

@@ -91,17 +91,12 @@ test("console entries are text controls and the journal shows complete messages 
 test("journal contains only short dated updates, newest first", async () => {
   const content = await import("./consoleContent.js");
   assert.equal(content.CONSOLE_ANNOUNCEMENTS, undefined);
-  assert.equal(content.CONSOLE_UPDATES[0].id, "cover-session");
-  let previous = "9999-12-31";
-  for (const item of content.CONSOLE_UPDATES) {
-    assert.match(item.date, /^\d{4}-\d{2}-\d{2}$/);
-    assert.ok(item.date <= previous);
-    assert.ok(item.text.length <= 45, item.id);
-    previous = item.date;
-  }
+  assert.deepEqual(content.CONSOLE_UPDATES, []);
   const ui = read("./SiteConsole.jsx");
   assert.match(ui, /<span>更新日志<\/span>/);
-  assert.doesNotMatch(ui, /CONSOLE_ANNOUNCEMENTS|公告与更新|写给每一个/);
+  assert.match(ui, /loadRecentEntries/);
+  assert.match(ui, /还没有更新。/);
+  assert.doesNotMatch(ui, /CONSOLE_ANNOUNCEMENTS|公告与更新|写给每一个|TAOZHIYO/);
 });
 
 test("console is centered on both axes and only the journal feed can scroll", () => {

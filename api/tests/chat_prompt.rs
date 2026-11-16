@@ -4,7 +4,7 @@ use taozhiyy_api::chat_prompt::{request_body, user_content, PageFields, SYSTEM_P
 fn page_context_is_placed_before_the_question() {
     let content = user_content(
         "What is on this page?",
-        "https://taozhiyy.top/about",
+        "https://www.miku.coffee/about",
         "About Taozhiyy",
         PageFields {
             page_url: "",
@@ -20,7 +20,7 @@ fn page_context_is_placed_before_the_question() {
     for part in [
         "Current page context",
         "Title: About Taozhiyy",
-        "URL: https://taozhiyy.top/about",
+        "URL: https://www.miku.coffee/about",
         "Path: /about",
         "Section: main",
         "Language: zh-CN",

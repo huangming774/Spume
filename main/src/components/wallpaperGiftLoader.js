@@ -3,7 +3,7 @@ export const wallpaperUnavailableGift = {
   previewUrl: "",
   album: "外部图片接口未配置",
   label: "外部图片接口暂无可用图片",
-  sourceUrl: "https://taozhiyy.top/api/v1/wallpapers/draw?source=api",
+  sourceUrl: "https://www.miku.coffee/api/v1/wallpapers/draw?source=api",
   licenseNote: "外部图片接口暂无可用图片，可以稍后再试一次。",
 };
 

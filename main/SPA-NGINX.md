@@ -1,6 +1,6 @@
 # Main site SPA routes (`/bili`)
 
-After adding React Router, direct visits and refreshes on `https://taozhiyy.top/bili` need Nginx to fall back to `index.html`.
+After adding React Router, direct visits and refreshes on `https://www.miku.coffee/bili` need Nginx to fall back to `index.html`.
 
 Inside the **main site** `server` / `location /` block (not `/blog/` or `/build/`):
 

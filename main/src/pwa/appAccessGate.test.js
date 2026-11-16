@@ -13,8 +13,8 @@ import {
 
 test("requires owner login only on the PWA app host", () => {
   assert.equal(shouldRequireOwnerLogin({ hostname: PWA_AUTH_HOSTNAME }), true);
-  assert.equal(shouldRequireOwnerLogin({ hostname: "taozhiyy.top" }), false);
-  assert.equal(shouldRequireOwnerLogin({ hostname: "www.taozhiyy.top" }), false);
+  assert.equal(shouldRequireOwnerLogin({ hostname: "www.miku.coffee" }), false);
+  assert.equal(shouldRequireOwnerLogin({ hostname: "www.miku.coffee" }), false);
   assert.equal(shouldRequireOwnerLogin({ hostname: "localhost" }), false);
 });
 
@@ -37,7 +37,7 @@ test("allows only owner sessions to enter the PWA app", () => {
 test("keeps public site open while blocking non-owner app sessions", () => {
   assert.equal(
     getAppAccessState({
-      hostname: "taozhiyy.top",
+      hostname: "www.miku.coffee",
       auth: { loggedIn: false },
       isLoading: false,
     }),
@@ -99,7 +99,7 @@ test("opens the app console from the PWA host root only", () => {
     false,
   );
   assert.equal(
-    shouldOpenAppConsoleAtRoot({ hostname: "taozhiyy.top", pathname: "/" }),
+    shouldOpenAppConsoleAtRoot({ hostname: "www.miku.coffee", pathname: "/" }),
     false,
   );
   assert.equal(
@@ -113,6 +113,6 @@ test("exposes the app console on every host; the login gate protects it", () => 
   assert.equal(shouldExposeAppConsole({ hostname: "localhost" }), true);
   assert.equal(shouldExposeAppConsole({ hostname: "127.0.0.1" }), true);
   assert.equal(shouldExposeAppConsole({ hostname: "::1" }), true);
-  assert.equal(shouldExposeAppConsole({ hostname: "taozhiyy.top" }), true);
-  assert.equal(shouldExposeAppConsole({ hostname: "www.taozhiyy.top" }), true);
+  assert.equal(shouldExposeAppConsole({ hostname: "www.miku.coffee" }), true);
+  assert.equal(shouldExposeAppConsole({ hostname: "www.miku.coffee" }), true);
 });

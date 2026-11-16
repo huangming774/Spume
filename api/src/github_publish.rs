@@ -322,7 +322,118 @@ pub async fn publish_article(
     })
 }
 
-fn is_conflict(error: &PublishError) -> bool {
+/// 一次仓库文件写回的结果。
+pub struct FileChange {
+    /// 仓库内路径。
+    pub path: String,
+    /// 新提交。内容没变时为空。
+    pub commit_sha: String,
+    /// 是否新建了提交。
+    pub changed: bool,
+    /// 写入的分支。
+    pub branch: String,
+    /// 提交说明。
+    pub commit_message: String,
+}
+
+/// 用 `edit` 改一个已有文件并提交。内容不变时不产生提交。
+pub async fn rewrite_file<F>(
+    http: &reqwest::Client,
+    repo: &RepoSpec<'_>,
+    path: &str,
+    message: &str,
+    edit: F,
+) -> Result<FileChange, PublishError>
+where
+    F: FnOnce(&str) -> Result<String, PublishError>,
+{
+    let file = get_file(http, repo, path).await?;
+    let next = edit(&file.content)?;
+    if next == file.content {
+        return Ok(unchanged_file(path, repo.branch, message));
+    }
+    let put = put_file(http, repo, path, message, &next, &file.sha, repo.branch).await?;
+    Ok(FileChange {
+        path: put.path,
+        commit_sha: put.sha,
+        changed: true,
+        branch: repo.branch.to_string(),
+        commit_message: message.to_string(),
+    })
+}
+
+/// 新建一个仓库文件。
+pub async fn create_repo_file(
+    http: &reqwest::Client,
+    repo: &RepoSpec<'_>,
+    path: &str,
+    message: &str,
+    content: &str,
+) -> Result<FileChange, PublishError> {
+    let put = create_file(http, repo, path, message, content).await?;
+    Ok(FileChange {
+        path: put.path,
+        commit_sha: put.sha,
+        changed: true,
+        branch: repo.branch.to_string(),
+        commit_message: message.to_string(),
+    })
+}
+
+/// 按当前 blob sha 删除一个仓库文件。
+pub async fn delete_repo_file(
+    http: &reqwest::Client,
+    repo: &RepoSpec<'_>,
+    path: &str,
+    message: &str,
+) -> Result<FileChange, PublishError> {
+    let file = get_file(http, repo, path).await?;
+    let url = contents_url(repo, path);
+    let payload = json!({
+        "message": message,
+        "sha": file.sha,
+        "branch": repo.branch,
+    });
+    let value = send(
+        http,
+        repo.token,
+        reqwest::Method::DELETE,
+        &url,
+        Some(&payload),
+    )
+    .await?;
+    let sha = value
+        .get("commit")
+        .and_then(|item| item.get("sha"))
+        .and_then(Value::as_str)
+        .filter(|item| !item.is_empty())
+        .ok_or(PublishError::Invalid("GitHub 提交响应缺少 sha"))?
+        .to_string();
+    Ok(FileChange {
+        path: path.to_string(),
+        commit_sha: sha,
+        changed: true,
+        branch: repo.branch.to_string(),
+        commit_message: message.to_string(),
+    })
+}
+
+/// GitHub 说文件不存在。
+pub fn is_missing(error: &PublishError) -> bool {
+    matches!(error, PublishError::GitHub { status: 404, .. })
+}
+
+fn unchanged_file(path: &str, branch: &str, message: &str) -> FileChange {
+    FileChange {
+        path: path.to_string(),
+        commit_sha: String::new(),
+        changed: false,
+        branch: branch.to_string(),
+        commit_message: message.to_string(),
+    }
+}
+
+pub(crate) fn is_conflict(error: &PublishError) -> bool {
     matches!(
         error,
         PublishError::GitHub {

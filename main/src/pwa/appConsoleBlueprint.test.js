@@ -14,7 +14,7 @@ import {
 test("restores the owner controller screen map from the prototype", () => {
   assert.deepEqual(
     ownerConsoleScreens.map((screen) => screen.id),
-    ["home", "article", "drafts", "gallery", "moments", "friend", "inbox", "emails", "ai"],
+    ["home", "article", "drafts", "gallery", "moments", "about", "bili", "projects", "friend", "inbox", "emails", "ai"],
   );
   assert.equal(ownerConsoleScreens[0].title, "站长工作台");
   assert.equal(ownerConsoleScreens[1].title, "发布文章");

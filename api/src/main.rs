@@ -23,6 +23,7 @@ async fn run() -> Result<(), String> {
     }
     let addr = taozhiyy_api::config::bind_addr(&cfg.bind);
     let state = AppState::connect(cfg).await;
+    taozhiyy_api::spawn_background(state.clone());
     let app = router(state);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

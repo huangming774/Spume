@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderProjectDetail } from '../src/detail.js';
-import { projects } from '../src/catalog.js';
 
 const sample = {id:'sample',title:'Sample <script>alert(1)</script>',author:'Author',category:'动画',summary:'Summary',source:'https://github.com/author/project',url:'https://example.com/',docs:'https://example.com/docs',license:'MIT',licenseUrl:'https://example.com/license',reviewedAt:'2026-10-28',cover:'/covers/sample.webp',tags:['Tag'],demo:{kind:'video',url:'https://example.com/demo.mp4',label:'作者演示',note:'Recorded by author'},sections:[['安装','在本地终端执行','npm install <package>']]};
 test('details safely present code, authors, licenses, source and playable author demos', () => {
@@ -37,9 +36,19 @@ test('reader uses a compact masthead, introduction and responsive section naviga
   assert.ok(html.includes('原作者'));
 });
 
-test('the introduction uses the reader without irrelevant repository, demo or license claims', () => {
-  const guide = projects.find(project => project.id === 'project-guide');
-  assert.ok(guide, 'introduction entry exists');
+test('the introduction renderer keeps a guide entry free of repository and demo claims', () => {
+  const guide = {
+    id: 'project-guide',
+    isGuide: true,
+    title: '项目星空 · 板块介绍',
+    author: 'spume',
+    category: '板块介绍',
+    summary: '认识奇想馆的项目分享空间。',
+    cover: '/covers/project-guide.webp',
+    reviewedAt: '2026-10-31',
+    tags: ['项目星空', '板块介绍'],
+    sections: [['这里是做什么的', '项目星空是奇想馆的项目分享空间，收录开源项目、实用工具、教程、试用、作者和来源。']],
+  };
   const html = renderProjectDetail(guide);
   assert.match(html, /ABOUT THIS SPACE/);
   assert.match(html, /板块介绍/);

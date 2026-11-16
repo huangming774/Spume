@@ -42,22 +42,30 @@ const WeatherBadge = ({ className = "" }) => {
 
   useEffect(() => {
     let cancelled = false;
-    let timer = null;
+    let refreshTimer = null;
+    let request = null;
 
     const load = async () => {
+      request?.abort();
+      const controller = new AbortController();
+      request = controller;
+      const timeout = window.setTimeout(() => controller.abort(), 5000);
       try {
-        const next = await fetchWeather();
+        const next = await fetchWeather({ signal: controller.signal });
         if (!cancelled) setWeather(next);
       } catch {
-        // 拿不到天气不隐藏挂件，留个占位，和 VisitorNetworkBadge 的降级风格一致。
+        // 天气超时或失败只留占位，不占用页面其它请求。
+      } finally {
+        window.clearTimeout(timeout);
       }
     };
 
     load();
-    timer = window.setInterval(load, REFRESH_MS);
+    refreshTimer = window.setInterval(load, REFRESH_MS);
     return () => {
       cancelled = true;
-      if (timer) window.clearInterval(timer);
+      request?.abort();
+      if (refreshTimer) window.clearInterval(refreshTimer);
     };
   }, []);
 

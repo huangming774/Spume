@@ -1,43 +1,6 @@
 /** Lightweight mock payloads — used when API is offline (zero extra network). */
 
-export const mockBangumiList = [
-  {
-    id: "b1",
-    title: "A Certain Scientific Railgun",
-    watched: 12,
-    total: 24,
-    latestEpisode: 24,
-    coverUrl: null,
-    hue: 200,
-  },
-  {
-    id: "b2",
-    title: "Healing Sketchbook",
-    watched: 8,
-    total: 12,
-    latestEpisode: 10,
-    coverUrl: null,
-    hue: 280,
-  },
-  {
-    id: "b3",
-    title: "Chronicles of Creation",
-    watched: 3,
-    total: 13,
-    latestEpisode: 7,
-    coverUrl: null,
-    hue: 140,
-  },
-  {
-    id: "b4",
-    title: "Reimu Garden",
-    watched: 6,
-    total: 12,
-    latestEpisode: 9,
-    coverUrl: null,
-    hue: 35,
-  },
-];
+export const mockBangumiList = [];
 
 export const mockRadarList = [
   {

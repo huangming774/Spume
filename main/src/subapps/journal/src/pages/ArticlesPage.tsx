@@ -2,16 +2,19 @@ import { Link } from 'react-router-dom';
 import { journalTo } from '../paths';
 import { Bilingual } from '../components/Bilingual';
 import { siteContent } from '../data/content';
+import { asJournal, useEntries } from '../../../../lib/siteEntries';
 import { useI18n } from '../i18n/I18nContext';
 
 export function ArticlesPage() {
   const { t } = useI18n();
+  const { items } = useEntries('journal');
+  const articles = [...asJournal(items), ...siteContent.articles];
 
   return (
     <div className="page-main-inner">
       <h1 className="page-title">{t('articlesTitle')}</h1>
       <div className="article-list">
-        {[...siteContent.articles]
+        {articles
           .sort((a, b) => (a.date < b.date ? 1 : -1))
           .map((a) => (
             <Link key={a.slug} to={journalTo(`/post/${a.slug}`)} className="article-card">

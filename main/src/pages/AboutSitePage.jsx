@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ServerInfoPanel from "../components/ServerInfoPanel";
+import { useEntries } from "../lib/siteEntries";
 import { peekAboutPreview } from "../lib/homeWarmup.js";
 import { rewriteAboutPreviewAssets } from "./aboutPreviewAssets.js";
 
@@ -177,6 +178,7 @@ const AboutSitePage = () => {
   const hostRef = useRef(null);
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const { items: entries } = useEntries("about");
   const [serverStatusReady, setServerStatusReady] = useState(false);
 
   useEffect(() => {
@@ -266,6 +268,17 @@ const AboutSitePage = () => {
           <span className="sakura-petal sakura-petal--eighteen" />
         </span>
       </div>
+      {entries.length ? (
+        <div className="about-managed" aria-label="站长发布的关于我">
+          {entries.map((entry) => (
+            <article key={entry.id}>
+              {entry.imageUrl ? <img src={entry.imageUrl} alt="" /> : null}
+              <h2>{entry.title}</h2>
+              <p>{entry.body}</p>
+            </article>
+          ))}
+        </div>
+      ) : null}
       <div ref={hostRef} className="about-route-shadow">
         {serverStatusReady ? (
           <div slot="server-status">

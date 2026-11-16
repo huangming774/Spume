@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Transparent AI healthcheck scheduler for taozhiyy.top."""
+"""Transparent AI healthcheck scheduler for www.miku.coffee."""
 
 from __future__ import annotations
 
@@ -16,14 +16,14 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 
-DEFAULT_ENDPOINT = "https://taozhiyy.top/api/chat"
+DEFAULT_ENDPOINT = "https://www.miku.coffee/api/chat"
 DEFAULT_MESSAGE = "请回复 OK，并说明当前服务正常"
 DEFAULT_UA = "taozhiyy-ai-healthcheck"
 DEFAULT_COUNT = 20
 DEFAULT_START = "08:00"
 DEFAULT_END = "23:30"
 DEFAULT_TIMEOUT = 20
-DEFAULT_PAGE_URL = "https://taozhiyy.top/"
+DEFAULT_PAGE_URL = "https://www.miku.coffee/"
 DEFAULT_LOG = "/var/log/taozhiyy-ai-healthcheck.log"
 
 

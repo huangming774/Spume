@@ -38,7 +38,7 @@ async function fitReader(page, width, height) {
       assert.ok(summary.y+summary.height<=footer.y+1,'summary and project dock must not overlap');
       const galleryThemes = page.getByRole('group',{name:'奇想馆主题',exact:true});
       const readerThemes = page.getByRole('group',{name:'阅读主题',exact:true});
-      assert.equal(await page.locator('.home-link').getAttribute('href'),'https://taozhiyy.top/');
+      assert.equal(await page.locator('.home-link').getAttribute('href'),'https://www.miku.coffee/');
       assert.equal(await page.locator('.home-link').getAttribute('target'),null);
       await page.locator('#gallery-canvas').focus();
       await page.keyboard.press('End');

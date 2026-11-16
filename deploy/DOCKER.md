@@ -88,7 +88,7 @@ TLS_CERT_DIR=./deploy/docker/certs docker compose up -d --build
 
    ```bash
    # 首次签发（nginx 容器还没跑起来时，用 standalone 模式）
-   sudo certbot certonly --standalone -d taozhiyy.top -d www.taozhiyy.top
+   sudo certbot certonly --standalone -d www.miku.coffee -d www.miku.coffee
 
    # 之后续期用 webroot 模式（nginx 容器已经跑起来时）
    sudo certbot renew \
@@ -178,7 +178,7 @@ nginx + `/opt/acg-api/acg-api`（Go 二进制）+ systemd `acg-api.service`。�
    sudo /usr/local/sbin/taozhiyy-docker-deploy.sh
    ```
 
-6. 确认 `https://taozhiyy.top/api/v1/health` 返回 `"status":"ok"`，页面正常后，
+6. 确认 `https://www.miku.coffee/api/v1/health` 返回 `"status":"ok"`，页面正常后，
    安装并启用新的 `taozhiyy-docker-deploy.timer`（见「一次性初始化」第 6 步）。
 
 ## 常见排障

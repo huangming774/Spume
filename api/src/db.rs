@@ -8,19 +8,20 @@ use sqlx::{
 
 const SCHEMA: &str = include_str!("../migrations/001_init.sql");
 
-pub async fn connect(url: &str) -> Result<PgPool, sqlx::Error> {
-    // 两条防卡死的保险：
-    // 1) statement_cache_capacity(0)：若 URL 指向 Supabase 6543 事务池化，服务端不保留
-    //    会话状态，带缓存的 prepared statement 会间歇报 "does not exist"；关掉对会话模式也无害。
-    // 2) 首连限时 + acquire_timeout：直连端点 IPv6-only，路由一抖建连会挂死，连接池就报
-    //    "pool timed out while waiting for an open connection"。已改走 IPv4 的 Pooler
-    //    端点（见 api/.env 注释），这里再兜一层建连超时，挂死也会 20 秒内快速失败。
-    let options = PgConnectOptions::from_str(url)?.statement_cache_capacity(0);
+pub async fn connect(
+    url: &str,
+    acquire: Duration,
+    statement: Duration,
+) -> Result<PgPool, sqlx::Error> {
+    let statement_ms = statement.as_millis().max(1).to_string();
+    let options = PgConnectOptions::from_str(url)?
+        .statement_cache_capacity(0)
+        .options([("statement_timeout", statement_ms.as_str())]);
     let pool = tokio::time::timeout(
         Duration::from_secs(20),
         PgPoolOptions::new()
-            .max_connections(5)
-            .acquire_timeout(Duration::from_secs(10))
+            .max_connections(8)
+            .acquire_timeout(acquire)
             .idle_timeout(Duration::from_secs(60))
             .connect_with(options),
     )

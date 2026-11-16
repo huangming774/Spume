@@ -12,7 +12,7 @@ set -euo pipefail
 
 COMPOSE_DIR="${COMPOSE_DIR:-/opt/taozhiyy}"
 LOCK_FILE="${LOCK_FILE:-/tmp/taozhiyy-docker-deploy.lock}"
-HEALTH_URL="${HEALTH_URL:-https://taozhiyy.top/api/v1/health}"
+HEALTH_URL="${HEALTH_URL:-https://www.miku.coffee/api/v1/health}"
 
 log() {
   printf '[%s] %s\n' "$(date '+%F %T')" "$*"

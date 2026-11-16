@@ -173,7 +173,7 @@ async fn warm_previews(http: &reqwest::Client, items: &[WallpaperCandidate]) {
             .get(&item.url)
             .timeout(std::time::Duration::from_secs(8))
             .header(reqwest::header::USER_AGENT, "taozhiyy-wallpaper-pool/1.0")
-            .header(reqwest::header::REFERER, "https://taozhiyy.top/")
+            .header(reqwest::header::REFERER, "https://www.miku.coffee/")
             .send()
             .await
         {

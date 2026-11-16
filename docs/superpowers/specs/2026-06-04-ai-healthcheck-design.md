@@ -6,7 +6,7 @@ Create a transparent daily AI healthcheck that sends 20 lightweight requests to 
 
 ## Scope
 
-- Requests target `https://taozhiyy.top/api/chat` by default.
+- Requests target `https://www.miku.coffee/api/chat` by default.
 - Each request uses the fixed prompt: `请回复 OK，并说明当前服务正常`.
 - Requests identify themselves with `User-Agent: taozhiyy-ai-healthcheck`.
 - The script reads an optional login cookie from `TAOZIYY_AI_COOKIE` so the checks can use the logged-in quota.

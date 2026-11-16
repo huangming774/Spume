@@ -11,7 +11,7 @@ TMP_DIR="${TMP_DIR:-/tmp/taozhiyy-pull-deploy}"
 BACKUP_DIR="${BACKUP_DIR:-/home/ubuntu/taozhiyy-deploy-backups}"
 STATE_DIR="${STATE_DIR:-/var/lib/taozhiyy-pull-deploy}"
 LOCK_FILE="${LOCK_FILE:-/tmp/taozhiyy-pull-deploy.lock}"
-VITE_API_BASE="${VITE_API_BASE:-https://taozhiyy.top}"
+VITE_API_BASE="${VITE_API_BASE:-https://www.miku.coffee}"
 FORCE_DEPLOY="${FORCE_DEPLOY:-}"
 
 run_sudo() {
@@ -188,15 +188,15 @@ switch_release_dirs() {
 
 post_deploy_checks() {
   curl -sf --max-time 20 http://127.0.0.1:8787/api/v1/health | grep -q '"status":"ok"'
-  curl -sf --max-time 20 https://taozhiyy.top/api/v1/wallpapers/draw | grep -q '"item"'
-  curl -sf --max-time 20 'https://taozhiyy.top/api/v1/wallpapers/draw?source=api' | grep -q '"apiOnly":true'
-  curl -sf --max-time 20 https://taozhiyy.top/api/chat | grep -q '"remaining"'
-  curl -fL --max-time 20 https://taozhiyy.top/ >/dev/null
-  curl -fL --max-time 20 https://taozhiyy.top/blog/ >/dev/null
-  curl -fL --max-time 20 https://taozhiyy.top/build/ >/dev/null
-  curl -fL --max-time 20 https://taozhiyy.top/gallery >/dev/null
-  curl -fL --max-time 20 https://taozhiyy.top/gallery/misaka >/dev/null
-  curl -fL --max-time 20 https://taozhiyy.top/bili >/dev/null
+  curl -sf --max-time 20 https://www.miku.coffee/api/v1/wallpapers/draw | grep -q '"item"'
+  curl -sf --max-time 20 'https://www.miku.coffee/api/v1/wallpapers/draw?source=api' | grep -q '"apiOnly":true'
+  curl -sf --max-time 20 https://www.miku.coffee/api/chat | grep -q '"remaining"'
+  curl -fL --max-time 20 https://www.miku.coffee/ >/dev/null
+  curl -fL --max-time 20 https://www.miku.coffee/blog/ >/dev/null
+  curl -fL --max-time 20 https://www.miku.coffee/build/ >/dev/null
+  curl -fL --max-time 20 https://www.miku.coffee/gallery >/dev/null
+  curl -fL --max-time 20 https://www.miku.coffee/gallery/misaka >/dev/null
+  curl -fL --max-time 20 https://www.miku.coffee/bili >/dev/null
 }
 
 build_project() {

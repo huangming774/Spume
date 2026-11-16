@@ -4,16 +4,16 @@ import cosmosCss from "../../../previews/project-gallery/src/cosmos.css?inline";
 import themeCss from "../../../previews/project-gallery/src/gallery-themes.css?inline";
 import readerCss from "../../../previews/project-gallery/src/reader.css?inline";
 import styleCss from "../../../previews/project-gallery/src/style.css?inline";
-import { cosmosMarkup } from "./cosmosMarkup.js";
+import { asProjects, loadEntries } from "../lib/siteEntries";
 
 const cosmosStyles = [styleCss, cosmosCss, themeCss, readerCss].join("\n");
 
 function isSiteHome(anchor) {
   const raw = anchor.getAttribute("href") || "";
-  if (raw === "/" || raw === "https://taozhiyy.top" || raw === "https://taozhiyy.top/") return true;
+  if (raw === "/" || raw === "https://www.miku.coffee" || raw === "https://www.miku.coffee/") return true;
   try {
     const url = new URL(anchor.href, window.location.origin);
-    return url.pathname === "/" && (url.hostname === "taozhiyy.top" || url.origin === window.location.origin);
+    return url.pathname === "/" && (url.hostname === "www.miku.coffee" || url.origin === window.location.origin);
   } catch {
     return false;
   }
@@ -44,9 +44,11 @@ export default function CosmosPage() {
       navigate("/");
     };
     host.addEventListener("click", onClick);
-    import("../../../previews/project-gallery/src/main.js").then(({ mountProjectGallery }) => {
+    import("../../../previews/project-gallery/src/main.js").then(async ({ mountProjectGallery }) => {
       if (stopped) return;
-      const stop = mountProjectGallery(host);
+      const stored = asProjects(await loadEntries("project"));
+      if (stopped) return;
+      const stop = mountProjectGallery(host, stored);
       if (stopped) stop();
       else dispose = stop;
     });

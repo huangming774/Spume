@@ -1,29 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiBell, FiEye, FiEyeOff, FiRefreshCw, FiUpload, FiX } from "react-icons/fi";
-import { authLogin, authMe } from "../services/authApi";
-import { fetchChatStats } from "../services/chatStatsApi";
+import AvatarCropDialog from "../components/owner-console/AvatarCropDialog";
+import { authLogin, authLogout, authUploadAvatar } from "../services/authApi";
 import {
   createOwnerFixedAnswer,
   createOwnerDraft,
-  fetchOwnerEmails,
-  fetchOwnerStatus,
   isPublicImageURL,
   markOwnerNotificationRead,
   publishOwnerArticle,
   publishOwnerFriend,
   publishOwnerGalleryImage,
+  publishOwnerJournal,
   publishOwnerMoment,
   uploadOwnerAsset,
 } from "../services/ownerApi";
 import { parseFriendQuickInput } from "../lib/friendQuickInput";
+import { notifyEntriesChanged } from "../lib/siteEntries";
+import {
+  AboutPanel,
+  ArticleLibrary,
+  BiliPanel,
+  GalleryLibrary,
+  MomentLibrary,
+  ProjectPanel,
+} from "./ownerLibrary";
 import { ownerFriendPublishToast } from "../lib/ownerPublishMessages";
 import {
   buildMobileArticleDraft,
-  getNotificationTotal,
   ownerConsoleAvatars,
   ownerConsoleModules,
-  ownerConsoleNotifications,
   ownerConsoleScreens,
   publishSteps,
 } from "../pwa/appConsoleBlueprint";
@@ -40,7 +46,6 @@ import {
   ownerCustomGalleryAlbumValue,
   ownerGalleryAlbumOptions,
 } from "../lib/ownerGalleryAlbums";
-import { cosAsset } from "../lib/cosAsset.js";
 
 const screenMap = Object.fromEntries(ownerConsoleScreens.map((screen) => [screen.id, screen]));
 
@@ -64,13 +69,6 @@ categories: [建站]
 const defaultMobileMaterial =
   "今天把手机端 AI 发文流程接到真实草稿接口，图片和文字都能先保存到站长控制台。";
 
-const defaultFriendLink = {
-  name: "Spume",
-  desc: "Spume的小屋",
-  url: "https://taozhiyy.top",
-  avatar: cosAsset("1.png"),
-};
-
 const defaultMoment = {
   year: "2026",
   date: "6.8",
@@ -84,10 +82,15 @@ const initialCandidateAnswers = [
   "如果没有命中固定答案，AI 助手会继续走 DeepSeek 正常聊天链路。",
 ];
 
-const fetchBackendHealth = async () => {
-  const res = await fetch("/api/v1/health", {
-    headers: { Accept: "application/json" },
+const fetchWithin = (url, options, timeoutMs) => {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+    window.clearTimeout(timer);
   });
+};
+
+const readJson = async (res) => {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
   return data;
@@ -122,6 +125,19 @@ const draftDetail = (item) => {
 
 const userInitial = (name) => (name || "?").slice(0, 1).toUpperCase();
 
+const AVATAR_FILE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+const OwnerAvatarFace = ({ photo, fallback }) =>
+  photo ? (
+    <span className="owner-avatar-face owner-avatar-face--photo">
+      <img src={photo} alt="" referrerPolicy="no-referrer" />
+    </span>
+  ) : (
+    <span className="owner-avatar-face" style={{ background: fallback.gradient }}>
+      {fallback.initial}
+    </span>
+  );
+
 const notificationSourceLabel = (source) => {
   switch (source) {
     case "guestbook":
@@ -145,17 +161,21 @@ const AppConsolePage = () => {
   const [loginPassword, setLoginPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatar, setAvatar] = useState(ownerConsoleAvatars[0]);
+  const [avatarUploadBusy, setAvatarUploadBusy] = useState(false);
+  const [avatarCropFile, setAvatarCropFile] = useState(null);
   const [articleTitle, setArticleTitle] = useState("站长控制器第一阶段接站记录");
+  const [articleKind, setArticleKind] = useState("博客");
   const [articleBody, setArticleBody] = useState(articleSeed);
   const [articleImageURL, setArticleImageURL] = useState("");
-  const [friendName, setFriendName] = useState(defaultFriendLink.name);
-  const [friendDesc, setFriendDesc] = useState(defaultFriendLink.desc);
-  const [friendUrl, setFriendUrl] = useState(defaultFriendLink.url);
-  const [friendAvatar, setFriendAvatar] = useState(defaultFriendLink.avatar);
+  const [friendName, setFriendName] = useState("");
+  const [friendDesc, setFriendDesc] = useState("");
+  const [friendUrl, setFriendUrl] = useState("");
+  const [friendAvatar, setFriendAvatar] = useState("");
   const [friendQuickInput, setFriendQuickInput] = useState("");
   const [momentYear, setMomentYear] = useState(defaultMoment.year);
   const [momentDate, setMomentDate] = useState(defaultMoment.date);
@@ -197,47 +217,69 @@ const AppConsolePage = () => {
   });
   const publishTimerRef = useRef(null);
 
-  const loadConsole = useCallback(async () => {
-    setError("");
-    const [authResult, healthResult, statsResult, ownerStatusResult, ownerEmailsResult] =
-      await Promise.allSettled([
-        authMe(),
-        fetchBackendHealth(),
-        fetchChatStats(14),
-        fetchOwnerStatus(),
-        fetchOwnerEmails(),
-      ]);
-
-    if (authResult.status === "fulfilled") {
-      setAuth(authResult.value.ok ? authResult.value.data : { loggedIn: false });
+  const readSession = useCallback(async () => {
+    try {
+      const res = await fetchWithin(
+        "/api/auth/me",
+        { credentials: "include", headers: { Accept: "application/json" } },
+        4000,
+      );
+      const data = await res.json().catch(() => ({}));
+      setAuth(res.ok ? data : { loggedIn: false });
+    } catch {
+      setAuth({ loggedIn: false });
     }
+  }, []);
+
+  const refreshSignals = useCallback(async () => {
+    const [healthResult, statsResult, ownerStatusResult, ownerEmailsResult] =
+      await Promise.allSettled([
+        fetchWithin("/api/v1/health", { headers: { Accept: "application/json" } }, 3000).then(
+          readJson,
+        ),
+        fetchWithin("/api/chat/stats?days=14", { headers: { Accept: "application/json" } }, 3000).then(
+          readJson,
+        ),
+        fetchWithin(
+          "/api/owner/status",
+          { credentials: "include", headers: { Accept: "application/json" } },
+          8000,
+        ).then(readJson),
+        fetchWithin(
+          "/api/owner/emails",
+          { credentials: "include", headers: { Accept: "application/json" } },
+          8000,
+        ).then(readJson),
+      ]);
     if (healthResult.status === "fulfilled") setHealth(healthResult.value);
     if (statsResult.status === "fulfilled") setStats(statsResult.value);
     if (ownerStatusResult.status === "fulfilled") setOwnerStatus(ownerStatusResult.value);
     if (ownerEmailsResult.status === "fulfilled") setOwnerEmails(ownerEmailsResult.value);
-
-    const requiredFailures = [authResult, healthResult, statsResult].some(
-      (result) => result.status === "rejected",
-    );
-    if (requiredFailures) {
-      setError("部分后端信号暂时不可用，可以继续操作草稿与原型区。");
-    }
   }, []);
 
+  const loadConsole = useCallback(async () => {
+    setError("");
+    const session = readSession();
+    const signals = refreshSignals();
+    await session;
+    await signals;
+  }, [readSession, refreshSignals]);
+
   useEffect(() => {
-    loadConsole();
+    readSession();
+    refreshSignals();
     return () => {
       if (publishTimerRef.current) clearInterval(publishTimerRef.current);
     };
-  }, [loadConsole]);
+  }, [readSession, refreshSignals]);
 
   const activeMeta = screenMap[activeScreen] || screenMap.home;
   const ownerLabel = getOwnerSessionLabel(auth);
+  const savedAvatarUrl = isPublicImageURL(auth?.user?.avatar || "") ? auth.user.avatar.trim() : "";
   const healthLabel = getBackendHealthLabel(health);
   const statsSnapshot = useMemo(() => getStatsSnapshot(stats), [stats]);
-  const liveNotifications = ownerStatus?.notifications?.items || ownerConsoleNotifications;
-  const notificationTotal =
-    ownerStatus?.notifications?.total ?? getNotificationTotal(ownerConsoleNotifications);
+  const liveNotifications = ownerStatus?.notifications?.items ?? [];
+  const notificationTotal = ownerStatus?.notifications?.total ?? liveNotifications.length;
   const registeredUsers = getOwnerRegisteredUsers(ownerEmails);
   const guestbookContacts = getOwnerGuestbookContacts(ownerEmails);
   const registeredUserTotal =
@@ -309,6 +351,47 @@ const AppConsolePage = () => {
     setPublishState((current) => ({ ...current, open: false }));
   };
 
+  const handleAvatarFile = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.type && !AVATAR_FILE_TYPES.has(file.type)) {
+      setError("仅支持 PNG / JPEG / WebP / GIF");
+      return;
+    }
+    setError("");
+    setAvatarOpen(false);
+    setAvatarCropFile(file);
+  };
+
+  const handleAvatarCropConfirm = async (file) => {
+    setAvatarUploadBusy(true);
+    try {
+      const result = await authUploadAvatar(file);
+      if (!result.ok) {
+        throw new Error(result.data?.message || "头像上传失败");
+      }
+      const nextUser = result.data?.user || {};
+      setAuth((current) => ({
+        ...(current || {}),
+        loggedIn: true,
+        user: { ...(current?.user || {}), ...nextUser },
+      }));
+      setAvatarCropFile(null);
+      setError("");
+      setPublishState({
+        open: true,
+        title: "头像已保存",
+        activeIndex: -1,
+        failIndex: null,
+        simulated: false,
+        toast: nextUser.avatar || "头像已写入对象存储",
+      });
+    } finally {
+      setAvatarUploadBusy(false);
+    }
+  };
+
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoginBusy(true);
@@ -328,6 +411,23 @@ const AppConsolePage = () => {
       setLoginError(e.message || "登录失败，请稍后再试");
     } finally {
       setLoginBusy(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setLogoutBusy(true);
+    setLoginError("");
+    try {
+      await authLogout();
+    } catch {
+      // 接口失败也清掉本地会话，避免停在已登录界面。
+    } finally {
+      setAuth({ loggedIn: false });
+      setOwnerStatus(null);
+      setOwnerEmails(null);
+      setNotificationsOpen(false);
+      setAvatarOpen(false);
+      setLogoutBusy(false);
     }
   };
 
@@ -387,12 +487,14 @@ const AppConsolePage = () => {
     });
 
     try {
-      const data = await publishOwnerArticle({
-        ...(draftId ? { draftId } : {}),
-        title,
-        body,
-        coverUrl,
-      });
+      const data = articleKind === "建站记录"
+        ? await publishOwnerJournal({ title, body, coverUrl })
+        : await publishOwnerArticle({
+            ...(draftId ? { draftId } : {}),
+            title,
+            body,
+            coverUrl,
+          });
       const item = data.item || {};
       const commitSha = item.commitSha ? `（commit ${item.commitSha.slice(0, 7)}）` : "";
       setPublishState({
@@ -402,9 +504,10 @@ const AppConsolePage = () => {
         failIndex: null,
         simulated: false,
         toast: item.path
-          ? `已发布到 ${item.path}${commitSha}，GitHub Actions 会从 ${item.branch || "master"} 部署。`
-          : "文章发布已提交。",
+          ? `正文已写入数据库 ${item.path}。图片地址保存在同一条记录里。`
+          : "文章已写入数据库。",
       });
+      notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
       const message = e.message || "文章发布失败";
@@ -559,10 +662,9 @@ const AppConsolePage = () => {
         activeIndex: publishSteps.length,
         failIndex: null,
         simulated: false,
-        toast: item.changed === false
-          ? `这张图片已经在 ${item.path || "相册数据"} 中。`
-          : `已发布到 ${item.path || "相册数据"}${commitSha}，GitHub Actions 会从 ${item.branch || "master"} 部署。`,
+        toast: `图片地址已写入数据库 ${item.path || ""}`.trim(),
       });
+      notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
       const message = e.message || "相册发布失败";
@@ -612,8 +714,9 @@ const AppConsolePage = () => {
         activeIndex: publishSteps.length,
         failIndex: null,
         simulated: false,
-        toast: `已写入 ${item.path || "碎语数据"}${commitSha}，GitHub Actions 会从 ${item.branch || "master"} 部署。`,
+        toast: `碎语已写入数据库 ${item.path || ""}`.trim(),
       });
+      notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
       const message = e.message || "碎语发布失败";
@@ -685,6 +788,11 @@ const AppConsolePage = () => {
     try {
       const data = await publishOwnerFriend({ name, desc, url, avatar: avatarUrl });
       const item = data.item || {};
+      setFriendName("");
+      setFriendDesc("");
+      setFriendUrl("");
+      setFriendAvatar("");
+      setFriendQuickInput("");
       setPublishState({
         open: true,
         title: "发布友链",
@@ -741,7 +849,9 @@ const AppConsolePage = () => {
     setArticleUploadBusy(true);
     setError("");
     try {
-      const data = await uploadOwnerAsset(file, { kind: "article" });
+      const data = await uploadOwnerAsset(file, {
+        kind: articleKind === "建站记录" ? "journal" : "article",
+      });
       const item = data.item || {};
       const nextURL = item.url || "";
       setArticleImageURL(nextURL);
@@ -942,6 +1052,19 @@ const AppConsolePage = () => {
               </button>
             ))}
           </nav>
+          <div className="owner-session-actions">
+            <Link className="owner-secondary owner-small-button" to="/">
+              回到主页
+            </Link>
+            <button
+              type="button"
+              className="owner-secondary owner-small-button"
+              onClick={handleLogout}
+              disabled={logoutBusy}
+            >
+              {logoutBusy ? "退出中…" : "退出登录"}
+            </button>
+          </div>
         </aside>
 
         <section className="owner-workspace">
@@ -951,6 +1074,19 @@ const AppConsolePage = () => {
               <p className="owner-page-sub">{activeMeta.subtitle}</p>
             </div>
             <div className="owner-top-actions">
+              <div className="owner-session-actions">
+                <Link className="owner-secondary owner-small-button" to="/">
+                  回到主页
+                </Link>
+                <button
+                  type="button"
+                  className="owner-secondary owner-small-button"
+                  onClick={handleLogout}
+                  disabled={logoutBusy}
+                >
+                  {logoutBusy ? "退出中…" : "退出登录"}
+                </button>
+              </div>
               <span className="owner-pill">
                 <span className="owner-status-dot" />
                 最新部署：等待发布阶段
@@ -975,10 +1111,13 @@ const AppConsolePage = () => {
                       <StatusTag>{notificationTotal}</StatusTag>
                     </div>
                     <div className="owner-notice-list">
+                      {liveNotifications.length ? null : (
+                        <p className="owner-record-empty">还没有未读提醒。</p>
+                      )}
                       {liveNotifications.map((item) => (
                         <button
                           type="button"
-                          key={`${item.source}-${item.title}`}
+                          key={item.id || `${item.source}-${item.title}`}
                           className="owner-notice"
                           onClick={() => openScreen("inbox")}
                         >
@@ -1001,36 +1140,53 @@ const AppConsolePage = () => {
                     setAvatarOpen((open) => !open);
                     setNotificationsOpen(false);
                   }}
-                  aria-label="切换头像"
+                  aria-label="更换头像"
                 >
-                  <span className="owner-avatar-face" style={{ background: avatar.gradient }}>
-                    {avatar.initial}
-                  </span>
+                  <OwnerAvatarFace photo={savedAvatarUrl} fallback={avatar} />
                 </button>
                 {avatarOpen ? (
                   <div className="owner-avatar-switcher owner-glass">
                     <div className="owner-panel-title">
-                      <h2>头像预览</h2>
-                      <StatusTag>本地</StatusTag>
+                      <h2>更换头像</h2>
+                      <StatusTag>{savedAvatarUrl ? "已保存" : "未设置"}</StatusTag>
                     </div>
+                    <p className="owner-avatar-note">
+                      支持 PNG、JPEG、WebP、GIF。选图后可以自由裁切，再写入对象存储。
+                    </p>
                     <div className="owner-avatar-grid">
-                      {ownerConsoleAvatars.map((item) => (
-                        <button
-                          type="button"
-                          key={item.id}
-                          className={`owner-avatar-option ${item.id === avatar.id ? "active" : ""}`}
-                          onClick={() => {
-                            setAvatar(item);
-                            setAvatarOpen(false);
-                          }}
-                        >
-                          <span className="owner-avatar-face" style={{ background: item.gradient }}>
-                            {item.initial}
-                          </span>
-                          <span>{item.label}</span>
-                        </button>
-                      ))}
+                      <label
+                        className={`owner-avatar-option owner-avatar-upload${avatarUploadBusy ? " is-busy" : ""}`}
+                        htmlFor="ownerAvatarUpload"
+                      >
+                        <FiUpload aria-hidden />
+                        {avatarUploadBusy ? "上传中..." : "上传头像"}
+                      </label>
+                      <input
+                        id="ownerAvatarUpload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        onChange={handleAvatarFile}
+                        disabled={avatarUploadBusy}
+                        hidden
+                      />
+                      {savedAvatarUrl
+                        ? null
+                        : ownerConsoleAvatars.map((item) => (
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={`owner-avatar-option ${item.id === avatar.id ? "active" : ""}`}
+                              onClick={() => {
+                                setAvatar(item);
+                                setAvatarOpen(false);
+                              }}
+                            >
+                              <OwnerAvatarFace fallback={item} />
+                              <span>{item.label}</span>
+                            </button>
+                          ))}
                     </div>
+                    {savedAvatarUrl ? <p className="owner-avatar-url">{savedAvatarUrl}</p> : null}
                   </div>
                 ) : null}
               </div>
@@ -1106,10 +1262,13 @@ const AppConsolePage = () => {
                     <StatusTag>{notificationTotal}</StatusTag>
                   </div>
                   <div className="owner-notice-list">
+                    {liveNotifications.length ? null : (
+                      <p className="owner-record-empty">还没有未读提醒。</p>
+                    )}
                     {liveNotifications.map((item) => (
                       <button
                         type="button"
-                        key={`${item.source}-${item.title}-panel`}
+                        key={item.id || `${item.source}-${item.title}-panel`}
                         className="owner-notice"
                         onClick={() => openScreen("inbox")}
                       >
@@ -1155,9 +1314,13 @@ const AppConsolePage = () => {
               <div>
                 <div className="owner-field">
                   <label htmlFor="articleType">文章类型</label>
-                  <select id="articleType">
-                    <option>博客</option>
-                    <option>建站记录</option>
+                  <select
+                    id="articleType"
+                    value={articleKind}
+                    onChange={(event) => setArticleKind(event.target.value)}
+                  >
+                    <option value="博客">博客</option>
+                    <option value="建站记录">建站记录</option>
                   </select>
                 </div>
                 <div className="owner-field">
@@ -1182,7 +1345,7 @@ const AppConsolePage = () => {
                 </div>
                 <div className="owner-quick-line">
                   <label className="owner-secondary" htmlFor="articleImageUpload">
-                    <FiUpload aria-hidden /> {articleUploadBusy ? "上传中..." : "上传封面到 COS"}
+                    <FiUpload aria-hidden /> {articleUploadBusy ? "上传中..." : "上传封面到 S3"}
                   </label>
                   <input
                     id="articleImageUpload"
@@ -1230,7 +1393,7 @@ const AppConsolePage = () => {
                     }
                     disabled={publishBusy}
                   >
-                    {publishBusy ? "发布中..." : "发布文章"}
+                    {publishBusy ? "发布中..." : articleKind === "建站记录" ? "发布建站日志" : "发布文章"}
                   </button>
                 </div>
               </div>
@@ -1242,7 +1405,7 @@ const AppConsolePage = () => {
                 <p>
                   {articleImageURL
                     ? `封面 URL：${articleImageURL}`
-                    : "添加公开封面 URL，或上传一张封面到 COS。"}
+                    : "添加公开封面 URL，或上传一张封面到 S3。"}
                 </p>
               </aside>
             </div>
@@ -1296,6 +1459,7 @@ const AppConsolePage = () => {
                 <pre>{mobileDraft.body}</pre>
               </aside>
             </div>
+            <ArticleLibrary />
           </section>
 
           <section className={`owner-screen ${activeScreen === "drafts" ? "active" : ""}`}>
@@ -1435,7 +1599,7 @@ const AppConsolePage = () => {
                     htmlFor="galleryUpload"
                     aria-disabled={uploadBusy}
                   >
-                    <FiUpload aria-hidden /> {uploadBusy ? "上传中..." : "上传到 COS"}
+                    <FiUpload aria-hidden /> {uploadBusy ? "上传中..." : "上传到 S3"}
                   </label>
                   <button type="button" className="owner-secondary" onClick={handleAddGalleryURL}>
                     添加 PicGo URL
@@ -1459,10 +1623,11 @@ const AppConsolePage = () => {
                     ? `真实上传 URL：${galleryUploads[0].url}。目标相册：${
                         galleryUploads[0].albumTitle || galleryUploads[0].albumId || "相册"
                       }。`
-                    : "上传图片到 COS，或添加一个公开图片 URL。"}
+                    : "上传图片到 S3，或添加一个公开图片 URL。"}
                 </p>
               </aside>
             </div>
+            <GalleryLibrary />
           </section>
 
           <section className={`owner-screen ${activeScreen === "moments" ? "active" : ""}`}>
@@ -1527,6 +1692,19 @@ const AppConsolePage = () => {
                 <p>发布后会写入首页右上角导航进入的“碎语”页面。</p>
               </aside>
             </div>
+            <MomentLibrary />
+          </section>
+
+          <section className={`owner-screen ${activeScreen === "about" ? "active" : ""}`}>
+            <AboutPanel />
+          </section>
+
+          <section className={`owner-screen ${activeScreen === "bili" ? "active" : ""}`}>
+            <BiliPanel />
+          </section>
+
+          <section className={`owner-screen ${activeScreen === "projects" ? "active" : ""}`}>
+            <ProjectPanel />
           </section>
 
           <section className={`owner-screen ${activeScreen === "friend" ? "active" : ""}`}>
@@ -1627,7 +1805,7 @@ const AppConsolePage = () => {
                     <p>{friendDesc || "站点描述"}</p>
                   </div>
                 </div>
-                <p>{friendUrl || "https://taozhiyy.top"}</p>
+                <p>{friendUrl || "https://www.miku.coffee"}</p>
               </aside>
             </div>
           </section>
@@ -1639,6 +1817,9 @@ const AppConsolePage = () => {
                 <StatusTag>{notificationTotal} 条提醒</StatusTag>
               </div>
               <div className="owner-inbox-list">
+                {liveNotifications.length ? null : (
+                  <p className="owner-record-empty">还没有未读提醒。新的留言和朋友页评论会出现在这里。</p>
+                )}
                 {liveNotifications.map((item) => (
                   <article className="owner-message" key={item.id || `${item.source}-${item.title}-inbox`}>
                     <div className="owner-message-head">
@@ -1936,6 +2117,16 @@ const AppConsolePage = () => {
           ) : null}
         </div>
       </div>
+      {avatarCropFile ? (
+        <AvatarCropDialog
+          file={avatarCropFile}
+          busy={avatarUploadBusy}
+          onCancel={() => {
+            if (!avatarUploadBusy) setAvatarCropFile(null);
+          }}
+          onConfirm={handleAvatarCropConfirm}
+        />
+      ) : null}
     </main>
   );
 };

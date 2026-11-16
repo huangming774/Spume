@@ -31,7 +31,7 @@ const notes: Record<string, EntryNotes> = {
   'site-growth-17-project-cosmos': {
     category: 'feature', title: ['项目在星光里，有了自己的位置', 'A place for projects among the stars'],
     tags: ['Projects', 'Three.js', 'Tutorials'],
-    note: ['片段 01 通向奇想馆，把自己的作品和收录项目放进同一片星空。滑动浏览九个项目，点开可读简介、教程、试用方式和作者来源；页头落款统一为 taozhiyo。', 'Fragment 01 opens Project Cosmos: one starfield for personal and curated projects. Scroll through nine projects, then open their introductions, tutorials, demos, and author credits. The header now reads taozhiyo.'],
+    note: ['片段 01 通向奇想馆，把自己的作品和收录项目放进同一片星空。滑动浏览九个项目，点开可读简介、教程、试用方式和作者来源；页头落款统一为 spume。', 'Fragment 01 opens Project Cosmos: one starfield for personal and curated projects. Scroll through nine projects, then open their introductions, tutorials, demos, and author credits. The header now reads spume.'],
   },
   'site-growth-16-lottery-wallpaper-source': {
     category: 'engineering', title: ['抽奖机抽不出图的那一天', 'The day the lottery lost its pictures'],

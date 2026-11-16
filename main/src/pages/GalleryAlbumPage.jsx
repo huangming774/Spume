@@ -1,11 +1,26 @@
+import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { TiLocationArrow } from "react-icons/ti";
-import { getGalleryAlbum } from "../data/galleryAlbums";
+import { asAlbums, loadEntries } from "../lib/siteEntries";
 
 const GalleryAlbumPage = () => {
   const { albumId } = useParams();
-  const album = getGalleryAlbum(albumId);
+  const [album, setAlbum] = useState(null);
+  const [loaded, setLoaded] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    loadEntries("gallery").then((items) => {
+      if (!active) return;
+      setAlbum(asAlbums(items).find((item) => item.id === albumId) || null);
+      setLoaded(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [albumId]);
+
+  if (!loaded) return null;
   if (!album) return <Navigate to="/glimmer" replace />;
 
   return (

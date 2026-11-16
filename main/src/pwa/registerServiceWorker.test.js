@@ -45,7 +45,7 @@ test("does not register on the public root domain", () => {
     shouldRegisterServiceWorker({
       isProduction: true,
       navigatorRef: { serviceWorker: {} },
-      windowRef: { location: { protocol: "https:", hostname: "taozhiyy.top" } },
+      windowRef: { location: { protocol: "https:", hostname: "www.miku.coffee" } },
     }),
     false,
   );
@@ -66,7 +66,7 @@ test("exposes install metadata only on the app subdomain and local preview", () 
   );
   assert.equal(
     shouldExposePwaInstallMetadata({
-      windowRef: { location: { hostname: "taozhiyy.top" } },
+      windowRef: { location: { hostname: "www.miku.coffee" } },
     }),
     false,
   );
@@ -76,7 +76,7 @@ test("removes existing service workers on the public root domain only", () => {
   assert.equal(
     shouldUnregisterServiceWorkers({
       navigatorRef: { serviceWorker: {} },
-      windowRef: { location: { hostname: "taozhiyy.top" } },
+      windowRef: { location: { hostname: "www.miku.coffee" } },
     }),
     true,
   );
@@ -90,7 +90,7 @@ test("removes existing service workers on the public root domain only", () => {
   assert.equal(
     shouldUnregisterServiceWorkers({
       navigatorRef: {},
-      windowRef: { location: { hostname: "taozhiyy.top" } },
+      windowRef: { location: { hostname: "www.miku.coffee" } },
     }),
     false,
   );

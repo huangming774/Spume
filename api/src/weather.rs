@@ -12,6 +12,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde_json::{json, Value};
+use tokio::sync::{OnceCell, Semaphore};
 
 use crate::guestbook::is_private_ip;
 use crate::routes::{client_ip, fail};
@@ -27,22 +28,32 @@ const FALLBACK_LON: f64 = 121.4737;
 const FALLBACK_CITY: &str = "上海";
 const FALLBACK_REGION: &str = "上海";
 
-/// 单条缓存：抓取时间和已经组好的 JSON 响应体。
+/// 失败结果的短缓存，避免下游全超时时空转重试。
+const NEGATIVE_FOR: Duration = Duration::from_secs(30);
+
+/// 单条缓存：抓取时间、响应体，以及这次是不是失败。
 struct Cached {
     fetched_at: Instant,
     body: Value,
+    negative: bool,
 }
 
-/// 进程内缓存，挂在 [AppState] 上跨请求共享。key 是访客 IP。
+/// 进程内缓存。同一 IP 同时只有一个在途刷新。
 #[derive(Default)]
 pub struct WeatherCache {
     entries: HashMap<String, Cached>,
+    inflight: HashMap<String, Arc<OnceCell<Result<Value, String>>>>,
+    permits: Option<Arc<Semaphore>>,
 }
 
 pub type SharedCache = Arc<Mutex<WeatherCache>>;
 
 pub fn new_cache() -> SharedCache {
-    Arc::new(Mutex::new(WeatherCache::default()))
+    Arc::new(Mutex::new(WeatherCache {
+        entries: HashMap::new(),
+        inflight: HashMap::new(),
+        permits: Some(Arc::new(Semaphore::new(8))),
+    }))
 }
 
 /// 把 reqwest 等错误的 source 链摊平成一行，方便在日志里看到
@@ -57,19 +68,43 @@ fn error_chain(error: &dyn Error) -> String {
     chain.join(": ")
 }
 
+/// `GET /api/client/place`。只返回访客 IP 对应的坐标，给菜单圆框里的地图用。
+/// 本地回环地址没有公网位置，`located` 为 false，前端再改用浏览器侧定位。
+pub async fn place(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let ip = client_ip(&headers);
+    let fallback = json!({
+        "lat": FALLBACK_LAT,
+        "lon": FALLBACK_LON,
+        "city": FALLBACK_CITY,
+        "region": FALLBACK_REGION,
+        "located": false,
+    });
+    if is_private_ip(&ip) {
+        return Json(fallback).into_response();
+    }
+    match fetch_geo(&state, &ip).await {
+        Ok(geo) => Json(json!({
+            "lat": geo.lat,
+            "lon": geo.lon,
+            "city": geo.city,
+            "region": geo.region,
+            "located": true,
+        }))
+        .into_response(),
+        Err(error) => {
+            tracing::warn!(%error, "client place lookup failed");
+            Json(fallback).into_response()
+        }
+    }
+}
+
 /// `GET /api/weather`。拿不到定位或天气时返回 502，前端自行隐藏挂件。
 pub async fn get(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let ip = client_ip(&headers);
-    if let Some(cached) = fresh_cached(&state, &ip) {
-        return Json(cached).into_response();
-    }
-    match fetch_weather(&state, &ip).await {
-        Ok(body) => {
-            store(&state, &ip, body.clone());
-            Json(body).into_response()
-        }
+    match resolve(&state, &ip).await {
+        Ok(body) => Json(body).into_response(),
         Err(error) => {
-            tracing::warn!(%error, "weather lookup failed");
+            tracing::warn!(%error, deadline = "background", "weather lookup failed");
             fail(
                 StatusCode::BAD_GATEWAY,
                 "WEATHER_UNAVAILABLE",
@@ -79,37 +114,99 @@ pub async fn get(State(state): State<AppState>, headers: HeaderMap) -> Response 
     }
 }
 
+async fn resolve(state: &AppState, ip: &str) -> Result<Value, String> {
+    if let Some(hit) = fresh_cached(state, ip) {
+        return hit;
+    }
+    let flight = {
+        let mut cache = state
+            .weather_cache
+            .lock()
+            .map_err(|_| "weather cache locked".to_string())?;
+        cache
+            .inflight
+            .entry(ip.to_string())
+            .or_insert_with(|| Arc::new(OnceCell::new()))
+            .clone()
+    };
+    let permits = state
+        .weather_cache
+        .lock()
+        .ok()
+        .and_then(|cache| cache.permits.clone());
+    let result = flight
+        .get_or_init(|| async {
+            let permit = match &permits {
+                Some(permits) => tokio::time::timeout(
+                    state.cfg.timeouts.weather,
+                    permits.clone().acquire_owned(),
+                )
+                .await
+                .ok()
+                .and_then(Result::ok),
+                None => None,
+            };
+            if permits.is_some() && permit.is_none() {
+                return Err("weather busy".into());
+            }
+            let result = fetch_weather(state, ip).await;
+            drop(permit);
+            result
+        })
+        .await
+        .clone();
+    if let Ok(mut cache) = state.weather_cache.lock() {
+        cache.inflight.remove(ip);
+        match &result {
+            Ok(body) => insert_cached(&mut cache, ip, body.clone(), false),
+            Err(_) => insert_cached(&mut cache, ip, json!({}), true),
+        }
+    }
+    result
+}
+
 /// 只读缓存，不发网络请求。
-fn fresh_cached(state: &AppState, ip: &str) -> Option<Value> {
+fn fresh_cached(state: &AppState, ip: &str) -> Option<Result<Value, String>> {
     let cache = state.weather_cache.lock().ok()?;
     let entry = cache.entries.get(ip)?;
-    if entry.fetched_at.elapsed() < FRESH_FOR {
-        Some(entry.body.clone())
-    } else {
-        None
+    let age = entry.fetched_at.elapsed();
+    if entry.negative && age < NEGATIVE_FOR {
+        return Some(Err("weather negative cache".into()));
+    }
+    if !entry.negative && age < FRESH_FOR {
+        return Some(Ok(entry.body.clone()));
+    }
+    None
+}
+
+fn insert_cached(cache: &mut WeatherCache, ip: &str, body: Value, negative: bool) {
+    if cache.entries.len() > 4096 {
+        cache.entries.clear();
+    }
+    cache.entries.insert(
+        ip.to_string(),
+        Cached {
+            fetched_at: Instant::now(),
+            body,
+            negative,
+        },
+    );
+}
+
+async fn within<T>(
+    limit: Duration,
+    work: impl std::future::Future<Output = Result<T, String>>,
+) -> Result<T, String> {
+    match tokio::time::timeout(limit, work).await {
+        Ok(result) => result,
+        Err(_) => Err("upstream timed out".into()),
     }
 }
 
-fn store(state: &AppState, ip: &str, body: Value) {
-    if let Ok(mut cache) = state.weather_cache.lock() {
-        // 天气接口不分用户，key 空间不会无限膨胀；保险起见上限兜底。
-        if cache.entries.len() > 4096 {
-            cache.entries.clear();
-        }
-        cache.entries.insert(
-            ip.to_string(),
-            Cached {
-                fetched_at: Instant::now(),
-                body,
-            },
-        );
-    }
-}
-
-/// 先查 IP 坐标，再查坐标天气，拼成挂件需要的 JSON。
 async fn fetch_weather(state: &AppState, ip: &str) -> Result<Value, String> {
-    let geo = fetch_geo(state, ip).await?;
-    let weather = fetch_current_weather(state, geo.lat, geo.lon, &geo.city).await?;
+    let limit = state.cfg.timeouts.weather;
+    let geo = within(limit, fetch_geo(state, ip)).await?;
+    let weather = fetch_current_weather(state, geo.lat, geo.lon, &geo.city, limit).await?;
     Ok(json!({
         "city": geo.city,
         "region": geo.region,
@@ -162,7 +259,7 @@ async fn fetch_geo(state: &AppState, ip: &str) -> Result<Geo, String> {
         .http
         .get(&url)
         .header("User-Agent", "taozhiyy-weather/1.0")
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(4))
         .send()
         .await
         .map_err(|error| error_chain(&error))?;
@@ -202,20 +299,34 @@ async fn fetch_geo(state: &AppState, ip: &str) -> Result<Geo, String> {
     })
 }
 
-/// Open-Meteo 免费无 key，开源，支持直接按经纬度查实况天气。
-/// 网络不通时（比如国内访问欧洲节点不稳定）自动退到 wttr.in 兜底。
+/// Open-Meteo 和 wttr.in 同时开查，各自 4 秒截止。
+/// Open-Meteo 先成功就采用它并取消备用源；失败则用已经在跑的 wttr.in。
 async fn fetch_current_weather(
     state: &AppState,
     lat: f64,
     lon: f64,
     city: &str,
+    limit: Duration,
 ) -> Result<CurrentWeather, String> {
-    match fetch_open_meteo(state, lat, lon).await {
-        Ok(weather) => Ok(weather),
-        Err(primary_error) => {
-            tracing::warn!(%primary_error, "open-meteo failed; falling back to wttr.in");
-            fetch_wttr(state, city, lat, lon).await
-        }
+    let primary = within(limit, fetch_open_meteo(state, lat, lon));
+    let fallback = within(limit, fetch_wttr(state, city, lat, lon));
+    tokio::pin!(primary);
+    tokio::pin!(fallback);
+    tokio::select! {
+        result = &mut primary => match result {
+            Ok(weather) => Ok(weather),
+            Err(primary_error) => {
+                tracing::warn!(%primary_error, "open-meteo failed; using wttr.in");
+                fallback.await
+            }
+        },
+        result = &mut fallback => match result {
+            Ok(weather) => match primary.await {
+                Ok(preferred) => Ok(preferred),
+                Err(_) => Ok(weather),
+            },
+            Err(_) => primary.await,
+        },
     }
 }
 
@@ -227,7 +338,7 @@ async fn fetch_open_meteo(state: &AppState, lat: f64, lon: f64) -> Result<Curren
         .http
         .get(&url)
         .header("User-Agent", "taozhiyy-weather/1.0")
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(4))
         .send()
         .await
         .map_err(|error| error_chain(&error))?;
@@ -279,7 +390,7 @@ async fn fetch_wttr(
         .http
         .get(&url)
         .header("User-Agent", "taozhiyy-weather/1.0")
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(4))
         .send()
         .await
         .map_err(|error| error_chain(&error))?;
@@ -354,7 +465,7 @@ fn weather_description(code: i64) -> &'static str {
         66 | 67 => "冻雨",
         71 | 73 | 75 => "雪",
         77 => "雪粒",
-        80 | 81 | 82 => "阵雨",
+        80..=82 => "阵雨",
         85 | 86 => "阵雪",
         95 => "雷阵雨",
         96 | 99 => "雷阵雨伴冰雹",

@@ -46,6 +46,6 @@ fn guestbook_owner_mail_names_the_channel() {
     );
     let body = owner_body(&notice);
     assert!(body.contains("友链留言"));
-    assert!(body.contains("https://taozhiyy.top/friends"));
+    assert!(body.contains("https://www.miku.coffee/friends"));
     assert!(body.contains("想换友链"));
 }

@@ -10,6 +10,7 @@ import WeatherBadge from "./WeatherBadge";
 import SiteSearch from "./SiteSearch";
 import { LuCommand, LuImages, LuLogIn } from "react-icons/lu";
 import SiteConsole from "./site-console/SiteConsole";
+import WhereOverlay from "./WhereOverlay";
 import "./cover-picker/cover-entry.css";
 
 const navLinks = [
@@ -22,6 +23,7 @@ const navLinks = [
   { label: "建站日志", to: "/build" },
   { label: "星空馆", to: "/projects" },
   { label: "Friends", to: "/friends", end: true },
+  { label: "你在哪里？", action: "where" },
 ];
 
 const DRAWER_MS = 220;
@@ -52,6 +54,8 @@ const NavBar = () => {
   const [drawerMounted, setDrawerMounted] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [consoleOpen, setConsoleOpen] = useState(false);
+  const [whereOpen, setWhereOpen] = useState(false);
+  const [whereWarm, setWhereWarm] = useState(false);
 
   const audioElementRef = useRef(null);
   const navContainerRef = useRef(null);
@@ -75,6 +79,17 @@ const NavBar = () => {
       if (pathname !== "/") navigate("/?cover=select");
       else window.dispatchEvent(new CustomEvent("showHeroPreview"));
     });
+  };
+
+  const primeWhere = () => setWhereWarm(true);
+
+  const openWhere = () => {
+    setWhereWarm(true);
+    setDrawerVisible(false);
+    setMobileOpen(false);
+    setDrawerMounted(false);
+    document.body.style.overflow = "";
+    setWhereOpen(true);
   };
 
   const openConsole = () => {
@@ -292,6 +307,21 @@ const NavBar = () => {
   };
 
   const renderDesktopLink = (item) => {
+    if (item.action === "where") {
+      return (
+        <button
+          key={item.label}
+          type="button"
+          className={desktopLinkClass(whereOpen)}
+          aria-haspopup="dialog"
+          aria-expanded={whereOpen}
+          onPointerDown={primeWhere}
+          onClick={openWhere}
+        >
+          {item.label}
+        </button>
+      );
+    }
     if (item.action === "console") {
       return (
         <button
@@ -330,6 +360,19 @@ const NavBar = () => {
 
   const renderMobileLink = (item) => {
     if (item.action === "console") return null;
+    if (item.action === "where") {
+      return (
+        <button
+          key={item.label}
+          type="button"
+          className={clsx("nav-mobile-link", `nav-mobile-link--${navTheme}`)}
+          onPointerDown={primeWhere}
+          onClick={openWhere}
+        >
+          {item.label}
+        </button>
+      );
+    }
     if (item.href) {
       return (
         <a
@@ -536,6 +579,7 @@ const NavBar = () => {
         isAudioPlaying={isAudioPlaying}
         onToggleAudio={toggleAudioIndicator}
       />
+      <WhereOverlay open={whereOpen} warm={whereWarm} onClose={() => setWhereOpen(false)} />
     </>
   );
 };

@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { loadScopedJournalCss } from './src/subapps/journal/prefixJournalCss.js'
+import { loadWhereMenuCss } from './src/where/scopeWhereCss.js'
 
 const journalStylesId = 'virtual:journal-scoped.css'
+const whereMenuStylesId = 'virtual:where-menu.css'
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const aiAssistantDir = join(repoRoot, 'shared', 'ai-assistant')
@@ -39,6 +41,75 @@ function galleryPublicAssets() {
       const outDir = join(fileURLToPath(new URL('.', import.meta.url)), 'dist')
       cpSync(join(galleryPublicDir, 'covers'), join(outDir, 'covers'), { recursive: true })
       cpSync(join(galleryPublicDir, 'thumbs'), join(outDir, 'thumbs'), { recursive: true })
+    },
+  }
+}
+
+function clientPlaceFallback() {
+  return {
+    name: 'client-place-fallback',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const path = (req.url || '').split('?')[0]
+        if (req.method !== 'GET' || path !== '/api/client/place') {
+          next()
+          return
+        }
+        const send = (body) => {
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+          res.end(JSON.stringify(body))
+        }
+        try {
+          const upstream = await fetch('http://127.0.0.1:8080/api/client/place', {
+            signal: AbortSignal.timeout(800),
+          })
+          if (upstream.ok) {
+            const data = await upstream.json()
+            if (data?.located) {
+              send(data)
+              return
+            }
+          }
+        } catch {
+          // 本地 API 没开，改用这台机器的出口 IP。
+        }
+        try {
+          const geo = await fetch(
+            'http://ip-api.com/json/?lang=zh-CN&fields=status,lat,lon,city,regionName',
+            { signal: AbortSignal.timeout(8000) },
+          )
+          const data = await geo.json()
+          if (data?.status === 'success' && Number.isFinite(data.lat) && Number.isFinite(data.lon)) {
+            send({
+              lat: data.lat,
+              lon: data.lon,
+              city: data.city || '',
+              region: data.regionName || '',
+              located: true,
+            })
+            return
+          }
+        } catch {
+          // 交给后面的 /api 代理。
+        }
+        next()
+      })
+    },
+  }
+}
+
+function whereMenuStyles() {
+  const file = join(repoRoot, 'endfield_menu', 'src', 'styles.css')
+  return {
+    name: 'where-menu-styles',
+    resolveId(id) {
+      if (id === whereMenuStylesId) return `\0${id}`
+    },
+    async load(id) {
+      if (id !== `\0${whereMenuStylesId}`) return null
+      this.addWatchFile(file)
+      return loadWhereMenuCss(file)
     },
   }
 }
@@ -77,7 +148,7 @@ function aiAssistantDevAssets() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), scopedJournalStyles(), aiAssistantDevAssets(), galleryPublicAssets()],
+  plugins: [react(), scopedJournalStyles(), whereMenuStyles(), clientPlaceFallback(), aiAssistantDevAssets(), galleryPublicAssets()],
   server: {
     fs: {
       allow: [repoRoot],

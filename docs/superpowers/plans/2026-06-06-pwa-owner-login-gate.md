@@ -35,4 +35,4 @@
 - [ ] Run focused Node tests.
 - [ ] Build `main`.
 - [ ] Upload build output to the server.
-- [ ] Verify `app.taozhiyy.top` requires owner login and `taozhiyy.top` remains public.
+- [ ] Verify `app.taozhiyy.top` requires owner login and `www.miku.coffee` remains public.

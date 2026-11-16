@@ -155,3 +155,62 @@ export async function uploadOwnerImage(file) {
   });
   return parseResponse(res);
 }
+
+function ownerJson(url, method, payload) {
+  return fetch(url, {
+    method,
+    credentials: "include",
+    headers: {
+      ...JSON_HEADERS,
+      ...(payload ? { "Content-Type": "application/json" } : {}),
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
+  }).then(parseResponse);
+}
+
+export function deleteOwnerEntry(id, kind) {
+  return ownerJson(
+    `/api/owner/content/${encodeURIComponent(id)}?kind=${encodeURIComponent(kind)}`,
+    "DELETE",
+  );
+}
+
+export function publishOwnerJournal(payload) {
+  return ownerJson("/api/owner/journal", "POST", payload);
+}
+
+export function deleteOwnerJournal(slug) {
+  return ownerJson(`/api/owner/journal?slug=${encodeURIComponent(slug)}`, "DELETE");
+}
+
+export function deleteOwnerGalleryImage(payload) {
+  return ownerJson("/api/owner/gallery/images", "DELETE", payload);
+}
+
+export function deleteOwnerMoment(payload) {
+  return ownerJson("/api/owner/moments", "DELETE", payload);
+}
+
+export function publishOwnerAbout(payload) {
+  return ownerJson("/api/owner/about", "POST", payload);
+}
+
+export function deleteOwnerAbout(id) {
+  return ownerJson("/api/owner/about", "DELETE", { id });
+}
+
+export function publishOwnerBili(payload) {
+  return ownerJson("/api/owner/bili", "POST", payload);
+}
+
+export function deleteOwnerBili(bvid) {
+  return ownerJson("/api/owner/bili", "DELETE", { bvid });
+}
+
+export function publishOwnerProject(payload) {
+  return ownerJson("/api/owner/projects", "POST", payload);
+}
+
+export function deleteOwnerProject(id) {
+  return ownerJson("/api/owner/projects", "DELETE", { id });
+}

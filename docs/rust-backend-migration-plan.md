@@ -1,4 +1,4 @@
-# taozhiyy.top 迁移方案 v3：单一 Vercel 项目 + 单一 SPA + Rust Axum 后端
+# www.miku.coffee 迁移方案 v3：单一 Vercel 项目 + 单一 SPA + Rust Axum 后端
 
 > v3 核心变化：**不再有四个独立前端**。文章（/blog）、建站日志（/build）、星空馆（/projects）全部并入 main 这一个 SPA 的路由，跳转是客户端路由切换，不再是独立 HTML 文档。
 > 后端不变：Rust Axum 作为同一 Vercel 项目里的 serverless 函数；数据库 Supabase Postgres；媒体 Cloudflare R2；缓存/定时/检索用 Upstash Redis / QStash / Vector。
@@ -21,7 +21,7 @@
 
 ## 1. 目标形态
 
-一个 Vercel 项目，域名 `taozhiyy.top`，路径即目录：
+一个 Vercel 项目，域名 `www.miku.coffee`，路径即目录：
 
 | 路径 | 内容 | 来源 |
 |---|---|---|
@@ -34,7 +34,7 @@
 
 ```mermaid
 flowchart LR
-  U[用户] --> V[Vercel 项目 taozhiyy.top]
+  U[用户] --> V[Vercel 项目 www.miku.coffee]
   subgraph V[单一 Vercel 项目]
     S1[/ 静态: main SPA/] 
     S2[/blog 静态: Hexo/]
@@ -148,13 +148,13 @@ cargo release 构建 + 三次 `npm ci`（main / blog / build）+ hexo generate�
 | `/api/v1/health` | DB / Redis / R2 / Vector 轻量探针 |
 | `/api/chat`、`/api/chat/stats` | DeepSeek SSE 流式透传；配额改 Redis 原子计数，统计每日落 PG |
 | `/api/ai/image`、`/api/ai/image/gallery` | 结果写 R2；长任务用 QStash 异步 + 回调（幂等键=任务 ID） |
-| `/api/auth/**` | 会话存 Upstash Redis，cookie 域 `taozhiyy.top`（单域下比 v1 更简单） |
+| `/api/auth/**` | 会话存 Upstash Redis，cookie 域 `www.miku.coffee`（单域下比 v1 更简单） |
 | `/api/guestbook/**` | Postgres 表 + IP/UA 哈希审计，邮件见风险 7 |
 | `/api/owner/**` | GitHub Contents API 写回不变；**新增** `/api/owner/uploads/presign` 发 R2 预签名 PUT，浏览器直传（绕开 4.5 MB 请求体限制）；COS SDK 删除 |
 | `/api/v1/bangumi/list`、`/api/v1/radar/feed`、`/api/v1/bili/videos` | 读 Redis 缓存，miss 回源 PG；写路径由 QStash 调度 |
 | `/api/v1/sync/trigger` | QStash 调度调用，校验 `Upstash-Signature` |
 | `/api/v1/wallpapers/draw` | 壁纸池迁 PG |
-| `/api/v1/acg/image/**` | 退役，改 `images.taozhiyy.top`（R2 自定义域 + Cloudflare 缓存）直出，替代 nginx cos-cache |
+| `/api/v1/acg/image/**` | 退役，改 `fs.964643.xyz`（R2 自定义域 + Cloudflare 缓存）直出，替代 nginx cos-cache |
 | `/api/server/info`、`/api/client/network` | 逻辑保留，出网 IP 假设需重写 |
 | 每日缓存清理 | QStash 每日 → `/api/internal/maintenance` |
 | 安全审计 / CORS / 限流 | 同 v1：PG `jsonb` 审计、CorsLayer、Upstash 滑窗 |
@@ -199,9 +199,9 @@ key 规划同 v1：`session:*`（登录态）、`rl:*`（限流）、`cache:bang
 
 1. T-24h：SQLite 快照；通知留言板维护窗口；DNS TTL 降到 60s。
 2. T-0：冻结写（留言只读、控制台暂停发布）。
-3. 增量迁移：`sqlite3` 导出 JSON → `COPY` 进 Supabase（时间戳统一 UTC；`ai_images` 等旧 COS URL 批量替换为 `images.taozhiyy.top`）；`rclone copy` 文件到 R2 桶（key 布局保持与旧 `data/cache` 一致）。
+3. 增量迁移：`sqlite3` 导出 JSON → `COPY` 进 Supabase（时间戳统一 UTC；`ai_images` 等旧 COS URL 批量替换为 `fs.964643.xyz`）；`rclone copy` 文件到 R2 桶（key 布局保持与旧 `data/cache` 一致）。
 4. 校验：逐表行数、抽样 URL 200、随机打开 50 条媒体。
-5. DNS：`taozhiyy.top` 一次性指向 Vercel 项目（**一笔切换，整个站点含 API 同步生效**）。
+5. DNS：`www.miku.coffee` 一次性指向 Vercel 项目（**一笔切换，整个站点含 API 同步生效**）。
 6. 验收：首页、三个新导航跳转、留言、登录、chat 流式、预签名上传、搜索、QStash 三个任务各触发一次。
 7. 解除冻结；T+48h 停 UCloud 服务器（保留一周再退役）。
 

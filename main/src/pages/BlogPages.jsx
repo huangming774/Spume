@@ -5,12 +5,16 @@ import "highlight.js/styles/atom-one-dark.css";
 import "../subapps/blog/blog.css";
 import { renderPostBody } from "../subapps/blog/renderPost.js";
 import { findPost, postPath, posts } from "../subapps/blog/posts.js";
+import { asPosts, useEntries } from "../lib/siteEntries";
 
 function formatDate(value) {
   return String(value || "").slice(0, 10);
 }
 
 export function BlogIndexPage() {
+  const { items: articleEntries } = useEntries("article");
+  const published = asPosts(articleEntries);
+  const visible = [...published, ...posts];
   useEffect(() => {
     const previous = document.title;
     document.title = "文章 · Spume";
@@ -26,7 +30,8 @@ export function BlogIndexPage() {
         <h1>文章</h1>
         <p className="site-blog-lead">学习笔记、项目记录和随手写下的东西。</p>
         <div className="site-blog-list">
-          {posts.map((post) => (
+          {visible.length ? null : <p className="site-blog-lead">还没有文章。</p>}
+          {visible.map((post) => (
             <Link key={post.slug} className="site-blog-card" to={postPath(post.slug)}>
               <div className="site-blog-meta">
                 <time dateTime={formatDate(post.date)}>{formatDate(post.date)}</time>
@@ -45,7 +50,14 @@ export function BlogIndexPage() {
 export function BlogPostPage() {
   const params = useParams();
   const splat = params["*"] || "";
-  const post = useMemo(() => findPost(splat), [splat]);
+  const { items: articleEntries, loaded } = useEntries("article");
+  const published = asPosts(articleEntries);
+  const post = useMemo(() => {
+    const fromFile = findPost(splat);
+    if (fromFile) return fromFile;
+    const slug = decodeURIComponent(splat || "").split("/").filter(Boolean).at(-1) || "";
+    return published.find((item) => item.slug === slug.replace(/\.html$/, ""));
+  }, [published, splat]);
   const articleRef = useRef(null);
   const html = useMemo(() => (post ? renderPostBody(post.body) : ""), [post]);
 
@@ -64,6 +76,16 @@ export function BlogPostPage() {
   }, [html]);
 
   if (!splat) return <Navigate to="/blog" replace />;
+
+  if (!post && !loaded) {
+    return (
+      <section className="site-blog">
+        <div className="site-blog-wrap">
+          <p className="site-blog-lead">正在读取文章。</p>
+        </div>
+      </section>
+    );
+  }
 
   if (!post) {
     return (

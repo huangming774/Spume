@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { journalTo } from '../paths';
 import { Bilingual } from '../components/Bilingual';
 import { siteContent } from '../data/content';
+import { asJournal, useEntries } from '../../../../lib/siteEntries';
 import { useI18n } from '../i18n/I18nContext';
 import { useCardRandom } from '../hooks/useCardRandom';
 
@@ -25,9 +26,10 @@ function formatMd(isoDate: string) {
 
 export function ArchivesPage() {
   const { t } = useI18n();
+  const { items } = useEntries('journal');
 
   const entries = useMemo(() => {
-    const sorted = [...siteContent.articles].sort((a, b) => (a.date < b.date ? 1 : -1));
+    const sorted = [...asJournal(items), ...siteContent.articles].sort((a, b) => (a.date < b.date ? 1 : -1));
     const byYear = new Map<string, typeof sorted>();
     sorted.forEach((a) => {
       const y = a.date.slice(0, 4);
@@ -50,7 +52,7 @@ export function ArchivesPage() {
       });
     });
     return out;
-  }, []);
+  }, [items]);
 
   useCardRandom([entries.length]);
 

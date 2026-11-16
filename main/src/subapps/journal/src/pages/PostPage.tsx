@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { journalTo } from '../paths';
 import { Bilingual } from '../components/Bilingual';
 import { getArticle } from '../data/content';
+import { asJournal, useEntries } from '../../../../lib/siteEntries';
 import { useI18n } from '../i18n/I18nContext';
 
 function decorateCodeBlocks(root: HTMLElement, copyLabel: string, copiedLabel: string) {
@@ -47,7 +48,10 @@ function decorateCodeBlocks(root: HTMLElement, copyLabel: string, copiedLabel: s
 export function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const { lang, t } = useI18n();
-  const article = slug ? getArticle(slug) : undefined;
+  const { items, loaded } = useEntries('journal');
+  const article = slug
+    ? asJournal(items).find((item) => item.slug === slug) || getArticle(slug)
+    : undefined;
   const proseRef = useRef<HTMLDivElement>(null);
 
   const bodyHtml = useMemo(
@@ -63,6 +67,14 @@ export function PostPage() {
     if (!root || !article) return;
     decorateCodeBlocks(root, copyLabel, copiedLabel);
   }, [article, bodyHtml, copyLabel, copiedLabel]);
+
+  if (!article && !loaded) {
+    return (
+      <div className="page-main-inner">
+        <p className="page-lead">{lang === 'zh' ? '正在读取。' : 'Loading.'}</p>
+      </div>
+    );
+  }
 
   if (!article) {
     return (

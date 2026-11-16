@@ -9,7 +9,7 @@ const {
 
 test("normalizes noisy visible page text into a compact page context", () => {
   const context = buildPageContext({
-    pageUrl: "https://taozhiyy.top/about",
+    pageUrl: "https://www.miku.coffee/about",
     pageTitle: "About Taozhiyy",
     pagePath: "/about",
     language: "zh-CN",
@@ -28,7 +28,7 @@ test("normalizes noisy visible page text into a compact page context", () => {
 
 test("chat payload includes structured page context as evidence for the bot", () => {
   const context = buildPageContext({
-    pageUrl: "https://taozhiyy.top/about",
+    pageUrl: "https://www.miku.coffee/about",
     pageTitle: "About Taozhiyy",
     pagePath: "/about",
     visibleText: "这是关于页面的真实正文。",
@@ -37,7 +37,7 @@ test("chat payload includes structured page context as evidence for the bot", ()
   const payload = createChatPayload("这个页面有什么？", context);
 
   assert.equal(payload.message, "这个页面有什么？");
-  assert.equal(payload.pageUrl, "https://taozhiyy.top/about");
+  assert.equal(payload.pageUrl, "https://www.miku.coffee/about");
   assert.equal(payload.pageTitle, "About Taozhiyy");
   assert.equal(payload.pageContext.visibleText, "这是关于页面的真实正文。");
 });

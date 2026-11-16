@@ -1,6 +1,6 @@
 # 技术栈概览
 
-Spume（taozhiyy.top）由两部分组成：Rust 后端 `api/` 和合并后的前端 SPA `main/`。
+Spume（www.miku.coffee）由两部分组成：Rust 后端 `api/` 和合并后的前端 SPA `main/`。
 这里只列技术选型，架构和部署细节见 [DOCKER.md](../deploy/DOCKER.md)。
 
 ## 后端 · `api/`（Rust）

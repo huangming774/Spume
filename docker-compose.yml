@@ -10,7 +10,7 @@
 # （从 api/.env.example 复制后填写），通过 env_file 注入 api 容器。
 # 数据库是外部托管的 Postgres（如 Supabase），不在本编排里起 db 容器。
 #
-# TLS 证书：默认从宿主机 /etc/letsencrypt/live/taozhiyy.top 挂载（certbot
+# TLS 证书：默认从宿主机 /etc/letsencrypt/live/www.miku.coffee 挂载（certbot
 # 在宿主机上签发/续期）。本地测试想用自签证书时：
 #   TLS_CERT_DIR=./deploy/docker/certs docker compose up -d
 
@@ -50,7 +50,7 @@ services:
       - "443:443"
     volumes:
       # TLS 证书：fullchain.pem / privkey.pem 放在这个目录下。
-      - ${TLS_CERT_DIR:-/etc/letsencrypt/live/taozhiyy.top}:/etc/nginx/certs:ro
+      - ${TLS_CERT_DIR:-/etc/letsencrypt/live/www.miku.coffee}:/etc/nginx/certs:ro
       # certbot --webroot 验证目录（宿主机跑 certbot 时用 -w 指向
       # ./deploy/docker/cert-webroot 的宿主机绝对路径，比如 /opt/taozhiyy/deploy/docker/cert-webroot，
       # 对应容器内 nginx.conf 里 /.well-known/acme-challenge/ 的 root）。

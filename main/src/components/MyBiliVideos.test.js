@@ -21,15 +21,18 @@ test("owner video cards render real content and never preload an iframe", async 
     const { default: MyBiliVideos } = await server.ssrLoadModule(
       "/src/components/MyBiliVideos.jsx",
     );
-    const { ownerVideos } = await server.ssrLoadModule(
-      "/src/data/biliOwnerVideos.js",
-    );
+    const sampleVideo = {
+      bvid: "BV1jK7W6MEAj",
+      title: "sample",
+      description: "VibeCoding",
+      cover: "https://i0.hdslb.com/bfs/archive/sample.jpg",
+      publishedAt: "2026-06-27T16:04:10.000Z",
+      duration: "04:36",
+    };
     const initial = renderToStaticMarkup(createElement(MyBiliVideos));
     assert.match(initial, /我的视频/);
-    assert.match(initial, /data-layout="single"/);
-    assert.match(initial, /data-video-bvid="BV1jK7W6MEAj"/);
-    assert.match(initial, /loading="lazy"/);
-    assert.match(initial, /VibeCoding/);
+    assert.match(initial, /data-layout="empty"/);
+    assert.match(initial, /还没有公开的视频/);
     assert.doesNotMatch(initial, /<iframe/);
     for (const [count, layout] of [
       [0, "empty"],
@@ -37,7 +40,7 @@ test("owner video cards render real content and never preload an iframe", async 
       [7, "collection"],
     ]) {
       const videos = Array.from({ length: count }, (_, index) => ({
-        ...ownerVideos[0],
+        ...sampleVideo,
         bvid: `BV1jK7W6MEA${index}`,
       }));
       const html = renderToStaticMarkup(
@@ -53,7 +56,7 @@ test("owner video cards render real content and never preload an iframe", async 
     }
     const unsafe = renderToStaticMarkup(
       createElement(MyBiliVideos, {
-        videos: [{ ...ownerVideos[0], bvid: "javascript:alert(1)" }],
+        videos: [{ ...sampleVideo, bvid: "javascript:alert(1)" }],
       }),
     );
     assert.doesNotMatch(unsafe, /data-video-bvid=|javascript:/);

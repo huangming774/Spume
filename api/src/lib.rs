@@ -22,16 +22,20 @@ mod r2;
 pub mod rate_limit;
 mod routes;
 pub mod search_hits;
+pub mod site_records;
+pub mod site_store;
 pub mod sync_auth;
 pub mod wallpaper;
 mod wbi;
 mod weather;
 
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use serde_json::Value;
 use sqlx::PgPool;
+use tracing::Instrument;
 
 pub use config::Config;
 use rate_limit::RateGate;
@@ -53,12 +57,20 @@ pub struct AppState {
     pub ai_model: ai_model::SharedCache,
     /// 导航栏天气缓存。见 [weather]。
     pub weather_cache: weather::SharedCache,
+    /// 最近一次健康快照。登录页不现算。
+    pub health_cache: Arc<Mutex<Option<(Instant, Value)>>>,
 }
 
 impl AppState {
     pub async fn connect(cfg: Config) -> Self {
         let db = if let Some(url) = cfg.database_url.clone() {
-            match db::connect(&url).await {
+            match db::connect(
+                &url,
+                cfg.timeouts.db_acquire,
+                cfg.timeouts.db_statement,
+            )
+            .await
+            {
                 Ok(pool) => {
                     match account::ensure_owner(&pool, &cfg.owner_email).await {
                         Ok(account::OwnerSeed::Created) => {
@@ -90,7 +102,7 @@ impl AppState {
             tracing::warn!("DATABASE_URL is empty; persistence is disabled");
             None
         };
-        Self::new(cfg, db, reqwest::Client::new())
+        Self::new(cfg, db, http_client())
     }
 
     /// 组装进程状态。限流窗口和 Go 版一致：聊天 20 次/分钟，生图 6 次/分钟，图库 60 次/分钟，账号 15 次/分钟。
@@ -107,10 +119,50 @@ impl AppState {
             sync_running: Arc::new(AtomicBool::new(false)),
             ai_model: ai_model::new_cache(),
             weather_cache: weather::new_cache(),
+            health_cache: Arc::new(Mutex::new(None)),
         }
     }
 }
 
 pub fn router(state: AppState) -> axum::Router {
     routes::router(state)
+}
+
+fn http_client() -> reqwest::Client {
+    match reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(1))
+        .pool_idle_timeout(Duration::from_secs(30))
+        .pool_max_idle_per_host(8)
+        .build()
+    {
+        Ok(client) => client,
+        Err(error) => {
+            tracing::warn!(%error, "http client used default settings");
+            reqwest::Client::new()
+        }
+    }
+}
+
+/// 后台刷新健康快照。任务 panic 只记日志，下一轮 interval 继续。
+pub fn spawn_background(state: AppState) {
+    let span = tracing::info_span!("background.refresh", deadline = "background");
+    tokio::spawn(
+        async move {
+            let period = state.cfg.timeouts.health_refresh;
+            let mut tick = tokio::time::interval(period);
+            tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tick.tick().await;
+                let started = Instant::now();
+                let body = routes::health_snapshot(&state).await;
+                routes::store_health(&state, body);
+                tracing::info!(
+                    elapsed_ms = started.elapsed().as_millis() as u64,
+                    deadline = "background",
+                    "health snapshot refreshed"
+                );
+            }
+        }
+        .instrument(span),
+    );
 }

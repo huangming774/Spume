@@ -694,17 +694,13 @@ test("does not render moments as a separate homepage section", () => {
   assert.doesNotMatch(homePageSource, /MomentsHome/);
 });
 
-test("themes the seasonal page footers for their page palettes", () => {
+test("does not render the removed footer credits and social links", () => {
   const footerSource = readSource("components/Footer.jsx");
 
-  assert.match(footerSource, /spring:\s*\{/);
-  assert.match(footerSource, /summer:\s*\{/);
-  assert.match(footerSource, /autumn:\s*\{/);
-  assert.match(footerSource, /winter:\s*\{/);
-  assert.match(footerSource, /pathname\.startsWith\("\/about"\)/);
-  assert.match(footerSource, /pathname\.startsWith\("\/glimmer"\)/);
-  assert.match(footerSource, /pathname\.startsWith\("\/bili"\)/);
-  assert.match(footerSource, /pathname\.startsWith\("\/friends"\)/);
+  assert.doesNotMatch(footerSource, /@bistutzyy/);
+  assert.doesNotMatch(footerSource, /GitHub|Bilibili|Vercel/);
+  assert.doesNotMatch(footerSource, /nzc173236231@gmail\.com/);
+  assert.doesNotMatch(footerSource, /本站仅作学习使用，感谢开源/);
 });
 
 test("keeps quizcard report summary card from overlaying reviews on narrow screens", () => {

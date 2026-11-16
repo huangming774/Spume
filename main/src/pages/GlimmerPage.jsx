@@ -1,16 +1,20 @@
 import { Link } from "react-router-dom";
-import { galleryAlbums } from "../data/galleryAlbums";
-import { moments } from "../data/moments";
+import { asAlbums, asMoments, useEntries } from "../lib/siteEntries";
 
 const OCEAN_ASSET_BASE =
   "/seasonal/ocean";
 
 const momentDateTime = (moment) => {
-  const [month, day] = moment.date.split(".");
+  const [month = "1", day = "1"] = String(moment.date || "1.1").split(".");
   return `${moment.year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 };
 
-const GlimmerPage = () => (
+const GlimmerPage = () => {
+  const { items: galleryEntries } = useEntries("gallery");
+  const { items: momentEntries } = useEntries("moment");
+  const galleryAlbums = asAlbums(galleryEntries);
+  const moments = asMoments(momentEntries);
+  return (
   <div className="glimmer-page seasonal-page seasonal-page--summer">
     <div className="seasonal-scene seasonal-scene--summer" aria-hidden="true">
       <div className="summer-ocean-stage">
@@ -52,6 +56,7 @@ const GlimmerPage = () => (
         <span>Album Shelf</span>
       </div>
       <div className="glimmer-album-grid">
+        {galleryAlbums.length ? null : <p className="glimmer-empty">还没有相册。</p>}
         {galleryAlbums.map((album) => (
           <Link
             key={album.id}
@@ -74,6 +79,7 @@ const GlimmerPage = () => (
         <span>All Notes</span>
       </div>
       <div className="glimmer-notes-grid">
+        {moments.length ? null : <p className="glimmer-empty">还没有碎语。</p>}
         {moments.map((moment) => (
           <article
             key={`${moment.year}-${moment.date}-${moment.type}`}
@@ -100,6 +106,7 @@ const GlimmerPage = () => (
       </div>
     </section>
   </div>
-);
+  );
+};
 
 export default GlimmerPage;

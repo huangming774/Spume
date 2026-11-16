@@ -40,7 +40,7 @@ fn input<'a>(
 #[test]
 fn current_key_accepts_the_raw_body() {
     let body = r#"{"hello":"world"}"#;
-    let url = "https://taozhiyy.top/api/internal/sync/bili";
+    let url = "https://www.miku.coffee/api/internal/sync/bili";
     let signature = sign(body, "current-key", url, 1_700_000_000);
     assert_eq!(
         verify(&input(&signature, body, url, 1_700_000_000, "")),
@@ -50,7 +50,7 @@ fn current_key_accepts_the_raw_body() {
 
 #[test]
 fn changed_body_is_rejected() {
-    let url = "https://taozhiyy.top/api/internal/sync/bili";
+    let url = "https://www.miku.coffee/api/internal/sync/bili";
     let signature = sign("{}", "current-key", url, 1_700_000_000);
     assert_eq!(
         verify(&input(
@@ -66,7 +66,7 @@ fn changed_body_is_rejected() {
 
 #[test]
 fn wrong_destination_is_rejected() {
-    let url = "https://taozhiyy.top/api/internal/sync/bili";
+    let url = "https://www.miku.coffee/api/internal/sync/bili";
     let signature = sign("{}", "current-key", url, 1_700_000_000);
     assert_eq!(
         verify(&input(
@@ -82,7 +82,7 @@ fn wrong_destination_is_rejected() {
 
 #[test]
 fn expired_token_is_rejected_outside_tolerance() {
-    let url = "https://taozhiyy.top/api/internal/maintenance";
+    let url = "https://www.miku.coffee/api/internal/maintenance";
     let signature = sign("{}", "current-key", url, 1_700_000_000);
     let now = 1_700_000_000 + 300 + CLOCK_TOLERANCE_SECS + 1;
     assert_eq!(
@@ -93,7 +93,7 @@ fn expired_token_is_rejected_outside_tolerance() {
 
 #[test]
 fn next_key_is_accepted_during_rotation() {
-    let url = "https://taozhiyy.top/api/internal/sync/radar";
+    let url = "https://www.miku.coffee/api/internal/sync/radar";
     let signature = sign("{}", "next-key", url, 1_700_000_000);
     assert_eq!(
         verify(&input(&signature, "{}", url, 1_700_000_000, "next-key")),
@@ -105,10 +105,10 @@ fn next_key_is_accepted_during_rotation() {
 fn none_algorithm_is_rejected() {
     let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"none","typ":"JWT"}"#);
     let payload = URL_SAFE_NO_PAD
-        .encode(br#"{"iss":"Upstash","sub":"https://taozhiyy.top","exp":2,"nbf":1,"body":""}"#);
+        .encode(br#"{"iss":"Upstash","sub":"https://www.miku.coffee","exp":2,"nbf":1,"body":""}"#);
     let token = format!("{header}.{payload}.aa");
     assert_eq!(
-        verify(&input(&token, "", "https://taozhiyy.top", 1, "")),
+        verify(&input(&token, "", "https://www.miku.coffee", 1, "")),
         Err(QStashError::Malformed)
     );
 }

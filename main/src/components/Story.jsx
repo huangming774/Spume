@@ -163,7 +163,7 @@ const FloatingImage = () => {
                 </p>
                 <p className="story-envelope-signoff">
                   <span className="story-envelope-signoff-line">Live from:</span>
-                  <span className="story-envelope-signoff-name">taozhiyy.top</span>
+                  <span className="story-envelope-signoff-name">www.miku.coffee</span>
                 </p>
                 <Button
                   id="realm-btn"

@@ -25,7 +25,7 @@ class AiHealthcheckTests(unittest.TestCase):
         payload = ai_healthcheck.build_payload("请回复 OK，并说明当前服务正常")
 
         self.assertEqual(payload["message"], "请回复 OK，并说明当前服务正常")
-        self.assertEqual(payload["pageUrl"], "https://taozhiyy.top/")
+        self.assertEqual(payload["pageUrl"], "https://www.miku.coffee/")
         self.assertEqual(payload["pageTitle"], "AI Healthcheck")
         self.assertEqual(payload["pageContext"]["siteSection"], "healthcheck")
         self.assertIn("healthcheck", payload["pageContext"]["visibleText"])
@@ -63,7 +63,7 @@ class AiHealthcheckTests(unittest.TestCase):
             return FakeResponse()
 
         result = ai_healthcheck.post_healthcheck(
-            endpoint="https://taozhiyy.top/api/chat",
+            endpoint="https://www.miku.coffee/api/chat",
             message="请回复 OK，并说明当前服务正常",
             cookie="session_id=abc",
             timeout=12,
@@ -74,7 +74,7 @@ class AiHealthcheckTests(unittest.TestCase):
         self.assertEqual(result["status"], 200)
         self.assertEqual(calls[0][1], 12)
         request = calls[0][0]
-        self.assertEqual(request.full_url, "https://taozhiyy.top/api/chat")
+        self.assertEqual(request.full_url, "https://www.miku.coffee/api/chat")
         self.assertEqual(request.get_method(), "POST")
         self.assertEqual(request.get_header("User-agent"), "taozhiyy-ai-healthcheck")
         self.assertEqual(request.get_header("Cookie"), "session_id=abc")

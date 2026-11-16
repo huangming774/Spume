@@ -33,8 +33,8 @@ import {
 import {
   CONSOLE_FRAGMENTS,
   CONSOLE_QUICK_LINKS,
-  CONSOLE_UPDATES,
 } from "./consoleContent.js";
+import { asConsoleUpdates, loadRecentEntries } from "../../lib/siteEntries";
 import "./site-console.css";
 import "./console-themes.css";
 import ConsoleThemePicker from "./ConsoleThemePicker.jsx";
@@ -81,6 +81,7 @@ export default function SiteConsole({
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
   const feedRef = useRef(null);
+  const [updates, setUpdates] = useState([]);
   const returnFocusRef = useRef(null);
   const copyTimerRef = useRef(null);
   const lastThemeRef = useRef(null);
@@ -96,6 +97,17 @@ export default function SiteConsole({
       /* Keep rotation in memory when storage is blocked. */
     }
   }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    let active = true;
+    loadRecentEntries().then((items) => {
+      if (active) setUpdates(asConsoleUpdates(items));
+    });
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -177,7 +189,7 @@ export default function SiteConsole({
   const copySite = async () => {
     window.clearTimeout(copyTimerRef.current);
     try {
-      await navigator.clipboard.writeText("https://taozhiyy.top/");
+      await navigator.clipboard.writeText("https://www.miku.coffee/");
       setCopyState("已复制站点链接");
     } catch {
       setCopyState("暂时无法复制，请检查浏览器权限");
@@ -215,7 +227,7 @@ export default function SiteConsole({
               <LuCommand />
             </span>
             <div>
-              <span className="console-eyebrow">TAOZHIYO / CONTROL ROOM</span>
+              <span className="console-eyebrow">SPUME / CONTROL ROOM</span>
               <h2 id="site-console-title">
                 控制台<span className="console-title-dot">.</span>
               </h2>
@@ -258,7 +270,10 @@ export default function SiteConsole({
               aria-live="off"
               tabIndex={0}
             >
-              {CONSOLE_UPDATES.map((message) => (
+              {updates.length ? null : (
+                <p className="console-journal-empty">还没有更新。</p>
+              )}
+              {updates.map((message) => (
                 <article
                   className="console-journal-entry is-update"
                   key={message.id}
@@ -412,7 +427,7 @@ export default function SiteConsole({
           <Link className="console-site-address" to="/" onClick={onClose}>
             <LuFlower2 aria-hidden="true" />
             <span>
-              taozhiyo<small>taozhiyy.top</small>
+              spume<small>www.miku.coffee</small>
             </span>
           </Link>
           <div className="console-control-keys">

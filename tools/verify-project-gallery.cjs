@@ -25,7 +25,7 @@ const output=path.resolve(__dirname,'../previews/project-gallery/.qa');
     await page.waitForTimeout(1600);
     assert.equal(await page.title(),'奇想馆 · 项目星空');
     assert.match(await page.locator('.brand').innerText(),/^taozhiyo/);
-    assert.equal(await page.locator('.brand').getAttribute('href'),'https://taozhiyy.top/');
+    assert.equal(await page.locator('.brand').getAttribute('href'),'https://www.miku.coffee/');
     assert.equal(await page.locator('.preview-badge').count(),0);
     assert.ok(await page.locator('.dock-item img').evaluateAll(nodes=>nodes.every(n=>n.src.includes('/projects/thumbs/'))));
     const shot=await page.screenshot({path:path.join(output,'production-space.png')});

@@ -37,7 +37,7 @@ export function Layout() {
           <p>{zh ? '把每一次小小的创造，留给未来回望。' : 'Keeping the little things we make, for the days ahead.'}</p>
         </div>
         <div className="archive-footer-links">
-          <a href="/"><ArrowLeft size={15} />taozhiyy.top</a>
+          <a href="/"><ArrowLeft size={15} />www.miku.coffee</a>
           <button type="button" className="archive-icon-button"
             onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })}
             title={zh ? '回到顶部' : 'Back to top'} aria-label={zh ? '回到顶部' : 'Back to top'}><ArrowUp size={18} /></button>

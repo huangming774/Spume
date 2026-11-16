@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiCopy, FiExternalLink } from "react-icons/fi";
 
 import FriendsApplicationBoard from "../components/FriendsApplicationBoard";
 import { friendCards } from "../data/friendCards";
-import { cosAsset } from "../lib/cosAsset.js";
+import { defaultSiteAvatarUrl, siteAvatarFromProfile } from "../lib/siteAvatar.js";
 
-const siteAvatarUrl = cosAsset("1.png");
-const copyBlock = `name: Spume
+const buildSiteFriendCard = (avatarUrl) => `name: Spume
 desc: Spume的小屋
-url: https://taozhiyy.top
-avatar: ${siteAvatarUrl}`;
+url: https://www.miku.coffee
+avatar: ${avatarUrl}`;
 
 const winterSnowflakes = Array.from({ length: 42 }, (_, index) => {
   const left = (index * 17 + 5) % 100;
@@ -40,6 +39,21 @@ const friendAvatarInitial = (name = "") => {
 const FriendsPage = () => {
   const [copied, setCopied] = useState(false);
   const [failedFriendAvatars, setFailedFriendAvatars] = useState(() => new Set());
+  const [siteAvatarUrl, setSiteAvatarUrl] = useState(defaultSiteAvatarUrl);
+  const copyBlock = buildSiteFriendCard(siteAvatarUrl);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/site/avatar", { headers: { Accept: "application/json" } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setSiteAvatarUrl(siteAvatarFromProfile(data));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleFriendAvatarError = (name) => {
     setFailedFriendAvatars((current) => {
@@ -103,6 +117,9 @@ const FriendsPage = () => {
             </p>
           </div>
 
+          {friendCards.length ? null : (
+            <p className="mt-6 text-sm leading-7 text-[#6B7280]">还没有友链。可以在站长后台添加。</p>
+          )}
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {friendCards.map((friend) => {
               const avatarFailed = !friend.avatar || failedFriendAvatars.has(friend.name);

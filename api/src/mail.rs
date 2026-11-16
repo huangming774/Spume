@@ -220,9 +220,9 @@ fn channel_name(channel: &str) -> &'static str {
 
 fn channel_url(channel: &str) -> &'static str {
     if channel == "friends" {
-        "https://taozhiyy.top/friends"
+        "https://www.miku.coffee/friends"
     } else {
-        "https://taozhiyy.top/guestbook"
+        "https://www.miku.coffee/guestbook"
     }
 }
 

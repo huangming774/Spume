@@ -13,4 +13,7 @@ test("friend avatars avoid hotlink referers and fall back to a unified placehold
   assert.doesNotMatch(source, /data:image\/svg\+xml,/);
   assert.doesNotMatch(source, /currentTarget\.src = friendAvatarPlaceholder/);
   assert.doesNotMatch(source, /currentTarget\.src = siteAvatarUrl/);
+  assert.match(source, /\/api\/site\/avatar/);
+  assert.match(source, /defaultSiteAvatarUrl/);
+  assert.match(source, /siteAvatarFromProfile/);
 });

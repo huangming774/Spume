@@ -73,7 +73,7 @@ Canonical content:
 ```yaml
 name: Spume
 desc: Spume的小屋
-url: https://taozhiyy.top
+url: https://www.miku.coffee
 avatar: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png
 ```
 

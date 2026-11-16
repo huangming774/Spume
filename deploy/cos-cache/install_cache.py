@@ -101,8 +101,8 @@ def fetch(url, byte_range=None):
         headers = Path(directory) / "headers"
         body = Path(directory) / "body"
         args = ["curl", "--noproxy", "*", "--silent", "--show-error", "--fail", "--max-time", "20", "--dump-header", str(headers), "--output", str(body)]
-        if url.startswith("https://taozhiyy.top/"):
-            args += ["--resolve", "taozhiyy.top:443:127.0.0.1"]
+        if url.startswith("https://www.miku.coffee/"):
+            args += ["--resolve", "www.miku.coffee:443:127.0.0.1"]
         if byte_range:
             args += ["--range", byte_range]
         run(args + [url])
@@ -121,14 +121,14 @@ def fetch(url, byte_range=None):
 
 def verify():
     origin = fetch("https://fs.964643.xyz/1.png")
-    first = fetch("https://taozhiyy.top/cos/1.png")
-    second = fetch("https://taozhiyy.top/cos/1.png")
+    first = fetch("https://www.miku.coffee/cos/1.png")
+    second = fetch("https://www.miku.coffee/cos/1.png")
     if not (origin["sha256"] == first["sha256"] == second["sha256"] and second["cache"] == "HIT"):
         raise RuntimeError("Original-image hash or shared cache HIT verification failed")
-    query = fetch("https://taozhiyy.top/cos/1.png?v=taozhiyy-cache-check")
+    query = fetch("https://www.miku.coffee/cos/1.png?v=taozhiyy-cache-check")
     if query["cache"] != "BYPASS" or query["sha256"] != origin["sha256"]:
         raise RuntimeError("Query bypass verification failed")
-    video = fetch("https://taozhiyy.top/cos/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/main/videos/feature-1.mp4", "0-0")
+    video = fetch("https://www.miku.coffee/cos/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/main/videos/feature-1.mp4", "0-0")
     if not (
         video["status"] == 206
         and video["origin_status"] == "206"

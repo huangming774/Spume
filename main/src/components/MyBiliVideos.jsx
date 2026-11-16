@@ -10,10 +10,7 @@ import {
   LuX,
 } from "react-icons/lu";
 import { biliOwner, ownerVideos } from "../data/biliOwnerVideos.js";
-import {
-  getBiliOwnerFeed,
-  getBiliSyncNotice,
-} from "../services/biliOwnerApi.js";
+import { asVideos, useEntries } from "../lib/siteEntries";
 import {
   formatVideoDate,
   getBiliEmbedSrc,
@@ -158,37 +155,15 @@ function VideoCard({ video, onPlay }) {
 
 export default function MyBiliVideos({ videos }) {
   const [playingVideo, setPlayingVideo] = useState(null);
-  const [feed, setFeed] = useState({ owner: biliOwner, items: ownerVideos });
-  const [syncNotice, setSyncNotice] = useState("");
   const [visibleCount, setVisibleCount] = useState(6);
   const gridRef = useRef(null);
-  const sourceVideos = videos === undefined ? feed.items : videos;
-  const owner = videos === undefined ? feed.owner : biliOwner;
+  const { items } = useEntries("bili");
+  const managed = items.length ? asVideos(items) : ownerVideos;
+  const sourceVideos = videos === undefined ? managed : videos;
+  const owner = biliOwner;
   const publicVideos = (Array.isArray(sourceVideos) ? sourceVideos : []).filter(
     (video) => video && getBiliVideoHref(video.bvid),
   );
-
-  useEffect(() => {
-    if (videos !== undefined) return;
-    const controller = new AbortController();
-    let active = true;
-    getBiliOwnerFeed({ signal: controller.signal })
-      .then((result) => {
-        if (!active) return;
-        if (result.ready) {
-          setFeed(result);
-        }
-        setSyncNotice(getBiliSyncNotice(result));
-      })
-      .catch((error) => {
-        if (active && error.name !== "AbortError")
-          setSyncNotice("暂用已收录视频");
-      });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [videos]);
 
   useEffect(() => {
     setVisibleCount(6);
@@ -232,11 +207,6 @@ export default function MyBiliVideos({ videos }) {
           <LuArrowUpRight aria-hidden="true" />
         </a>
       </header>
-      {videos === undefined && syncNotice && (
-        <p className="owner-videos__sync-status" role="status">
-          {syncNotice}
-        </p>
-      )}
       <div
         ref={gridRef}
         className="owner-videos__grid"

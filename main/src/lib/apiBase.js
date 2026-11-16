@@ -1,4 +1,4 @@
-/** API root: set VITE_API_BASE in production (e.g. https://taozhiyy.top). */
+/** API root: set VITE_API_BASE in production (e.g. https://www.miku.coffee). */
 export const API_BASE = (import.meta.env?.VITE_API_BASE || "").replace(/\/$/, "");
 
 export const apiUrl = (path) => {

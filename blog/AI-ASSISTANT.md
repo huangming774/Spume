@@ -4,7 +4,7 @@
 
 ## 前端（全站共用）
 
-- 静态资源：`shared/ai-assistant/` → 部署到 `https://taozhiyy.top/ai-assistant/`
+- 静态资源：`shared/ai-assistant/` → 部署到 `https://www.miku.coffee/ai-assistant/`
 - 主站 `main/index.html`、`build/index.html`、博客 `_config.butterfly.yml` inject 均引用上述路径
 - 博客 **勿** 再开 Butterfly 的 Tidio/Chatra（`_config.butterfly.yml` → `chat.use` 留空），避免与全站小精灵重复
 - 打开面板会显示 **当前页面** 标题；发消息时附带 `pageUrl`、`pageTitle` 供模型理解上下文（不抓取整页 HTML）
@@ -63,7 +63,7 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 ## 部署检查
 
-1. `curl https://taozhiyy.top/api/chat` → JSON 含 `remaining`
+1. `curl https://www.miku.coffee/api/chat` → JSON 含 `remaining`
 2. 主站、`/blog/`、`/build/`、`/bili` 等页面右下角可见 **✦ 问问博客**
 3. 发消息能收到回复且次数递减；可问「我现在在看什么页面」验证上下文
 

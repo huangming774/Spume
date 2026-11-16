@@ -46,6 +46,6 @@ test("returns an unavailable gift instead of a local fallback in api-only mode",
   });
 
   assert.equal(result.url, "");
-  assert.equal(result.sourceUrl, "https://taozhiyy.top/api/v1/wallpapers/draw?source=api");
+  assert.equal(result.sourceUrl, "https://www.miku.coffee/api/v1/wallpapers/draw?source=api");
 });
 

@@ -4,7 +4,7 @@ use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, Multipart, OriginalUri, Path, Query, State};
 use axum::http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::de::DeserializeOwned;
@@ -49,6 +49,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/auth/profile", axum::routing::patch(auth_profile))
         .route("/api/auth/verify-security", post(auth_verify_security))
         .route("/api/auth/avatar", post(auth_avatar))
+        .route("/api/site/avatar", get(site_avatar))
         .route(
             "/api/guestbook/messages",
             get(guestbook_list).post(guestbook_create),
@@ -75,7 +76,10 @@ pub fn router(state: AppState) -> Router {
         .route("/api/ai/image/gallery", get(image_gallery))
         .route("/api/server/info", get(server_info))
         .route("/api/client/network", get(client_network))
+        .route("/api/client/place", get(crate::weather::place))
         .route("/api/weather", get(crate::weather::get))
+        .route("/api/content", get(content_recent))
+        .route("/api/content/{kind}", get(content_list))
         .route("/api/owner/status", get(owner_status))
         .route("/api/owner/emails", get(owner_emails))
         .route(
@@ -83,9 +87,33 @@ pub fn router(state: AppState) -> Router {
             get(owner_drafts).post(owner_draft_create),
         )
         .route("/api/owner/publish", post(owner_publish))
-        .route("/api/owner/gallery/images", post(owner_gallery))
+        .route("/api/owner/content/{id}", delete(owner_content_delete))
+        .route("/api/owner/posts", delete(owner_post_delete))
+        .route(
+            "/api/owner/journal",
+            post(owner_journal).delete(owner_journal_delete),
+        )
+        .route(
+            "/api/owner/gallery/images",
+            post(owner_gallery).delete(owner_gallery_delete),
+        )
         .route("/api/owner/friends", post(owner_friends))
-        .route("/api/owner/moments", post(owner_moments))
+        .route(
+            "/api/owner/moments",
+            post(owner_moments).delete(owner_moment_delete),
+        )
+        .route(
+            "/api/owner/about",
+            post(owner_about).delete(owner_about_delete),
+        )
+        .route(
+            "/api/owner/bili",
+            post(owner_bili).delete(owner_bili_delete),
+        )
+        .route(
+            "/api/owner/projects",
+            post(owner_project).delete(owner_project_delete),
+        )
         .route(
             "/api/owner/ai/fixed-answers",
             get(fixed_answers).post(fixed_answer_create),
@@ -262,10 +290,40 @@ fn clear_cookie(secure: bool) -> HeaderValue {
 }
 
 async fn health(State(state): State<AppState>) -> Json<Value> {
-    let db = match &state.db {
-        Some(pool) => sqlx::query("SELECT 1").execute(pool).await.is_ok(),
-        None => false,
+    if let Some(body) = fresh_health(&state) {
+        return Json(body);
+    }
+    let body = health_snapshot(&state).await;
+    store_health(&state, body.clone());
+    Json(body)
+}
+
+pub(crate) fn fresh_health(state: &AppState) -> Option<Value> {
+    let guard = state.health_cache.lock().ok()?;
+    let (fetched_at, body) = guard.as_ref()?;
+    if fetched_at.elapsed() < state.cfg.timeouts.health_refresh {
+        Some(body.clone())
+    } else {
+        None
+    }
+}
+
+pub(crate) fn store_health(state: &AppState, body: Value) {
+    if let Ok(mut guard) = state.health_cache.lock() {
+        *guard = Some((Instant::now(), body));
+    }
+}
+
+pub(crate) async fn health_snapshot(state: &AppState) -> Value {
+    let db_check = async {
+        match &state.db {
+            Some(pool) => sqlx::query("SELECT 1").execute(pool).await.is_ok(),
+            None => false,
+        }
     };
+    let db = tokio::time::timeout(Duration::from_secs(2), db_check)
+        .await
+        .unwrap_or_default();
     let redis_url = if state.cfg.redis_ready() {
         format!("{}/ping", state.cfg.redis_url.trim_end_matches('/'))
     } else {
@@ -276,20 +334,27 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
     } else {
         String::new()
     };
+    let probe_limit = Duration::from_secs(3);
     let (redis, vector, r2) = tokio::join!(
-        crate::jobs::probe(&state, &redis_url, &state.cfg.redis_token, false),
-        crate::jobs::vector_probe(&state),
-        crate::jobs::probe(&state, &r2_url, "", true),
+        tokio::time::timeout(
+            probe_limit,
+            crate::jobs::probe(state, &redis_url, &state.cfg.redis_token, false),
+        ),
+        tokio::time::timeout(probe_limit, crate::jobs::vector_probe(state)),
+        tokio::time::timeout(probe_limit, crate::jobs::probe(state, &r2_url, "", true)),
     );
+    let redis = redis.unwrap_or("down");
+    let vector = vector.unwrap_or("down");
+    let r2 = r2.unwrap_or("down");
     let ready = db && redis != "down" && vector != "down" && r2 != "down";
-    Json(json!({
+    json!({
         "status": if ready { "ok" } else { "degraded" },
         "uid": state.cfg.bilibili_uid,
         "db": if db { "up" } else { "down" },
         "redis": redis,
         "r2": r2,
         "vector": vector,
-    }))
+    })
 }
 
 #[derive(Deserialize)]
@@ -301,7 +366,20 @@ struct AuthBody {
 }
 
 async fn auth_me(State(state): State<AppState>, headers: HeaderMap) -> Json<Value> {
-    let Some(user) = session_user(&state, &headers).await else {
+    let limit = state.cfg.timeouts.session;
+    let started = Instant::now();
+    let user = match tokio::time::timeout(limit, session_user(&state, &headers)).await {
+        Ok(user) => user,
+        Err(_) => {
+            tracing::warn!(
+                elapsed_ms = started.elapsed().as_millis() as u64,
+                deadline = "critical",
+                "session lookup timed out"
+            );
+            None
+        }
+    };
+    let Some(user) = user else {
         return Json(json!({"loggedIn": false}));
     };
     Json(json!({
@@ -740,6 +818,26 @@ async fn auth_avatar(
         );
     }
     Json(json!({"ok": true, "user": {"id": user.id, "email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name), "avatar": public, "isOwner": user.is_owner}})).into_response()
+}
+
+async fn site_avatar(State(state): State<AppState>) -> Json<Value> {
+    let Some(pool) = state.db.as_ref() else {
+        return Json(json!({"avatar": ""}));
+    };
+    let avatar = match sqlx::query_scalar::<_, String>(
+        "SELECT avatar FROM users WHERE is_owner = true AND avatar <> '' ORDER BY id ASC LIMIT 1",
+    )
+    .fetch_optional(pool)
+    .await
+    {
+        Ok(Some(value)) if value.starts_with("http://") || value.starts_with("https://") => value,
+        Ok(_) => String::new(),
+        Err(error) => {
+            tracing::error!(error = %error, "site avatar lookup failed");
+            String::new()
+        }
+    };
+    Json(json!({"avatar": avatar}))
 }
 
 /// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。
@@ -1347,11 +1445,11 @@ async fn wallpaper_draw(
     } else {
         json!({
             "id": "fallback-archive",
-            "url": "https://images.taozhiyy.top/wallpapers/fallback.jpg",
-            "previewUrl": "https://images.taozhiyy.top/wallpapers/fallback.jpg",
+            "url": public_url(&state.cfg, "wallpapers/fallback.jpg"),
+            "previewUrl": public_url(&state.cfg, "wallpapers/fallback.jpg"),
             "source": "r2",
             "author": "taozhiyy",
-            "sourceUrl": "https://taozhiyy.top/",
+            "sourceUrl": "https://www.miku.coffee/",
             "licenseNote": "站点图池为空时的占位",
             "kind": "fallback",
             "status": "active",
@@ -2163,39 +2261,37 @@ async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery
     let today = Utc::now().date_naive();
     let since = today - chrono::Duration::days(days - 1);
     let (daily, hourly) = if let Some(pool) = state.db.as_ref() {
-        let daily = match sqlx::query_as::<_, (NaiveDate, i32, i32, i32, i32, i32, i32, i32)>(
-            "SELECT bucket, success, upstream_error, quota_denied, rate_denied, not_configured, guest_calls, user_calls FROM ai_chat_daily WHERE bucket >= $1 ORDER BY bucket",
-        )
-        .bind(since)
-        .fetch_all(pool)
-        .await
-        {
-            Ok(rows) => rows,
-            Err(error) => return query_failed(&error),
-        };
         let prefix = Utc::now().format("%Y-%m-%dT").to_string();
-        let hourly = match sqlx::query_as::<_, (String, i32, i32, i32, i32, i32)>(
-            "SELECT bucket, success, upstream_error, quota_denied, rate_denied, not_configured FROM ai_chat_hourly WHERE bucket LIKE $1 || '%' ORDER BY bucket",
-        )
-        .bind(&prefix)
-        .fetch_all(pool)
-        .await
-        {
-            Ok(rows) => rows,
-            Err(error) => return query_failed(&error),
-        };
-        let quota = match sqlx::query_as::<_, (NaiveDate, i64, i64, i64)>(
-            "SELECT quota_date, COALESCE(SUM(used), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'guest:%' THEN used ELSE 0 END), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'user:%' THEN used ELSE 0 END), 0)::bigint FROM ai_chat_quota WHERE quota_date >= $1 GROUP BY quota_date",
-        )
-        .bind(since)
-        .fetch_all(pool)
-        .await
-        {
-            Ok(rows) => rows,
-            Err(error) => return query_failed(&error),
-        };
-        let mut daily = daily;
-        merge_quota_daily(&mut daily, &quota);
+        let stats_limit = Duration::from_secs(2);
+        let (daily, hourly, quota) = tokio::join!(
+            tokio::time::timeout(
+                stats_limit,
+                sqlx::query_as::<_, (NaiveDate, i32, i32, i32, i32, i32, i32, i32)>(
+                    "SELECT bucket, success, upstream_error, quota_denied, rate_denied, not_configured, guest_calls, user_calls FROM ai_chat_daily WHERE bucket >= $1 ORDER BY bucket",
+                )
+                .bind(since)
+                .fetch_all(pool),
+            ),
+            tokio::time::timeout(
+                stats_limit,
+                sqlx::query_as::<_, (String, i32, i32, i32, i32, i32)>(
+                    "SELECT bucket, success, upstream_error, quota_denied, rate_denied, not_configured FROM ai_chat_hourly WHERE bucket LIKE $1 || '%' ORDER BY bucket",
+                )
+                .bind(&prefix)
+                .fetch_all(pool),
+            ),
+            tokio::time::timeout(
+                stats_limit,
+                sqlx::query_as::<_, (NaiveDate, i64, i64, i64)>(
+                    "SELECT quota_date, COALESCE(SUM(used), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'guest:%' THEN used ELSE 0 END), 0)::bigint, COALESCE(SUM(CASE WHEN identity_key LIKE 'user:%' THEN used ELSE 0 END), 0)::bigint FROM ai_chat_quota WHERE quota_date >= $1 GROUP BY quota_date",
+                )
+                .bind(since)
+                .fetch_all(pool),
+            ),
+        );
+        let mut daily = stats_rows(daily);
+        let hourly = stats_rows(hourly);
+        merge_quota_daily(&mut daily, &stats_rows(quota));
         (daily, hourly)
     } else {
         (Vec::new(), Vec::new())
@@ -2212,6 +2308,22 @@ async fn chat_stats(State(state): State<AppState>, Query(query): Query<DaysQuery
 
 type DailyRow = (NaiveDate, i32, i32, i32, i32, i32, i32, i32);
 type HourlyRow = (String, i32, i32, i32, i32, i32);
+
+fn stats_rows<T>(
+    result: Result<Result<Vec<T>, sqlx::Error>, tokio::time::error::Elapsed>,
+) -> Vec<T> {
+    match result {
+        Ok(Ok(rows)) => rows,
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "chat stats query failed");
+            Vec::new()
+        }
+        Err(_) => {
+            tracing::warn!("chat stats query timed out");
+            Vec::new()
+        }
+    }
+}
 
 fn merge_quota_daily(daily: &mut Vec<DailyRow>, quota: &[(NaiveDate, i64, i64, i64)]) {
     for (date, used, guest, user) in quota {
@@ -2603,8 +2715,8 @@ async fn image_generate_flow(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
     }
     if let Err(response) = note_audit(
-        &state,
-        &headers,
+        state,
+        headers,
         AuditNote {
             event: "ai.image",
             outcome: "success",
@@ -2619,7 +2731,7 @@ async fn image_generate_flow(
         return *response;
     }
     // 预占已把 used 加一，成功响应直接展示预占后的口径。
-    let mut out = image_quota_json(&state, &user, limit, used + 1);
+    let mut out = image_quota_json(state, user, limit, used + 1);
     out["image"] = json!({"url": stored.url, "path": stored.key, "mimeType": stored.mime, "size": stored.size, "width": generated.width, "height": generated.height});
     out["size"] = json!(generated.size);
     out["model"] = json!(generated.model);
@@ -3024,6 +3136,132 @@ fn owner_payload(user: &SessionUser, item: Value) -> Value {
     json!({"ok": true, "item": item, "owner": {"email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name)}})
 }
 
+fn content_error(error: crate::site_store::StoreError, code: &str) -> Response {
+    match error {
+        crate::site_store::StoreError::Invalid(message) => fail(StatusCode::BAD_REQUEST, code, message),
+        crate::site_store::StoreError::Database(message) => {
+            fail(StatusCode::INTERNAL_SERVER_ERROR, "CONTENT_WRITE_FAILED", &message)
+        }
+    }
+}
+
+async fn save_entry(
+    state: &AppState,
+    headers: &HeaderMap,
+    owner: &SessionUser,
+    event: &str,
+    code: &str,
+    entry: crate::site_store::NewEntry,
+    draft_id: i64,
+) -> Response {
+    let pool = match db_required(state) {
+        Ok(pool) => pool,
+        Err(response) => return *response,
+    };
+    let saved = match crate::site_store::insert(pool, entry).await {
+        Ok(saved) => saved,
+        Err(error) => return content_error(error, code),
+    };
+    if draft_id > 0 {
+        if let Err(response) = mark_draft_published(state, draft_id).await {
+            return *response;
+        }
+    }
+    let target = saved.id.to_string();
+    if let Err(response) = note_audit(
+        state,
+        headers,
+        AuditNote {
+            event,
+            outcome: "success",
+            actor: owner.id,
+            target_type: "site_entry",
+            target_id: &target,
+            detail: "saved",
+        },
+    )
+    .await
+    {
+        return *response;
+    }
+    let mut item = crate::site_store::entry_json(&saved);
+    if let Some(object) = item.as_object_mut() {
+        object.insert("path".into(), Value::String(format!("site_entries/{}", saved.id)));
+    }
+    Json(owner_payload(owner, item)).into_response()
+}
+
+async fn remove_entry(
+    state: &AppState,
+    headers: &HeaderMap,
+    event: &str,
+    code: &str,
+    id: i64,
+    kind: &str,
+) -> Response {
+    let owner = match require_owner(state, headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    let pool = match db_required(state) {
+        Ok(pool) => pool,
+        Err(response) => return *response,
+    };
+    match crate::site_store::delete(pool, id, kind).await {
+        Ok(true) => {
+            let target = id.to_string();
+            if let Err(response) = note_audit(
+                state,
+                headers,
+                AuditNote {
+                    event,
+                    outcome: "success",
+                    actor: owner.id,
+                    target_type: "site_entry",
+                    target_id: &target,
+                    detail: "deleted",
+                },
+            )
+            .await
+            {
+                return *response;
+            }
+            Json(owner_payload(&owner, json!({"id": id, "kind": kind}))).into_response()
+        }
+        Ok(false) => fail(StatusCode::NOT_FOUND, code, "没有这条内容"),
+        Err(error) => content_error(error, code),
+    }
+}
+
+async fn content_recent(State(state): State<AppState>) -> Response {
+    let Some(pool) = state.db.as_ref() else {
+        return Json(json!({"items": []})).into_response();
+    };
+    match crate::site_store::list_recent(pool, 30).await {
+        Ok(items) => {
+            let items: Vec<Value> = items.iter().map(crate::site_store::entry_json).collect();
+            Json(json!({"items": items})).into_response()
+        }
+        Err(error) => content_error(error, "CONTENT_READ_FAILED"),
+    }
+}
+
+async fn content_list(State(state): State<AppState>, Path(kind): Path<String>) -> Response {
+    if !crate::site_store::known_kind(&kind) {
+        return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "栏目无效");
+    }
+    let Some(pool) = state.db.as_ref() else {
+        return Json(json!({"items": []})).into_response();
+    };
+    match crate::site_store::list(pool, &kind).await {
+        Ok(items) => {
+            let items: Vec<Value> = items.iter().map(crate::site_store::entry_json).collect();
+            Json(json!({"items": items})).into_response()
+        }
+        Err(error) => content_error(error, "CONTENT_READ_FAILED"),
+    }
+}
+
 async fn owner_publish(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -3032,20 +3270,6 @@ async fn owner_publish(
     let owner = match require_owner(&state, &headers).await {
         Ok(user) => user,
         Err(response) => return *response,
-    };
-    let spec = match publish_spec(&state) {
-        Ok(spec) => spec,
-        Err(response) => {
-            return publish_not_configured(
-                &state,
-                &headers,
-                owner.id,
-                "owner.publish",
-                "article",
-                response,
-            )
-            .await
-        }
     };
     let title = body
         .get("title")
@@ -3056,7 +3280,7 @@ async fn owner_publish(
     let cover = body.get("coverUrl").and_then(Value::as_str).unwrap_or("");
     let draft_id = body.get("draftId").and_then(Value::as_i64).unwrap_or(0);
     let now = Utc::now();
-    let article = match crate::post_markdown::build_article(
+    if let Err(error) = crate::post_markdown::build_article(
         crate::post_markdown::ArticleInput {
             title,
             body: markdown_body,
@@ -3064,78 +3288,32 @@ async fn owner_publish(
         },
         now,
     ) {
-        Ok(article) => article,
-        Err(error) => {
-            // Go 分 INVALID_TITLE / INVALID_BODY（owner_publish.go:93-131）：
-            // post_markdown 的文案「发布标题…」归标题，「发布正文…」归正文。
-            let message = error.to_string();
-            let code = if message.starts_with("发布标题") {
-                "INVALID_TITLE"
-            } else if message.starts_with("发布正文") {
-                "INVALID_BODY"
-            } else {
-                "INVALID_PUBLISH"
-            };
-            return fail(StatusCode::BAD_REQUEST, code, &message);
-        }
-    };
-    let published = match crate::github_publish::publish_article(
-        &state.http,
-        &spec,
-        title,
-        &article.markdown,
-        &article.path,
-        now,
-    )
-    .await
-    {
-        Ok(published) => published,
-        Err(error) => {
-            return publish_error(
-                &state,
-                &headers,
-                PublishFailure {
-                    actor: owner.id,
-                    event: "owner.publish",
-                    target: &article.path,
-                    invalid_code: "INVALID_PUBLISH",
-                    github_code: "PUBLISH_FAILED",
-                    internal_status: StatusCode::INTERNAL_SERVER_ERROR,
-                    internal_code: "PUBLISH_FAILED",
-                },
-                error,
-            )
-            .await
-        }
-    };
-    if draft_id > 0 {
-        if let Err(response) = mark_draft_published(&state, draft_id).await {
-            return *response;
-        }
+        let message = error.to_string();
+        let code = if message.starts_with("发布标题") {
+            "INVALID_TITLE"
+        } else if message.starts_with("发布正文") {
+            "INVALID_BODY"
+        } else {
+            "INVALID_PUBLISH"
+        };
+        return fail(StatusCode::BAD_REQUEST, code, &message);
     }
-    if let Err(response) = note_audit(
+    save_entry(
         &state,
         &headers,
-        AuditNote {
-            event: "owner.publish",
-            outcome: "success",
-            actor: owner.id,
-            target_type: "owner_publish",
-            target_id: &published.path,
-            detail: "published",
+        &owner,
+        "owner.publish",
+        "INVALID_PUBLISH",
+        crate::site_store::NewEntry {
+            kind: "article".into(),
+            title: title.to_string(),
+            body: markdown_body.trim().to_string(),
+            image_url: cover.trim().to_string(),
+            extra: json!({}),
         },
+        draft_id,
     )
     .await
-    {
-        return *response;
-    }
-    Json(owner_payload(&owner, json!({
-        "path": published.path,
-        "commitSha": published.commit_sha,
-        "branch": published.branch,
-        "commitMessage": published.commit_message,
-        "repoURL": format!("https://github.com/{}/{}/blob/{}/{}", spec.owner, spec.repo, published.branch, published.path)
-    }))).into_response()
 }
 
 async fn mark_draft_published(state: &AppState, draft_id: i64) -> Result<(), Box<Response>> {
@@ -3317,6 +3495,313 @@ async fn publish_error(
     }
 }
 
+#[derive(Deserialize)]
+struct PostDeleteQuery {
+    #[serde(default)]
+    path: String,
+}
+
+#[derive(Deserialize)]
+struct JournalDeleteQuery {
+    #[serde(default)]
+    slug: String,
+}
+
+#[derive(Deserialize)]
+struct JournalBody {
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    body: String,
+    #[serde(rename = "coverUrl", default)]
+    cover_url: String,
+}
+
+#[derive(Deserialize)]
+struct GalleryDeleteBody {
+    #[serde(rename = "albumId", default)]
+    album_id: String,
+    #[serde(rename = "imageUrl", default)]
+    image_url: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct MomentDeleteBody {
+    #[serde(default)]
+    year: String,
+    #[serde(default)]
+    date: String,
+    #[serde(rename = "type", default)]
+    kind: String,
+    #[serde(default)]
+    content: String,
+}
+
+#[derive(Deserialize)]
+struct AboutBody {
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    text: String,
+    #[serde(default)]
+    image: String,
+}
+
+#[derive(Deserialize)]
+struct IdBody {
+    #[serde(default)]
+    id: String,
+}
+
+#[derive(Deserialize)]
+struct BiliBody {
+    #[serde(default)]
+    bvid: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    cover: String,
+    #[serde(default)]
+    duration: String,
+    #[serde(rename = "publishedAt", default)]
+    published_at: String,
+}
+
+#[derive(Deserialize)]
+struct BiliDeleteBody {
+    #[serde(default)]
+    bvid: String,
+}
+
+#[derive(Deserialize)]
+struct ProjectBody {
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    summary: String,
+    #[serde(default)]
+    cover: String,
+    #[serde(default)]
+    url: String,
+    #[serde(default)]
+    tags: String,
+}
+
+async fn owner_post_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<PostDeleteQuery>,
+) -> Response {
+    let raw = query
+        .path
+        .trim()
+        .strip_prefix("site_entries/")
+        .unwrap_or(query.path.trim());
+    let Ok(id) = raw.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_POST", "文章编号无效");
+    };
+    remove_entry(&state, &headers, "owner.post_delete", "INVALID_POST", id, "article").await
+}
+
+#[derive(Deserialize)]
+struct KindQuery {
+    #[serde(default)]
+    kind: String,
+}
+
+async fn owner_content_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i64>,
+    Query(query): Query<KindQuery>,
+) -> Response {
+    remove_entry(
+        &state,
+        &headers,
+        "owner.content_delete",
+        "CONTENT_NOT_FOUND",
+        id,
+        &query.kind,
+    )
+    .await
+}
+
+async fn owner_journal(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<JournalBody>,
+) -> Response {
+    let owner = match require_owner(&state, &headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.journal_publish",
+        "INVALID_JOURNAL",
+        crate::site_store::NewEntry {
+            kind: "journal".into(),
+            title: body.title,
+            body: body.body,
+            image_url: body.cover_url,
+            extra: json!({}),
+        },
+        0,
+    )
+    .await
+}
+async fn owner_journal_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<JournalDeleteQuery>,
+) -> Response {
+    let Ok(id) = query.slug.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_JOURNAL", "建站日志编号无效");
+    };
+    remove_entry(&state, &headers, "owner.journal_delete", "INVALID_JOURNAL", id, "journal").await
+}
+async fn owner_gallery_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<GalleryDeleteBody>,
+) -> Response {
+    let Ok(id) = body.image_url.parse::<i64>().or_else(|_| body.album_id.parse::<i64>()) else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_GALLERY_PUBLISH", "相册图片编号无效");
+    };
+    remove_entry(&state, &headers, "owner.gallery_delete", "INVALID_GALLERY_PUBLISH", id, "gallery").await
+}
+async fn owner_moment_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<MomentDeleteBody>,
+) -> Response {
+    let Ok(id) = body.content.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_MOMENT_PUBLISH", "碎语编号无效");
+    };
+    remove_entry(&state, &headers, "owner.moment_delete", "INVALID_MOMENT_PUBLISH", id, "moment").await
+}
+async fn owner_about(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<AboutBody>,
+) -> Response {
+    let owner = match require_owner(&state, &headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.about_publish",
+        "INVALID_ABOUT",
+        crate::site_store::NewEntry {
+            kind: "about".into(),
+            title: body.title,
+            body: body.text,
+            image_url: body.image,
+            extra: json!({}),
+        },
+        0,
+    )
+    .await
+}
+async fn owner_about_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<IdBody>,
+) -> Response {
+    let Ok(id) = body.id.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_ABOUT", "关于我编号无效");
+    };
+    remove_entry(&state, &headers, "owner.about_delete", "INVALID_ABOUT", id, "about").await
+}
+async fn owner_bili(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<BiliBody>,
+) -> Response {
+    let owner = match require_owner(&state, &headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    let published = if body.published_at.trim().is_empty() {
+        (Utc::now() + chrono::Duration::hours(8)).format("%Y-%m-%d").to_string()
+    } else {
+        body.published_at
+    };
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.bili_publish",
+        "INVALID_BILI",
+        crate::site_store::NewEntry {
+            kind: "bili".into(),
+            title: body.title,
+            body: body.description,
+            image_url: body.cover,
+            extra: json!({
+                "bvid": body.bvid.trim(),
+                "duration": body.duration.trim(),
+                "publishedAt": published,
+            }),
+        },
+        0,
+    )
+    .await
+}
+async fn owner_bili_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<BiliDeleteBody>,
+) -> Response {
+    let Ok(id) = body.bvid.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_BILI", "哔哩视频编号无效");
+    };
+    remove_entry(&state, &headers, "owner.bili_delete", "INVALID_BILI", id, "bili").await
+}
+async fn owner_project(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<ProjectBody>,
+) -> Response {
+    let owner = match require_owner(&state, &headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.project_publish",
+        "INVALID_PROJECT",
+        crate::site_store::NewEntry {
+            kind: "project".into(),
+            title: body.title,
+            body: body.summary,
+            image_url: body.cover,
+            extra: json!({"url": body.url.trim(), "tags": body.tags.trim()}),
+        },
+        0,
+    )
+    .await
+}
+async fn owner_project_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<IdBody>,
+) -> Response {
+    let Ok(id) = body.id.parse::<i64>() else {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_PROJECT", "星空馆编号无效");
+    };
+    remove_entry(&state, &headers, "owner.project_delete", "INVALID_PROJECT", id, "project").await
+}
 async fn owner_gallery(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -3326,74 +3811,28 @@ async fn owner_gallery(
         Ok(user) => user,
         Err(response) => return *response,
     };
-    let spec = match publish_spec(&state) {
-        Ok(spec) => spec,
-        Err(response) => {
-            return publish_not_configured(
-                &state,
-                &headers,
-                owner.id,
-                "owner.gallery_publish",
-                crate::github_publish::GALLERY_PATH,
-                response,
-            )
-            .await
-        }
+    let title = if body.album_title.trim().is_empty() {
+        body.album_id.clone()
+    } else {
+        body.album_title.clone()
     };
-    let input = crate::js_source::GalleryInput {
-        album_id: &body.album_id,
-        album_title: &body.album_title,
-        image_url: &body.image_url,
-    };
-    match crate::github_publish::publish_gallery(&state.http, &spec, input, Utc::now()).await {
-        Ok(item) => {
-            if let Err(response) = note_audit(
-                &state,
-                &headers,
-                AuditNote {
-                    event: "owner.gallery_publish",
-                    outcome: "success",
-                    actor: owner.id,
-                    target_type: "owner_publish",
-                    target_id: &item.path,
-                    detail: "published",
-                },
-            )
-            .await
-            {
-                return *response;
-            }
-            Json(owner_payload(&owner, json!({
-            "albumId": item.album_id,
-            "imageUrl": item.image_url,
-            "path": item.path,
-            "commitSha": item.commit_sha,
-            "changed": item.changed,
-            "branch": item.branch,
-            "commitMessage": item.commit_message,
-            "repoURL": format!("https://github.com/{}/{}/blob/{}/{}", spec.owner, spec.repo, item.branch, item.path)
-        }))).into_response()
-        }
-        Err(error) => {
-            publish_error(
-                &state,
-                &headers,
-                PublishFailure {
-                    actor: owner.id,
-                    event: "owner.gallery_publish",
-                    target: crate::github_publish::GALLERY_PATH,
-                    invalid_code: "INVALID_GALLERY_PUBLISH",
-                    github_code: "GALLERY_PUBLISH_FAILED",
-                    internal_status: StatusCode::BAD_REQUEST,
-                    internal_code: "INVALID_GALLERY_PUBLISH",
-                },
-                error,
-            )
-            .await
-        }
-    }
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.gallery_publish",
+        "INVALID_GALLERY_PUBLISH",
+        crate::site_store::NewEntry {
+            kind: "gallery".into(),
+            title,
+            body: String::new(),
+            image_url: body.image_url,
+            extra: json!({"albumId": body.album_id, "albumTitle": body.album_title}),
+        },
+        0,
+    )
+    .await
 }
-
 async fn owner_friends(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -3483,77 +3922,31 @@ async fn owner_moments(
         Ok(user) => user,
         Err(response) => return *response,
     };
-    let spec = match publish_spec(&state) {
-        Ok(spec) => spec,
-        Err(response) => {
-            return publish_not_configured(
-                &state,
-                &headers,
-                owner.id,
-                "owner.moment_publish",
-                crate::github_publish::MOMENTS_PATH,
-                response,
-            )
-            .await
-        }
+    let kind = if body.kind.trim().is_empty() { body.category.clone() } else { body.kind.clone() };
+    let now = Utc::now() + chrono::Duration::hours(8);
+    let year = if body.year.trim().is_empty() { now.format("%Y").to_string() } else { body.year.clone() };
+    let date = if body.date.trim().is_empty() {
+        format!("{}.{}", now.format("%m").to_string().trim_start_matches('0'), now.format("%d").to_string().trim_start_matches('0'))
+    } else {
+        body.date.clone()
     };
-    let input = crate::js_source::MomentInput {
-        year: &body.year,
-        date: &body.date,
-        kind: &body.kind,
-        category: &body.category,
-        content: &body.content,
-    };
-    match crate::github_publish::publish_moment(&state.http, &spec, input, Utc::now()).await {
-        Ok(item) => {
-            if let Err(response) = note_audit(
-                &state,
-                &headers,
-                AuditNote {
-                    event: "owner.moment_publish",
-                    outcome: "success",
-                    actor: owner.id,
-                    target_type: "owner_publish",
-                    target_id: &item.path,
-                    detail: "published",
-                },
-            )
-            .await
-            {
-                return *response;
-            }
-            Json(owner_payload(&owner, json!({
-            "year": item.year,
-            "date": item.date,
-            "type": item.kind,
-            "path": item.path,
-            "commitSha": item.commit_sha,
-            "changed": item.changed,
-            "branch": item.branch,
-            "commitMessage": item.commit_message,
-            "repoURL": format!("https://github.com/{}/{}/blob/{}/{}", spec.owner, spec.repo, item.branch, item.path)
-        }))).into_response()
-        }
-        Err(error) => {
-            publish_error(
-                &state,
-                &headers,
-                PublishFailure {
-                    actor: owner.id,
-                    event: "owner.moment_publish",
-                    target: crate::github_publish::MOMENTS_PATH,
-                    invalid_code: "INVALID_MOMENT_PUBLISH",
-                    github_code: "MOMENT_PUBLISH_FAILED",
-                    internal_status: StatusCode::BAD_REQUEST,
-                    internal_code: "INVALID_MOMENT_PUBLISH",
-                },
-                error,
-            )
-            .await
-        }
-    }
+    save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.moment_publish",
+        "INVALID_MOMENT_PUBLISH",
+        crate::site_store::NewEntry {
+            kind: "moment".into(),
+            title: kind.clone(),
+            body: body.content,
+            image_url: String::new(),
+            extra: json!({"year": year, "date": date, "type": kind}),
+        },
+        0,
+    )
+    .await
 }
-
 async fn fixed_answers(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if require_owner(&state, &headers).await.is_err() {
         return fail(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "请先登录");
@@ -3756,13 +4149,6 @@ async fn owner_asset(
             _ => {}
         }
     }
-    if kind != "gallery" && kind != "article" {
-        return fail(
-            StatusCode::BAD_REQUEST,
-            "INVALID_ASSET_KIND",
-            "资源类型必须是相册或文章。",
-        );
-    }
     if kind == "gallery" && album.trim().is_empty() {
         return fail(
             StatusCode::BAD_REQUEST,
@@ -3770,16 +4156,31 @@ async fn owner_asset(
             "相册上传必须选择相册。",
         );
     }
-    // 相册名消毒，避免把 / \ 带进对象键。
     let album_slug: String = album
         .trim()
         .chars()
         .map(|ch| if ch == '/' || ch == '\\' { '-' } else { ch })
         .collect();
-    let folder = if kind == "gallery" {
-        format!("gallery/{album_slug}")
-    } else {
-        format!("articles/{album_slug}")
+    let folder = match kind.as_str() {
+        "gallery" => format!("gallery/{album_slug}"),
+        "article" => {
+            if album_slug.is_empty() {
+                "articles".to_string()
+            } else {
+                format!("articles/{album_slug}")
+            }
+        }
+        "about" => "about".to_string(),
+        "journal" => "journal".to_string(),
+        "bili" => "bili".to_string(),
+        "project" => "projects".to_string(),
+        _ => {
+            return fail(
+                StatusCode::BAD_REQUEST,
+                "INVALID_ASSET_KIND",
+                "资源类型必须是关于我、相册、哔哩、文章、建站日志或星空馆。",
+            )
+        }
     };
     match put_bytes(&state, &folder, &name, bytes).await {
         Ok((public, key, name, size, mime)) => Json(json!({"ok": true, "item": {"kind": kind, "url": public, "path": key, "name": name, "size": size, "mimeType": mime}})).into_response(),
@@ -3845,13 +4246,13 @@ async fn put_bytes(
             "请选择要上传的文件。",
         )));
     }
-    // 头像走 Go 的 2MB 上限和专用错误码，其它上传 8MB。
+    // 头像和其它图片共用 8MB 上限。头像仍用自己的类型错误码。
     let (max_bytes, too_large_code, too_large_msg, invalid_code, invalid_msg) =
         if folder == "avatars" {
             (
-                2 * 1024 * 1024,
-                "IMAGE_TOO_LARGE",
-                "头像图片不能超过 2MB",
+                8 * 1024 * 1024,
+                "FILE_TOO_LARGE",
+                "上传文件超过 8 MiB 限制。",
                 "INVALID_IMAGE_TYPE",
                 "仅支持 PNG / JPEG / WebP / GIF",
             )
@@ -4293,6 +4694,28 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let body: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["loggedIn"], false);
+    }
+
+    #[tokio::test]
+    async fn site_avatar_is_empty_without_a_database() {
+        let app = router(AppState::new(
+            crate::config::Config::for_test(),
+            None,
+            reqwest::Client::new(),
+        ));
+        let response = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/api/site/avatar")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let body: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["avatar"], "");
     }
 
     #[tokio::test]

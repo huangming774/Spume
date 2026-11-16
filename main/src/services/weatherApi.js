@@ -1,7 +1,8 @@
-export async function fetchWeather({ fetchImpl = fetch } = {}) {
+export async function fetchWeather({ fetchImpl = fetch, signal } = {}) {
   const res = await fetchImpl("/api/weather", {
     headers: { Accept: "application/json" },
     cache: "no-store",
+    signal,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

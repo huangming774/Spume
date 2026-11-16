@@ -95,7 +95,7 @@ async fn friend_publish_writes_the_card_and_opens_a_pull_request() {
         FriendInput {
             name: "Spume",
             desc: "个人站",
-            url: "https://taozhiyy.top",
+            url: "https://www.miku.coffee",
             avatar: "https://images.example/avatar.jpg",
         },
         now,
