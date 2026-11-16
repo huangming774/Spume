@@ -14,6 +14,7 @@
 **/dist
 out/
 api/target
+api/_core/target
 
 # 与前端镜像无关的子项目 / 文档
 acg-api/

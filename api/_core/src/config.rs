@@ -66,10 +66,10 @@ pub struct Config {
 
 impl Config {
     /// 启动时读取 `.env` 文件补全环境变量，行为和 Go 版 `loadOptionalEnvFiles` 一致：
-    /// 依次尝试 `/opt/acg-api/.env` 和 `.env`，已有的环境变量不会被覆盖。
+    /// 依次尝试 `/opt/acg-api/.env`、`.env` 和 `../.env`，已有的环境变量不会被覆盖。
     /// `dotenvy` 本身就不覆盖已存在的变量，所以直接按顺序加载即可。
     pub fn load_env_files() {
-        for path in ["/opt/acg-api/.env", ".env"] {
+        for path in ["/opt/acg-api/.env", ".env", "../.env"] {
             if !std::path::Path::new(path).exists() {
                 continue;
             }

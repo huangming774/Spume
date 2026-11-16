@@ -11,14 +11,14 @@ FROM rust:1.83-bookworm-slim AS builder
 
 WORKDIR /usr/src/taozhiyy-api
 
-COPY Cargo.toml Cargo.lock ./
+COPY _core/Cargo.toml _core/Cargo.lock ./
 RUN mkdir -p src \
     && echo 'fn main() {}' > src/main.rs \
     && cargo build --release --locked \
     && rm -rf src
 
-COPY src ./src
-COPY migrations ./migrations
+COPY _core/src ./src
+COPY _core/migrations ./migrations
 
 RUN touch src/main.rs && cargo build --release --locked
 

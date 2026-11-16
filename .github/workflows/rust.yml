@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: api
+        working-directory: api/_core
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: api
+          workspaces: api/_core
 
       - name: Format
         run: cargo fmt --all -- --check

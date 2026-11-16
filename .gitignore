@@ -35,6 +35,7 @@ acg-api/
 .idea/
 /target/
 api/target/
+api/_core/target/
 api/.env
 main/.env
 main/.env.*

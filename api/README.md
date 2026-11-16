@@ -1,6 +1,6 @@
 # API
 
-`api/` 是一个 Axum 服务。它读取环境变量，可选连接 Postgres，然后在一个进程里提供下面这些 HTTP 接口。
+`api/_core/` 是一个 Axum 服务。`api/` 顶层只放 Vercel 函数入口 `index.rs`，`.rs` 源码全部收在 `_core/` 下（`_` 开头的目录 Vercel 不会当成函数）。它读取环境变量，可选连接 Postgres，然后在一个进程里提供下面这些 HTTP 接口。
 
 没有 `DATABASE_URL` 时进程仍能启动，需要落库的接口会返回数据库未连接。媒体、模型和定时任务也都按对应环境变量是否配齐来决定能不能用。
 
@@ -9,11 +9,11 @@
 要求 Rust 2021 工具链。
 
 ```text
-cd api
+cd api/_core
 cargo run
 ```
 
-默认监听 `0.0.0.0:8080`。用 `ACG_API_ADDR` 修改地址，例如 `:8080`。示例变量在 `.env.example`。启动时会按顺序读取 `/opt/acg-api/.env` 和 `.env`（已有的环境变量不会被覆盖，和 Go 版行为一致），把 `.env.example` 拷成 `.env` 填上即可。
+默认监听 `0.0.0.0:8080`。用 `ACG_API_ADDR` 修改地址，例如 `:8080`。示例变量在 `.env.example`。启动时会按顺序读取 `/opt/acg-api/.env`、`.env` 和 `../.env`（已有的环境变量不会被覆盖，和 Go 版行为一致）。示例文件在 `api/.env.example`，填好后放 `api/.env` 即可，`api/_core` 下运行时会从上一级找到它。
 
 ```text
 cargo fmt --all
@@ -28,7 +28,7 @@ cargo test
 本地常驻服务仍用上面的 `cargo run`，它继续监听端口并启动健康快照后台任务；Vercel 入口使用 Fluid compute 复用函数实例，不启动常驻定时任务。部署前在 Vercel 项目中配置同样的环境变量，然后运行 `vercel deploy`。
 
 ```text
-cargo check --manifest-path ../Cargo.toml --bin index
+cargo check --manifest-path ../../Cargo.toml --bin index
 ```
 
 ## 配置
