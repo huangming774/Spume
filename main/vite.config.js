@@ -114,6 +114,37 @@ function whereMenuStyles() {
   }
 }
 
+/**
+ * endfield_menu/ 在 main/ 之外，它自己的 node_modules 不随仓库发布，
+ * Vite 从它的文件位置往上找不到 react/three。这里只对 endfield_menu 的源码
+ * 把这几个裸导入重定向到 main/node_modules，避免和 previews/project-gallery
+ * 的 three/addons 解析互相干扰。
+ */
+function endfieldMenuDeps() {
+  const menuRoot = fileURLToPath(new URL('../endfield_menu/', import.meta.url))
+  const nm = fileURLToPath(new URL('./node_modules/', import.meta.url))
+  const target = new Map([
+    ['react', join(nm, 'react/index.js')],
+    ['react/jsx-runtime', join(nm, 'react/jsx-runtime.js')],
+    ['react/jsx-dev-runtime', join(nm, 'react/jsx-dev-runtime.js')],
+    ['react-dom', join(nm, 'react-dom/index.js')],
+    ['react-dom/client', join(nm, 'react-dom/client.js')],
+    ['three', join(nm, 'three/build/three.module.js')],
+  ])
+  return {
+    name: 'endfield-menu-deps',
+    enforce: 'pre',
+    resolveId(id, importer) {
+      if (!importer) return null
+      const resolved = target.get(id)
+      if (!resolved) return null
+      const importerPath = importer.split('?')[0]
+      if (!importerPath.startsWith(menuRoot)) return null
+      return resolved
+    },
+  }
+}
+
 function scopedJournalStyles() {
   return {
     name: 'scoped-journal-styles',
@@ -148,7 +179,7 @@ function aiAssistantDevAssets() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), scopedJournalStyles(), whereMenuStyles(), clientPlaceFallback(), aiAssistantDevAssets(), galleryPublicAssets()],
+  plugins: [react(), scopedJournalStyles(), whereMenuStyles(), endfieldMenuDeps(), clientPlaceFallback(), aiAssistantDevAssets(), galleryPublicAssets()],
   server: {
     fs: {
       allow: [repoRoot],
