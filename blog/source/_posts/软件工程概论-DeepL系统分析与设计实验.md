@@ -3,7 +3,7 @@ title: 软件工程概论实验——DeepL语言翻译平台系统分析与设�
 date: 2026-05-15 15:00:00
 tags: [软件工程, 系统分析与设计, UML建模, DeepL, 实验报告]
 categories: [学习笔记]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-15_14-44-14.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-15_14-44-14.png
 description: 基于面向对象方法对DeepL翻译平台进行完整的系统分析与设计，涵盖用例建模、功能结构设计、数据库设计、规模估算等核心环节。
 ---
 
@@ -87,7 +87,7 @@ DeepL 是一款基于深度学习神经网络技术（Transformer 架构）的�
 {% checkbox , UC10 - 团队管理 %}
 {% checkbox , UC11 - 系统管理 %}
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-use-case-diagram.png" alt="图4-1 DeepL翻译平台顶层用例图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-use-case-diagram.png" alt="图4-1 DeepL翻译平台顶层用例图" style="width:92%">
 
 ### 核心用例描述
 
@@ -140,7 +140,7 @@ DeepL 是一款基于深度学习神经网络技术（Transformer 架构）的�
 
 系统分为 **6 个一级功能模块**：
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-function-structure.jpg" alt="图4-2 系统功能层次结构图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-function-structure.jpg" alt="图4-2 系统功能层次结构图" style="width:92%">
 
 {% folding blue, 文本翻译模块（核心） %}
 系统的**核心功能模块**。负责接收用户输入的文本，通过神经网络翻译引擎进行实时翻译。支持多种语言互译，具备源语言自动检测、翻译结果词典查询、同义词替换建议等增强功能。
@@ -200,7 +200,7 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
 └─────────────────────────────────┘
 ```
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-layered-architecture.png" alt="图4-3 系统分层架构图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-layered-architecture.png" alt="图4-3 系统分层架构图" style="width:92%">
 
 ### 核心实体类设计
 
@@ -232,7 +232,7 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
 
 {% endfolding %}
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-class-diagram.png" alt="图4-4 系统核心设计类图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-class-diagram.png" alt="图4-4 系统核心设计类图" style="width:92%">
 
 ---
 
@@ -246,11 +246,11 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
 4. 系统调用翻译引擎（同时匹配词汇表）
 5. 系统返回翻译结果，保存翻译历史
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-text-translate-activity.png" alt="图4-5 文本翻译活动图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-text-translate-activity.png" alt="图4-5 文本翻译活动图" style="width:92%">
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-synonym-flow.png" alt="图4-5-2 同义词替换流程图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-synonym-flow.png" alt="图4-5-2 同义词替换流程图" style="width:92%">
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-text-translate-sequence.png" alt="图4-6 文本翻译顺序图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-text-translate-sequence.png" alt="图4-6 文本翻译顺序图" style="width:92%">
 
 ### 文档翻译模块——程序流程
 
@@ -260,11 +260,11 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
   → 提供下载链接 → 结束
 ```
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-document-translate-flow.png" alt="图4-7 文档翻译程序流程图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-document-translate-flow.png" alt="图4-7 文档翻译程序流程图" style="width:92%">
 
 ### API调用模块——程序流程
 
-{% image https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-api-activity.png, alt=图4-8 API调用活动图, width=100%}
+{% image https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-api-activity.png, alt=图4-8 API调用活动图, width=100%}
 
 ---
 
@@ -278,7 +278,7 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
 核心实体：User（用户）、Translation（翻译记录）、Glossary（词汇表）、GlossaryEntry（词汇表条目）、Document（文档）、Subscription（订阅）、ApiKey（API密钥）、Payment（支付记录）
 {% endnote %}
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-er-diagram.jpg" alt="图4-9 数据库E-R图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-er-diagram.jpg" alt="图4-9 数据库E-R图" style="width:92%">
 
 ### 核心数据库表
 
@@ -368,7 +368,7 @@ DeepL 翻译平台采用**分层架构（Layered Architecture）**设计模式�
 | {% span cyan, 增量5 %} | DeepL Write | 6 周 | AI 写作辅助、语法检查、风格切换 |
 | {% span red, 增量6 %} | 性能优化与扩展 | 4 周 | 性能优化、CDN、多区域支持 |
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-gantt-chart.png" alt="图4-10 增量开发计划甘特图" style="width:92%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/deepl-gantt-chart.png" alt="图4-10 增量开发计划甘特图" style="width:92%">
 
 ---
 

@@ -3,18 +3,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { getHeroCoverSrc } from "./heroCoverAssets.js";
 
-test("cover 2 and 3 use the approved versioned COS images in attachment order", () => {
+test("cover 2 and 3 use the approved versioned hero images in attachment order", () => {
   assert.ok(getHeroCoverSrc(2).endsWith("/img/hero-2-20261031.webp"));
   assert.ok(getHeroCoverSrc(3).endsWith("/img/hero-3-20261031.webp"));
 });
 
-test("cover 1 and 4 keep their existing files and all images use the same-origin COS proxy", () => {
+test("cover 1 and 4 keep their existing files and all images use the R2 direct origin", () => {
   assert.ok(getHeroCoverSrc(1).endsWith("/img/hero-1.webp"));
   assert.ok(getHeroCoverSrc(4).endsWith("/img/hero-4.webp"));
   const sources = [1, 2, 3, 4].map(getHeroCoverSrc);
   assert.equal(new Set(sources).size, 4);
   for (const source of sources) {
-    assert.ok(source.startsWith("/cos/"));
+    assert.ok(source.startsWith("https://fs.964643.xyz/"));
     assert.ok(source.includes("/main/img/"));
     assert.doesNotMatch(source, /myqcloud\.com|\.png$/);
   }

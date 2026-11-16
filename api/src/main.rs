@@ -32,7 +32,7 @@ async fn run() -> Result<(), String> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-        .await
-        .map_err(|error| format!("serve: {error}"))?;
+    .await
+    .map_err(|error| format!("serve: {error}"))?;
     Ok(())
 }

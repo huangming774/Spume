@@ -5,7 +5,7 @@ tags: [深度学习, 计算机视觉, NLP, 目标检测, 情感分析, GAN, 大�
 categories: [人工智能]
 ---
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/ai-experiments-cover.png" alt="YOLO目标检测演示" style="width:100%">
+<img src="https://fs.964643.xyz/AI自动化博客图片/ai-experiments-cover.png" alt="YOLO目标检测演示" style="width:100%">
 
 ## 前言
 
@@ -99,7 +99,7 @@ GAN（生成对抗网络）由生成器 G 和判别器 D 组成，G 从噪声生
 
 在 GAN 训练中，单看损失值并不可靠，生成图像的清晰度与多样性才是关键指标。以下是 16 张随机生成的数字：
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/ai-experiments-gan.png" alt="GAN生成的手写数字" style="width:100%">
+<img src="https://fs.964643.xyz/AI自动化博客图片/ai-experiments-gan.png" alt="GAN生成的手写数字" style="width:100%">
 
 {% folding green, 16张生成数字（4×4网格） %}
 大部分数字轮廓清晰、形态可辨，说明 G 已从 64 维噪声学到了合理的手写数字分布。个别边缘模糊、少数数字形态介于两类之间。
@@ -123,7 +123,7 @@ GAN（生成对抗网络）由生成器 G 和判别器 D 组成，G 从噪声生
 
 使用 {% label hf-mirror.com blue %} 镜像下载（国内比 HuggingFace 快很多），升级 transformers 至最新版以支持 qwen3_5 架构。加载完成后仅 0.75B 参数。
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/ai-experiments-qwen.png" alt="Qwen3.5模型推理" style="width:100%">
+<img src="https://fs.964643.xyz/AI自动化博客图片/ai-experiments-qwen.png" alt="Qwen3.5模型推理" style="width:100%">
 
 {% folding green, 加载代码 %}
 ```python

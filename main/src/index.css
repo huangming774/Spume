@@ -541,6 +541,43 @@ body {
     margin-left: 0;
   }
 
+  .weather-badge {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .weather-badge-chip {
+    display: inline-flex;
+    min-width: 0;
+    height: 2rem;
+    align-items: center;
+    gap: 0.32rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 10px 28px rgba(0, 0, 0, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    font-family: "General Sans", system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    padding: 0 0.58rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    backdrop-filter: blur(14px);
+  }
+
+  .weather-badge-icon {
+    flex: 0 0 auto;
+    font-size: 0.95rem;
+    color: rgba(255, 237, 160, 0.94);
+  }
+
 
   .floating-nav {
     @apply bg-black rounded-lg border;
@@ -10169,4 +10206,320 @@ body {
   grid-row: auto;
   justify-self: center;
   width: 100%;
+}
+
+/* ===== 站长登录（/app 未登录时的账号密码表单） =====
+   融合主站暖奶油+玫瑰粉编辑风与 /app 控制台品牌元素：
+   纸感卡片用首页 AI Plaza 的墨+粉双层硬阴影，
+   标题/诗句用碎语页的 ZCOOL XiaoWei 衬线与玫瑰荧光笔底纹，
+   字段用留言页的奶油描边 + 黄油焦点，TC 徽标保留控制台蓝青渐变。 */
+.owner-login-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.25rem, 5vw, 3rem) clamp(1.15rem, 4vw, 2.5rem);
+  color: #241322;
+  background:
+    radial-gradient(900px 520px at 12% 8%, rgba(255, 143, 171, 0.22), transparent 62%),
+    radial-gradient(760px 520px at 88% 92%, rgba(131, 215, 207, 0.18), transparent 64%),
+    linear-gradient(180deg, rgba(255, 251, 246, 0.97), rgba(241, 248, 255, 0.95)),
+    repeating-linear-gradient(135deg, rgba(255, 143, 171, 0.08) 0 1px, transparent 1px 18px);
+}
+
+.owner-login-card {
+  position: relative;
+  width: min(27rem, 100%);
+  padding: clamp(1.8rem, 5.5vw, 2.6rem) clamp(1.5rem, 5vw, 2.4rem) clamp(1.7rem, 5vw, 2.3rem);
+  border: 1px solid rgba(36, 19, 34, 0.86);
+  border-radius: 22px;
+  background:
+    radial-gradient(130% 70% at 88% -10%, rgba(255, 200, 222, 0.5), transparent 55%),
+    linear-gradient(165deg, #fffaf4 0%, #fff1ec 100%);
+  box-shadow:
+    12px 12px 0 -1px rgba(36, 19, 34, 0.9),
+    12px 12px 0 0 rgba(255, 143, 171, 0.5),
+    0 28px 70px rgba(124, 92, 255, 0.16);
+  animation: ownerLoginRise 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.owner-login-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.55rem;
+}
+
+.owner-login-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(123, 183, 255, 0.95), rgba(131, 215, 207, 0.85));
+  box-shadow: 0 12px 28px rgba(82, 154, 216, 0.28);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.owner-login-brand strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #241322;
+}
+
+.owner-login-brand small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: rgba(90, 71, 80, 0.72);
+}
+
+.owner-login-kicker {
+  width: max-content;
+  margin: 0 0 0.95rem;
+  border: 1px solid rgba(183, 110, 121, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.66);
+  padding: 0.42rem 0.85rem;
+  font-family: "General Sans", system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #b76e79;
+}
+
+.owner-login-title {
+  margin: 0;
+  font-family: "ZCOOL XiaoWei", "KaiTi", "STKaiti", "Microsoft YaHei", serif;
+  font-size: clamp(2.35rem, 7.5vw, 3rem);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: 0;
+  color: #241322;
+}
+
+.owner-login-verse {
+  width: fit-content;
+  margin: 0.72rem 0 0;
+  padding: 0.12rem 0.35rem 0.24rem 0.08rem;
+  font-family: "ZCOOL XiaoWei", "KaiTi", "STKaiti", "Microsoft YaHei", serif;
+  font-size: 1.02rem;
+  font-weight: 400;
+  line-height: 1.75;
+  color: #b0446a;
+  background: linear-gradient(180deg, transparent 58%, rgba(255, 214, 232, 0.5) 58%);
+}
+
+.owner-login-hint {
+  margin: 1rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.75;
+  color: rgba(90, 71, 80, 0.8);
+}
+
+.owner-login-hint .owner-login-busy-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.55rem;
+  border-radius: 999px;
+  background: #ff8fab;
+  animation: ownerLoginPulse 1.2s ease-in-out infinite;
+}
+
+/* 粉点细线：主站 AI Plaza 的「细线 + 粉点收尾」分隔线 */
+.owner-login-rule {
+  position: relative;
+  height: 1px;
+  margin: 1.55rem 0 1.35rem;
+  background: rgba(36, 19, 34, 0.82);
+}
+
+.owner-login-rule::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -2.5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #ff8fab;
+}
+
+.owner-login-field {
+  margin-top: 1.15rem;
+}
+
+.owner-login-label {
+  display: block;
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5a4750;
+}
+
+.owner-login-input-wrap {
+  position: relative;
+}
+
+.owner-login-input {
+  width: 100%;
+  border: 1px solid #f2e6c9;
+  border-radius: 14px;
+  background: #fffbf5;
+  padding: 0.85rem 0.95rem;
+  font-size: 0.95rem;
+  color: #2b2b2b;
+  outline: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.owner-login-input::placeholder {
+  color: rgba(138, 124, 116, 0.72);
+}
+
+.owner-login-input:focus {
+  border-color: #ffd43b;
+  background: #fffdf8;
+  box-shadow: 0 0 0 4px rgba(255, 143, 171, 0.18);
+}
+
+.owner-login-input-wrap .owner-login-input {
+  padding-right: 2.9rem;
+}
+
+.owner-login-eye {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  transform: translateY(-50%);
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #b08a92;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.owner-login-eye:hover {
+  color: #c94d72;
+  background: rgba(255, 143, 171, 0.14);
+}
+
+.owner-login-error {
+  margin: 1.15rem 0 0;
+  border: 1px solid rgba(201, 77, 114, 0.28);
+  border-radius: 12px;
+  background: rgba(255, 244, 247, 0.85);
+  padding: 0.72rem 0.92rem;
+  color: #9d3155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.owner-login-submit {
+  margin-top: 1.35rem;
+  width: 100%;
+  min-height: 3.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: #241322;
+  color: #fffaf7;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0.9rem 1.8rem rgba(36, 19, 34, 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.owner-login-submit:hover {
+  background: #372432;
+  transform: translateY(-1px);
+  box-shadow: 0 1.15rem 2.2rem rgba(255, 143, 171, 0.35);
+}
+
+.owner-login-submit:focus-visible {
+  outline: 3px solid rgba(255, 143, 171, 0.38);
+  outline-offset: 3px;
+}
+
+.owner-login-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 0.9rem 1.8rem rgba(36, 19, 34, 0.16);
+}
+
+.owner-login-back {
+  display: block;
+  width: max-content;
+  margin: 1.15rem auto 0;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(183, 110, 121, 0.35);
+  color: #b76e79;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.owner-login-back:hover {
+  color: #c94d72;
+  border-color: #c94d72;
+}
+
+@keyframes ownerLoginRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ownerLoginPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@media (max-width: 480px) {
+  .owner-login-card {
+    box-shadow:
+      8px 8px 0 -1px rgba(36, 19, 34, 0.9),
+      8px 8px 0 0 rgba(255, 143, 171, 0.5),
+      0 20px 50px rgba(124, 92, 255, 0.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-login-card {
+    animation: none;
+  }
+
+  .owner-login-hint .owner-login-busy-dot {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .owner-login-submit:hover {
+    transform: none;
+  }
 }

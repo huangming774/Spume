@@ -1,4 +1,4 @@
-const CACHE_NAME = "taozhiyy-pwa-v5";
+const CACHE_NAME = "taozhiyy-pwa-v6";
 const APP_START_URL = "/app";
 const APP_SHELL = [APP_START_URL, "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 
@@ -34,6 +34,8 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/assets/")) return;
   if (url.pathname.startsWith("/projects/")) return;
   if (url.pathname.startsWith("/cos/")) return;
+  // 小精灵的 CSS/JS 在 shared/ 里随时会改，缓存了就再也拿不到新版（滚动条/布局会停留在旧样式）。
+  if (url.pathname.startsWith("/ai-assistant/")) return;
   if (url.pathname === "/about-preview.html") return;
   if (url.pathname.startsWith("/showcase/") || url.pathname.startsWith("/web/")) return;
 

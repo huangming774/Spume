@@ -14,7 +14,7 @@ import {
 test("restores the owner controller screen map from the prototype", () => {
   assert.deepEqual(
     ownerConsoleScreens.map((screen) => screen.id),
-    ["home", "article", "drafts", "gallery", "moments", "friend", "inbox", "ai"],
+    ["home", "article", "drafts", "gallery", "moments", "friend", "inbox", "emails", "ai"],
   );
   assert.equal(ownerConsoleScreens[0].title, "站长工作台");
   assert.equal(ownerConsoleScreens[1].title, "发布文章");
@@ -23,7 +23,7 @@ test("restores the owner controller screen map from the prototype", () => {
 test("keeps the prototype task modules and notification badge content", () => {
   assert.deepEqual(
     ownerConsoleModules.map((module) => module.title),
-    ["发布文章", "相册图片", "发布碎语", "增加友链", "留言收件箱"],
+    ["发布文章", "相册图片", "发布碎语", "增加友链", "留言收件箱", "邮箱目录"],
   );
   assert.deepEqual(
     ownerConsoleNotifications.map((notification) => notification.title),

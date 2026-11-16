@@ -1,7 +1,7 @@
 ---
 title: Claude Code Skills 配置指南 —— 打造你的 AI 超能力工具箱
 
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-09_11-09-08.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-09_11-09-08.png
 date: 2026-05-09 00:00:00
 categories: 教程
 tags: [Claude Code, Skills, AI工具, 效率]

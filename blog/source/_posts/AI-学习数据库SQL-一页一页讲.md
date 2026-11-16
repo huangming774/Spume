@@ -3,10 +3,10 @@ title: 我是如何借助 AI 学习数据库 SQL 的：一次"一页一页讲"�
 date: 2026-05-24 23:25:00
 tags: [AI, SQL, 学习方法, 数据库]
 categories: [学习笔记]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/20260524-232506-ee241f.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/20260524-232506-ee241f.png
 ---
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/20260524-232506-ee241f.png" alt="封面" style="width:100%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/20260524-232506-ee241f.png" alt="封面" style="width:100%">
 
 最近我在学习数据库课程中的《第5章 数据操作语句》。这部分内容主要围绕 SQL 查询展开，包括 `SELECT`、`WHERE`、`LIKE`、`ORDER BY`、聚合函数等。
 

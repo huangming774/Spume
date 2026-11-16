@@ -396,7 +396,7 @@ def page_shell(title: str, active: str, inner: str, *, depth: int = 0, extra_scr
 <aside class="sidebar">
   <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
   <div class="sidebar-header">
-    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div class="avatar"><img src="https://fs.964643.xyz/1.png" alt=""></div>
     <div><div class="blog-name blog-name-full" data-i18n="blogTitle">Spume</div></div>
   </div>
   <div class="sidebar-social">{SIDEBAR_SOCIAL}</div>

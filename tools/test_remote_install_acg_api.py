@@ -50,9 +50,9 @@ class RemoteInstallAcgApiTests(unittest.TestCase):
         text = SCRIPT_PATH.read_text(encoding="utf-8")
 
         self.assertIn("location /cos/", text)
-        self.assertIn("tzyy-1330068502.cos.ap-beijing.myqcloud.com", text)
+        self.assertIn("fs.964643.xyz", text)
         self.assertIn("proxy_ssl_server_name on;", text)
-        self.assertIn('proxy_set_header Host "tzyy-1330068502.cos.ap-beijing.myqcloud.com";', text)
+        self.assertIn('proxy_set_header Host "fs.964643.xyz";', text)
         self.assertIn('add_header X-Content-Type-Options "nosniff" always;', text)
         self.assertIn('add_header Cache-Control "public, max-age=31536000, immutable" always;', text)
 

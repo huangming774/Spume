@@ -65,7 +65,7 @@ add_header X-Taozhiyy-Origin-Status $taozhiyy_cos_local_origin_status always;
 
 
 def patch_snippet(text):
-    if "https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/" not in text:
+    if "https://fs.964643.xyz/" not in text:
         raise ValueError("Unexpected COS origin; refusing to modify the snippet")
     if INCLUDE in text:
         return text
@@ -120,7 +120,7 @@ def fetch(url, byte_range=None):
 
 
 def verify():
-    origin = fetch("https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png")
+    origin = fetch("https://fs.964643.xyz/1.png")
     first = fetch("https://taozhiyy.top/cos/1.png")
     second = fetch("https://taozhiyy.top/cos/1.png")
     if not (origin["sha256"] == first["sha256"] == second["sha256"] and second["cache"] == "HIT"):

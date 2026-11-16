@@ -126,13 +126,23 @@ const AiGalleryPage = () => {
       />
 
       <header className="container mx-auto px-5 pb-10 md:px-10">
-        <p className="font-general text-xs uppercase tracking-[0.45em] text-[#b76e79]">
-          AI Image Plaza
-        </p>
-        <h1 className="mt-4 font-zentry text-5xl font-black uppercase leading-none text-[#241322] md:text-7xl">
-          生成图
-          <span className="block text-[#ff8fab]">Plaza</span>
-        </h1>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-general text-xs uppercase tracking-[0.45em] text-[#b76e79]">
+              AI Image Plaza
+            </p>
+            <h1 className="mt-4 font-zentry text-5xl font-black uppercase leading-none text-[#241322] md:text-7xl">
+              生成图
+              <span className="block text-[#ff8fab]">Plaza</span>
+            </h1>
+          </div>
+          <Link
+            to="/ai-image"
+            className="rounded-full bg-[#241322] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe7ef]"
+          >
+            去工坊生图
+          </Link>
+        </div>
       </header>
 
       <section className="container mx-auto px-5 pb-24 md:px-10">
@@ -148,7 +158,7 @@ const AiGalleryPage = () => {
             <p className="font-general text-xs uppercase tracking-[0.36em] text-[#b76e79]">Empty</p>
             <p className="mt-3 text-base">还没有人在工坊生成图片。</p>
             <Link
-              to="/app"
+              to="/ai-image"
               className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#241322] px-5 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-[#ffe7ef]"
             >
               去工坊抢首发

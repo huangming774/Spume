@@ -3,7 +3,7 @@ title: Claude Code + cc-connect 打通微信，手机远程操控电脑写代码
 date: 2026-05-14 14:30:00
 tags: [Claude Code, cc-connect, 微信, 效率工具, 远程控制]
 categories: [教程]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-14_14-42-50.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-14_14-42-50.png
 ---
 
 {% span red, 用手机指挥电脑上的 Claude Code 写代码、发文件、改配置，全程无需碰键盘。 %}这篇教程记录我如何通过 cc-connect 把 Claude Code 接入微信，实现双端联动。
@@ -124,9 +124,9 @@ cc-connect
 
 启动后，打开微信向机器人发消息即可交互。我把工作目录定位在 `C:/Users/lenovo`，这样 Claude Code 的所有能力（skills、memory、项目上下文）都能在手机上调用。
 
-{% image https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1c108889732d721111aa7c9b76eaee4c.jpg, alt=微信端聊天效果截图一, width=360px %}
+{% image https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1c108889732d721111aa7c9b76eaee4c.jpg, alt=微信端聊天效果截图一, width=360px %}
 
-{% image https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1fc28c042ce32d72b0cb28b31e05120a.jpg, alt=微信端聊天效果截图二, width=360px %}
+{% image https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/1fc28c042ce32d72b0cb28b31e05120a.jpg, alt=微信端聊天效果截图二, width=360px %}
 
 ---
 

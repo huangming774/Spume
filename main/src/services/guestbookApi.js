@@ -21,7 +21,7 @@ function toLegacyRow(item) {
 }
 
 export async function getGuestbook(limit = 50) {
-  const pageSize = Math.max(1, Math.min(Number(limit) || 50, 100));
+  const pageSize = Math.max(1, Math.min(Number(limit) || 50, 50));
   const res = await fetch(
     `/api/guestbook/messages?page=1&pageSize=${pageSize}&channel=${DEFAULT_CHANNEL}`,
     { credentials: "include", headers: { Accept: "application/json" } },

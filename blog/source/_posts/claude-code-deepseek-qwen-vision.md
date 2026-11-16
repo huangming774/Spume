@@ -3,8 +3,8 @@ title: Claude Code + DeepSeek V4 Pro + 千问VL：零成本为国产大模型装
 date: 2026-05-10 14:00:00
 tags: [Claude Code, DeepSeek, 千问, 识图, AI工具]
 categories: [AI教程]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png
-top_img: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png
+top_img: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png
 ---
 
 ## 写在前面
@@ -153,7 +153,7 @@ node /d/deepseek-vision/vision.js "D:/截图专用/xxx.png" "用中文描述这�
 
 {% folding blue, 我的测试结果示例 %}
 
-{% image https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png, alt=辉夜大小姐动画搜索结果, width=100% %}
+{% image https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_10-18-42.png, alt=辉夜大小姐动画搜索结果, width=100% %}
 
 千问 VL 返回的描述：
 

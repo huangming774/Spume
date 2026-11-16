@@ -99,7 +99,7 @@
 <aside class="sidebar">
   <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
   <div class="sidebar-header">
-    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div class="avatar"><img src="https://fs.964643.xyz/1.png" alt=""></div>
     <div><div class="blog-name blog-name-full" data-i18n="blogTitle">Spume</div></div>
   </div>
   <div class="sidebar-social">
@@ -144,8 +144,8 @@
 <h4>1.1.2 可视性</h4>
 <p>单一的游戏展示界面会让玩家很快感受到无聊，因此为泡泡糖的主界面设计了不同的主题风格，切换主题的方式也相当简便。</p>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/01/1.1.2.01.png" alt="主题1效果" style="max-width:48%;border-radius:8px;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/01/1.1.2.02.jpg" alt="主题2效果" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/01/1.1.2.01.png" alt="主题1效果" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/01/1.1.2.02.jpg" alt="主题2效果" style="max-width:48%;border-radius:8px;">
 </div>
 
 <h3>1.2 玩家分析</h3>
@@ -167,11 +167,11 @@
 <li>显示关卡积分（更新关卡分数和实现积分规则）</li>
 </ol>
 <p>根据上述描述设计的流程图：</p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/2.1.01.png" alt="设计流程图" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/2.1.01.png" alt="设计流程图" style="max-width:80%;"></p>
 <h3>2.2 游戏流程与整体框架</h3>
 <p><strong>游戏流程：</strong></p>
 <p>开始→玩家点击→执行消除操作→判断消除→计算得分→判断是否通关→通关提示→刷新界面到下一关；或判断是否还能消除→无可消除且无通关可能→游戏结束。</p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/2.2.1.01.png" alt="游戏流程图" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/2.2.1.01.png" alt="游戏流程图" style="max-width:80%;"></p>
 <p><strong>整体框架：</strong></p>
 <p>本消灭泡泡糖游戏项目以Java作为核心开发语言，依托JavaFX技术实现游戏功能设计与界面渲染，同时由元素、主题和控制器搭建了整体架构，确保代码模块化、逻辑清晰，便于开发维护与功能扩展。</p>
 <ul>
@@ -180,7 +180,7 @@
 <li><strong>控制器：</strong> 主要在MainForm文件中，设计了事件处理对象，负责相应玩家的输入，随之调整模型和视图</li>
 </ul>
 <h3>2.2.3 本项目对应的企业级开发流程</h3>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/%E5%9B%BE%E7%89%8773.png" alt="企业级开发流程" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/02/%E5%9B%BE%E7%89%8773.png" alt="企业级开发流程" style="max-width:80%;"></p>
 <h2>第三章 泡泡糖的显示</h2>
 <h3>3.1 显示泡泡糖</h3>
 <p>本场景需要实现在游戏界面上呈现5个不同颜色的泡泡糖，并且泡泡糖的位置由坐标决定，需要创建Star、Position等实体类，并设置其中的成员方法和成员变量，同时还需要创建枚举类型StarType。</p>
@@ -220,7 +220,7 @@
 </code></pre>
 <h3>3.2 随机显示10×10泡泡糖矩阵</h3>
 <p>利用for循环的嵌套使用以及随机数的产生等方法在界面上显示随机产生的10×10的泡泡糖矩阵。</p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/03/3.2.3.01.png" alt="随机10×10泡泡糖矩阵" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/03/3.2.3.01.png" alt="随机10×10泡泡糖矩阵" style="max-width:80%;"></p>
 <pre><code class="language-java">public StarList createStars() {
     StarList stars = new StarList();
     for(int row = 0; row &lt; MAX_ROW_SIZE; row++) {
@@ -260,8 +260,8 @@
 <p>同样的逻辑应用于右侧、顶部和底部四个方向，通过递归调用<code>lookupByPath</code>函数实现查找被点击泡泡糖四周同色泡泡糖的完整功能。</p>
 <p><strong>消除前后对比：</strong></p>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/04/4.4.2.01.png" alt="消除前" style="max-width:48%;border-radius:8px;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/04/4.4.2.02.png" alt="消除后" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/04/4.4.2.01.png" alt="消除前" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/04/4.4.2.02.png" alt="消除后" style="max-width:48%;border-radius:8px;">
 </div>
 
 <h3>4.2 封装待移动的泡泡糖</h3>
@@ -373,14 +373,14 @@
 <p>获取水平待移动泡泡糖——根据空列计算左移跨度，将右侧泡泡糖向左移动。</p>
 <p><strong>垂直移动效果：</strong></p>
 <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:16px 0;">
-<div style="flex:1;min-width:200px;max-width:44%;"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8736.png" alt="垂直移动前" style="width:100%;border-radius:8px;"></div>
-<div style="flex:1;min-width:200px;max-width:44%;"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8745.png" alt="垂直移动后" style="width:100%;border-radius:8px;"></div>
+<div style="flex:1;min-width:200px;max-width:44%;"><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8736.png" alt="垂直移动前" style="width:100%;border-radius:8px;"></div>
+<div style="flex:1;min-width:200px;max-width:44%;"><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8745.png" alt="垂直移动后" style="width:100%;border-radius:8px;"></div>
 </div>
 
 <p><strong>水平移动效果：</strong></p>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8749.png" alt="水平移动前" style="max-width:48%;border-radius:8px;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8750.png" alt="水平移动后" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8749.png" alt="水平移动前" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/05/%E5%9B%BE%E7%89%8750.png" alt="水平移动后" style="max-width:48%;border-radius:8px;">
 </div>
 
 <h2>第六章 通关分数与积分</h2>
@@ -417,15 +417,15 @@
 <h3>7.1 泡泡糖换肤体验</h3>
 <p>定位<code>src/res.layout/main_layout.fxml</code>，通过切换<code>stylesheets</code>属性实现skin1和skin2两套主题的切换。</p>
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8763.jpg" alt="skin2主题效果" style="max-width:48%;border-radius:8px;">
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8764.jpg" alt="skin1主题效果" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8763.jpg" alt="skin2主题效果" style="max-width:48%;border-radius:8px;">
+<img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8764.jpg" alt="skin1主题效果" style="max-width:48%;border-radius:8px;">
 </div>
 
 <h3>7.2 Jar命令运行项目</h3>
 <p>导出项目Jar包，实现游戏的打包与发布。运行时需要指定JavaFX模块路径：</p>
 <pre><code class="language-bash">java --module-path &quot;D:\javafx-sdk-21.0.2\lib&quot; --add-modules javafx.controls,javafx.fxml -jar Bubble.jar
 </code></pre>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8765.png" alt="Jar运行效果" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/%E6%B3%A1%E6%B3%A1%E7%B3%96%E5%AD%98%E5%82%A8/07/%E5%9B%BE%E7%89%8765.png" alt="Jar运行效果" style="max-width:80%;"></p>
 <h2>第八章 项目实践的问题与解答（Q&amp;A）</h2>
 <table>
 <thead>

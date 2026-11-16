@@ -9,6 +9,7 @@
   var OWNER_EMAIL = "shangkesan9@gmail.com";
   var LIMIT_MSG = "今日提问次数用完啦，明天再来问我吧～";
   var IMAGE_LIMIT_MSG = "今日生图次数用完啦，明天再来画吧～";
+  var RATE_LIMIT_MSG = "提问太快啦，请稍等 5 秒再试～";
   var ERROR_MSG = "小精灵暂时走神了，请稍后再试～";
   var IMAGE_ERROR_MSG = "生图暂时失败了，请稍后再试～";
   var NOT_CONFIGURED_MSG =
@@ -17,7 +18,7 @@
     "生图还没配置 Agnes API Key，站长配好后就能用了。";
 
   var LOGO_URL =
-    "/cos/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/main/img/logo.png";
+    "https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/main/img/logo.png";
   var LIMITS = { chat: 2000, image: 1200 };
   var API_AVATAR = "/api/auth/avatar";
 
@@ -770,7 +771,7 @@
           ui.messages,
           "system",
           state.isLogin
-            ? "生图使用 Agnes Image，默认每天 3 张。"
+            ? "生图由 Cloudflare Workers AI 生成，默认每天 3 张。"
             : "生图需要先登录，避免额度被刷。"
         );
         intro.classList.add("bai-image-intro");
@@ -1076,7 +1077,7 @@
           state.remaining = res.data.remaining ?? state.remaining;
           state.isLogin = !!res.data.isLogin;
           state.unlimited = !!res.data.unlimited;
-          if (res.data.chatEnabled === false) state.chatEnabled = false;
+          if (res.data.chatEnabled != null) state.chatEnabled = !!res.data.chatEnabled;
         }
         updateQuotaLabel();
       })
@@ -1159,6 +1160,10 @@
           return;
         }
         if (res.status === 429 || d.error === "DAILY_LIMIT_EXCEEDED") {
+          if (d.error === "RATE_LIMIT_EXCEEDED") {
+            appendMsg(ui.messages, "system", d.message || RATE_LIMIT_MSG);
+            return;
+          }
           state.imageRemaining = 0;
           appendMsg(ui.messages, "system", d.message || IMAGE_LIMIT_MSG);
           return;
@@ -1233,7 +1238,7 @@
         if (d.remaining != null) state.remaining = d.remaining;
         if (d.isLogin != null) state.isLogin = d.isLogin;
         if (d.unlimited != null) state.unlimited = d.unlimited;
-        if (d.chatEnabled === false) state.chatEnabled = false;
+        if (d.chatEnabled != null) state.chatEnabled = !!d.chatEnabled;
         updateQuotaLabel();
 
         if (d.error === "CHAT_NOT_CONFIGURED" || d.chatEnabled === false) {
@@ -1241,6 +1246,10 @@
           return;
         }
         if (res.status === 429 || d.error === "DAILY_LIMIT_EXCEEDED") {
+          if (d.error === "RATE_LIMIT_EXCEEDED") {
+            appendMsg(ui.messages, "system", d.message || RATE_LIMIT_MSG);
+            return;
+          }
           state.remaining = 0;
           appendMsg(ui.messages, "system", d.message || LIMIT_MSG);
           return;

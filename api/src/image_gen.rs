@@ -397,7 +397,11 @@ async fn send_raw(
         .and_then(|value| value.to_str().ok())
         .unwrap_or("")
         .to_string();
-    let bytes = response.bytes().await.map(|item| item.to_vec()).unwrap_or_default();
+    let bytes = response
+        .bytes()
+        .await
+        .map(|item| item.to_vec())
+        .unwrap_or_default();
     let parsed = if content_type.contains("json") {
         serde_json::from_slice(&bytes).unwrap_or(Value::Null)
     } else {

@@ -1,7 +1,7 @@
 ---
 title: Epic无法获取游戏解决方法
 date: 2025-01-03 12:00:00
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/6418150606f6f31152c1ed426a6f0b5.jpg
+cover: https://fs.964643.xyz/6418150606f6f31152c1ed426a6f0b5.jpg
 categories: 工具
 tags: Epic
 description: 从网上搜刮来的
@@ -15,11 +15,11 @@ Epic游戏商城网址：[https://store.epicgames.com/](https://store.epicgames.
 
 今天Epic放出来了我十分期待的游戏《幽灵行者2》，在28号早上就截止了，我也是迫不及待的去下载Epic平台来下载游戏。
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/934f06475827444c553116c633269b7.jpg">
+<img src="https://fs.964643.xyz/934f06475827444c553116c633269b7.jpg">
 
 然而，遇到了一个难题：
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/3ad6dec89f8937b7c22277d65f31ddb.jpg">
+<img src="https://fs.964643.xyz/3ad6dec89f8937b7c22277d65f31ddb.jpg">
 
 ## 解决办法
 
@@ -39,7 +39,7 @@ Epic游戏商城网址：[https://store.epicgames.com/](https://store.epicgames.
 没错，这就是我所遇到的问题。在我尝试了网上各路大神的方法依然无效之后，终于在一个评论区找到答案，也让我欣喜若狂。
 {% endnote %}
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/a2eb1c029fb08e54f4296ce4e9fbd22.jpg">
+<img src="https://fs.964643.xyz/a2eb1c029fb08e54f4296ce4e9fbd22.jpg">
 
 ### 4. 去浏览器官网商店
 

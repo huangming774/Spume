@@ -170,9 +170,7 @@ fn text_output(item: &Value) -> bool {
         .and_then(|item| item.get("output_modalities"))
         .and_then(Value::as_array)
     {
-        return mods
-            .iter()
-            .any(|entry| entry.as_str() == Some("text"));
+        return mods.iter().any(|entry| entry.as_str() == Some("text"));
     }
     if let Some(modality) = architecture
         .and_then(|item| item.get("modality"))

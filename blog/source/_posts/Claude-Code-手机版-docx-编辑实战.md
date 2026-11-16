@@ -3,7 +3,7 @@ title: Claude Code 手机版实战：多轮修正 Word 文档直到完美提交
 date: 2026-05-14 22:00:00
 tags: [Claude Code, AI工具, 效率提升]
 categories: [AI编程]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Screenshot_20260514_204759.jpg
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Screenshot_20260514_204759.jpg
 description: 在手机上用 Claude Code 直接编辑 .docx 的 XML，多轮迭代修改数据库实验报告直到完美提交的全过程。
 ---
 

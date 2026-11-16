@@ -413,7 +413,7 @@ test("keeps the about preview production-safe", () => {
 
   assert.doesNotMatch(aboutPreviewSource, /预览专用|Preview only/i);
   assert.doesNotMatch(aboutPreviewSource, /cos\.ap-beijing\.myqcloud\.com/);
-  assert.match(aboutPreviewSource, /\/cos\/about-page\/20260624\//);
+  assert.match(aboutPreviewSource, /fs\.964643\.xyz\/about-page\/20260624\//);
   assert.match(aboutPreviewSource, /href="\/showcase\/quizcard\.html"/);
   assert.doesNotMatch(aboutPreviewSource, /\/about\/projects\/quizcard/);
 });

@@ -1,9 +1,13 @@
-const DIRECT_COS_ORIGIN =
+// Historical compatibility: about-preview content used to embed absolute URLs
+// on the former Tencent COS bucket. Those objects now live on Cloudflare R2,
+// so residual old COS URLs are rewritten to the R2 direct origin.
+const LEGACY_COS_ORIGIN =
   "https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/";
+const R2_ASSET_ORIGIN = "https://fs.964643.xyz/";
 
 export const rewriteAboutPreviewAssets = (markup = "") =>
   String(markup)
-    .replaceAll(DIRECT_COS_ORIGIN, "/cos/")
+    .replaceAll(LEGACY_COS_ORIGIN, R2_ASSET_ORIGIN)
     .replace(/<img\b[^>]*>/gi, (tag) => {
       let next = tag;
       // Strip inline onerror handlers. Inside a shadow DOM an onerror
@@ -12,7 +16,7 @@ export const rewriteAboutPreviewAssets = (markup = "") =>
       // would succeed. Letting the broken-image placeholder show is
       // better than silently hiding it.
       next = next.replace(/\sonerror\s*=\s*"[^"]*"/gi, "");
-      // Add referrerpolicy to avoid hotlink protection on COS assets.
+      // Add referrerpolicy to avoid hotlink protection on the asset host.
       if (!/\sreferrerpolicy\s*=/i.test(next)) {
         next = next.replace(/<img\b/i, '<img referrerpolicy="no-referrer"');
       }

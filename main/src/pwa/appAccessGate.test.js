@@ -108,11 +108,11 @@ test("opens the app console from the PWA host root only", () => {
   );
 });
 
-test("exposes the app console only on the PWA host and local development", () => {
+test("exposes the app console on every host; the login gate protects it", () => {
   assert.equal(shouldExposeAppConsole({ hostname: PWA_AUTH_HOSTNAME }), true);
   assert.equal(shouldExposeAppConsole({ hostname: "localhost" }), true);
   assert.equal(shouldExposeAppConsole({ hostname: "127.0.0.1" }), true);
   assert.equal(shouldExposeAppConsole({ hostname: "::1" }), true);
-  assert.equal(shouldExposeAppConsole({ hostname: "taozhiyy.top" }), false);
-  assert.equal(shouldExposeAppConsole({ hostname: "www.taozhiyy.top" }), false);
+  assert.equal(shouldExposeAppConsole({ hostname: "taozhiyy.top" }), true);
+  assert.equal(shouldExposeAppConsole({ hostname: "www.taozhiyy.top" }), true);
 });

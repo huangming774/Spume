@@ -5,7 +5,7 @@ updated: 2026-05-18
 sticky: 999999
 tags: [VibeCoding, Claude Code, Codex, Cursor, React, Vite, Vercel, MCP, 个人主页]
 categories: [项目]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-hero.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-hero.png
 description: 用一天时间搭建全新个人主页，再用一天从静态 HTML 迁移到 React SPA 架构，接入 MCP 组件生态。22 篇文章从 Hexo 博客完整迁移，全程 Vibe Coding。
 ---
 
@@ -160,19 +160,19 @@ homepage-project/
 
 ### 首页
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-hero.png" alt="首页效果" style="width:100%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-hero.png" alt="首页效果" style="width:100%">
 
 首页是整个创作屋的门面——动漫少女插画 + 手绘小猫 + 渐变色标题 + Hello SVG 描边动画，营造出"有趣的灵魂终会遇见"的氛围。
 
 ### 文章系统
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-articles.png" alt="文章界面" style="width:100%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-articles.png" alt="文章界面" style="width:100%">
 
 文章列表用卡片式布局，支持中英双语切换。代码块用了 macOS 终端风格——暗色背景 + 顶部标题栏 + 三色圆点 + highlight.js 语法高亮。
 
 ### 说说 — 随机艺术效果
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-shuoshuo.png" alt="说说界面" style="width:100%">
+<img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/homepage-shuoshuo.png" alt="说说界面" style="width:100%">
 
 重点——说说页面里每条卡片的样式是 {% span red, 随机分配 %} 的：
 

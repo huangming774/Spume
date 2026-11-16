@@ -99,7 +99,7 @@
 <aside class="sidebar">
   <button type="button" class="sidebar-toggle" onclick="this.parentElement.classList.toggle('collapsed')" title="折叠导航栏">☰</button>
   <div class="sidebar-header">
-    <div class="avatar"><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png" alt=""></div>
+    <div class="avatar"><img src="https://fs.964643.xyz/1.png" alt=""></div>
     <div><div class="blog-name blog-name-full" data-i18n="blogTitle">Spume</div></div>
   </div>
   <div class="sidebar-social">
@@ -203,7 +203,7 @@ cnn_model.save(&quot;models/cnn_mnist.keras&quot;)
 <p>训练耗时约<strong>34.61秒</strong>。</p>
 <h2>模型评估与对比</h2>
 <p>在MNIST测试集（10000张图片）上，使用Accuracy、Precision、Recall和F1-Score四个指标进行评估：</p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE3.png" alt="模型对比结果" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE3.png" alt="模型对比结果" style="max-width:80%;"></p>
 <table>
 <thead>
 <tr>
@@ -236,20 +236,20 @@ cnn_model.save(&quot;models/cnn_mnist.keras&quot;)
 <p>从混淆矩阵可以看出，三个模型的大部分预测都集中在对角线上。</p>
 <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:20px 0;">
   <div style="flex:1;min-width:280px;">
-    <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE4.png" alt="逻辑回归混淆矩阵" style="width:100%;border-radius:8px;">
+    <img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE4.png" alt="逻辑回归混淆矩阵" style="width:100%;border-radius:8px;">
   </div>
   <div style="flex:1;min-width:280px;">
-    <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE5.png" alt="SVM混淆矩阵" style="width:100%;border-radius:8px;">
+    <img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE5.png" alt="SVM混淆矩阵" style="width:100%;border-radius:8px;">
   </div>
 </div>
 <div style="max-width:66%;margin:20px auto 0;">
-  <img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png" alt="CNN混淆矩阵" style="width:100%;border-radius:8px;">
+  <img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png" alt="CNN混淆矩阵" style="width:100%;border-radius:8px;">
 </div>
 
 <p>逻辑回归和SVM在数字4/9、5/6、7/3等形态相似的数字之间仍存在一定的误判。而CNN的混淆矩阵对角线更加集中，误分类数量明显更少。</p>
 <h2>自制手写数字测试</h2>
 <p>标准测试集表现好≠实际效果好。为了检验模型的真实泛化能力，我用画图工具手写了0~9共10张数字图片：</p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-37-05.png" alt="自制手写数字图片" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-37-05.png" alt="自制手写数字图片" style="max-width:80%;"></p>
 <h3>图片预处理</h3>
 <p>自制图片不能直接输入模型——它们是白底黑字的大画布，而MNIST是28×28的黑底白字灰度图。我设计了一套预处理流程：</p>
 <ol>
@@ -286,11 +286,11 @@ cnn_model.save(&quot;models/cnn_mnist.keras&quot;)
 </code></pre>
 <h3>预测结果</h3>
 <p><strong>逻辑回归预测结果（6/10 = 60%）：</strong></p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-46.png" alt="逻辑回归自制图片预测" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-46.png" alt="逻辑回归自制图片预测" style="max-width:80%;"></p>
 <p><strong>SVM预测结果（6/10 = 60%）：</strong></p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-55.png" alt="SVM自制图片预测" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-55.png" alt="SVM自制图片预测" style="max-width:80%;"></p>
 <p><strong>CNN预测结果（9/10 = 90%）：</strong></p>
-<p><img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-46-06.png" alt="CNN自制图片预测" style="max-width:80%;"></p>
+<p><img src="https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-46-06.png" alt="CNN自制图片预测" style="max-width:80%;"></p>
 <table>
 <thead>
 <tr>

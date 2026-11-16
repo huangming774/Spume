@@ -1,7 +1,7 @@
 ---
 title: Reimu 主题博客搭建笔记——Hexo 新主题从零到部署
 date: 2026-05-10 21:00:00
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_20-49-32.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/Snipaste_2026-05-10_20-49-32.png
 categories: 教程
 tags: [Hexo, blog, Skills]
 description: 从 Butterfly 迁移到 Reimu 主题的完整踩坑记录

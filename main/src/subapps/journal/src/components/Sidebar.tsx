@@ -4,7 +4,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { journalTo } from '../paths';
 import { useWeather } from '../weather/WeatherContext';
 
-const AVATAR = 'https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/1.png';
+const AVATAR = 'https://fs.964643.xyz/1.png';
 
 const NAV = [
   { to: journalTo('/'), icon: '🏠', key: 'navHome' as const },

@@ -3,7 +3,7 @@ title: 入选小米MiMo Orbit百万亿Token创造者激励计划，喜提7亿Tok
 date: 2026-05-21 22:41:00
 tags: [MiMo, 小米, AI, Token]
 categories: [AI]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/mimo-orbit-7亿token.png
+cover: https://fs.964643.xyz/AI自动化博客图片/mimo-orbit-7亿token.png
 ---
 
 ## 开篇
@@ -18,7 +18,7 @@ cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图�
 
 以下是收到的入选通知邮件：
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/mimo-orbit-入选邮件.jpg" alt="MiMo Orbit入选邮件" style="max-width:450px;width:100%">
+<img src="https://fs.964643.xyz/AI自动化博客图片/mimo-orbit-入选邮件.jpg" alt="MiMo Orbit入选邮件" style="max-width:450px;width:100%">
 
 {% folding blue, 邮件全文整理 %}
 你好，
@@ -34,7 +34,7 @@ cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图�
 
 登录 MiMo 控制台后，订阅管理页面直接显示 **700,000,000 Credits** 已到账：
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/mimo-orbit-7亿token.png" alt="MiMo 7亿Token" style="max-width:800px;width:100%">
+<img src="https://fs.964643.xyz/AI自动化博客图片/mimo-orbit-7亿token.png" alt="MiMo 7亿Token" style="max-width:800px;width:100%">
 
 ## 套餐权益详解
 

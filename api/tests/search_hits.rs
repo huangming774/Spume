@@ -48,7 +48,10 @@ fn nested_milvus_rows_also_parse() {
 
 #[test]
 fn empty_data_is_no_hits_and_missing_data_is_an_error() {
-    assert_eq!(hits_from_milvus(&json!({"code": 0, "data": []})).unwrap(), Vec::new());
+    assert_eq!(
+        hits_from_milvus(&json!({"code": 0, "data": []})).unwrap(),
+        Vec::new()
+    );
     assert_eq!(
         hits_from_milvus(&json!({"code": 200})).unwrap_err(),
         SearchHitError::MissingResult

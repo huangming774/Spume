@@ -1,6 +1,6 @@
 ---
 title: OpenAI Codex 实战 —— 让 AI 帮我做 PPT 和写实验报告
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/Snipaste_2026-05-12_18-54-19.png
+cover: https://fs.964643.xyz/AI自动化博客图片/Snipaste_2026-05-12_18-54-19.png
 date: 2026-05-12 00:00:00
 categories: AI工具
 tags: [OpenAI Codex, VibeCoding, PPT, Word, 数据结构, AI编程]
@@ -46,7 +46,7 @@ Claude Code、Trae、Antigravity、OpenAI Codex、Cursor、GitHub Copilot、Wind
 
 ### 生成效果
 
-{% image https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI自动化博客图片/Snipaste_2026-05-12_18-56-56.png, alt=PPT生成效果截图 %}
+{% image https://fs.964643.xyz/AI自动化博客图片/Snipaste_2026-05-12_18-56-56.png, alt=PPT生成效果截图 %}
 
 ### {% span red, 踩坑与修复 %}
 

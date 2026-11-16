@@ -21,12 +21,13 @@ test("keeps the fixed-height hero shell from becoming a vertical scroll containe
   );
 });
 
-test("loads hero media through the same-origin COS proxy", () => {
+test("loads hero media from the R2 direct origin", () => {
   assert.match(heroSource, /getHeroCoverSrc as getImgSrc/);
   for (const index of [1, 2, 3, 4]) {
-    const source = new URL(getHeroCoverSrc(index), "https://taozhiyy.top");
-    assert.equal(source.origin, "https://taozhiyy.top");
-    assert.ok(source.pathname.startsWith("/cos/"));
+    const source = new URL(getHeroCoverSrc(index));
+    assert.equal(source.hostname, "fs.964643.xyz");
+    assert.equal(source.protocol, "https:");
+    assert.ok(source.pathname.startsWith("/"));
   }
   assert.doesNotMatch(heroSource, /cos\.ap-beijing\.myqcloud\.com/);
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FiBell, FiRefreshCw, FiUpload, FiX } from "react-icons/fi";
-import { authMe } from "../services/authApi";
+import { Link } from "react-router-dom";
+import { FiBell, FiEye, FiEyeOff, FiRefreshCw, FiUpload, FiX } from "react-icons/fi";
+import { authLogin, authMe } from "../services/authApi";
 import { fetchChatStats } from "../services/chatStatsApi";
 import {
   createOwnerFixedAnswer,
@@ -67,7 +68,7 @@ const defaultFriendLink = {
   name: "Spume",
   desc: "Spume的小屋",
   url: "https://taozhiyy.top",
-  avatar: `https://taozhiyy.top${cosAsset("1.png")}`,
+  avatar: cosAsset("1.png"),
 };
 
 const defaultMoment = {
@@ -140,6 +141,11 @@ const AppConsolePage = () => {
   const [ownerStatus, setOwnerStatus] = useState(null);
   const [ownerEmails, setOwnerEmails] = useState(null);
   const [error, setError] = useState("");
+  const [loginName, setLoginName] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatar, setAvatar] = useState(ownerConsoleAvatars[0]);
@@ -301,6 +307,28 @@ const AppConsolePage = () => {
   const closePublish = () => {
     clearPublishTimer();
     setPublishState((current) => ({ ...current, open: false }));
+  };
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setLoginBusy(true);
+    setLoginError("");
+    try {
+      const result = await authLogin(loginName.trim(), loginPassword);
+      if (!result.ok) {
+        setLoginError(
+          result.data?.message || result.data?.error || "登录失败，请检查账号和密码",
+        );
+        return;
+      }
+      setAuth(result.data);
+      setLoginPassword("");
+      await loadConsole();
+    } catch (e) {
+      setLoginError(e.message || "登录失败，请稍后再试");
+    } finally {
+      setLoginBusy(false);
+    }
   };
 
   const saveArticleDraft = async ({ title, body, toastTitle, toastMessage }) => {
@@ -787,6 +815,103 @@ const AppConsolePage = () => {
           status: "draft",
         },
       ];
+
+  // 站长登录界面：没登录只给账号密码表单，登录后才进控制台。
+  if (!auth) {
+    return (
+      <main className="owner-login-page">
+        <section className="owner-login-card" aria-busy="true">
+          <header className="owner-login-head">
+            <span className="owner-login-mark" aria-hidden="true">
+              TC
+            </span>
+            <span className="owner-login-brand">
+              <strong>Spume控制器</strong>
+              <small>站长工作区</small>
+            </span>
+          </header>
+          <p className="owner-login-kicker">Owner Console</p>
+          <h1 className="owner-login-title">站长控制台</h1>
+          <p className="owner-login-verse">桃之夭夭，灼灼其华。</p>
+          <p className="owner-login-hint">
+            <span className="owner-login-busy-dot" aria-hidden="true" />
+            正在读取会话…
+          </p>
+        </section>
+      </main>
+    );
+  }
+  if (!auth.loggedIn) {
+    return (
+      <main className="owner-login-page">
+        <form className="owner-login-card" onSubmit={handleLogin}>
+          <header className="owner-login-head">
+            <span className="owner-login-mark" aria-hidden="true">
+              TC
+            </span>
+            <span className="owner-login-brand">
+              <strong>Spume控制器</strong>
+              <small>站长工作区</small>
+            </span>
+          </header>
+          <p className="owner-login-kicker">Owner Console</p>
+          <h1 className="owner-login-title">站长控制台</h1>
+          <p className="owner-login-verse">桃之夭夭，灼灼其华。</p>
+          <p className="owner-login-hint">用站长账号登录后发布文章、管理站点。</p>
+          <div className="owner-login-rule" aria-hidden="true" />
+          <div className="owner-login-field">
+            <label className="owner-login-label" htmlFor="owner-login-name">
+              账号
+            </label>
+            <input
+              id="owner-login-name"
+              className="owner-login-input"
+              value={loginName}
+              onChange={(event) => setLoginName(event.target.value)}
+              placeholder="admin"
+              autoComplete="username"
+              autoFocus
+            />
+          </div>
+          <div className="owner-login-field">
+            <label className="owner-login-label" htmlFor="owner-login-password">
+              密码
+            </label>
+            <div className="owner-login-input-wrap">
+              <input
+                id="owner-login-password"
+                className="owner-login-input"
+                type={showPassword ? "text" : "password"}
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="owner-login-eye"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <FiEyeOff aria-hidden /> : <FiEye aria-hidden />}
+              </button>
+            </div>
+          </div>
+          {loginError ? (
+            <p className="owner-login-error" role="alert">
+              {loginError}
+            </p>
+          ) : null}
+          <button type="submit" className="owner-login-submit" disabled={loginBusy}>
+            {loginBusy ? "登录中…" : "登录"}
+          </button>
+          <Link className="owner-login-back" to="/">
+            返回首页
+          </Link>
+        </form>
+      </main>
+    );
+  }
 
   return (
     <main className="owner-console">

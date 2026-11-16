@@ -1,7 +1,7 @@
 ---
 title: Hello World
 date: 2025-01-03 00:00:00
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/a837df5f5ddc4f75bfe46d1a489757eb.jpeg
+cover: https://fs.964643.xyz/a837df5f5ddc4f75bfe46d1a489757eb.jpeg
 categories: 分享
 tags: blog
 description: 最开始的地方
@@ -15,5 +15,5 @@ description: 最开始的地方
 感谢来访，祝天天开心！
 {% endnote %}
 
-<img src="https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/a837df5f5ddc4f75bfe46d1a489757eb.jpeg">
+<img src="https://fs.964643.xyz/a837df5f5ddc4f75bfe46d1a489757eb.jpeg">
 

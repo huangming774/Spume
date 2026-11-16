@@ -280,9 +280,9 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 
 location /cos/ {
     include /etc/nginx/snippets/taozhiyy-cos-image-cache*.conf;
-    proxy_pass https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/;
+    proxy_pass https://fs.964643.xyz/;
     proxy_ssl_server_name on;
-    proxy_set_header Host "tzyy-1330068502.cos.ap-beijing.myqcloud.com";
+    proxy_set_header Host "fs.964643.xyz";
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;

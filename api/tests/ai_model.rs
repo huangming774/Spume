@@ -22,14 +22,20 @@ fn free_models_are_filtered_by_suffix_price_and_text_output() {
     // 付费的 b 被价格挡掉，纯 embedding 的 c 被输出模态挡掉。
     assert_eq!(
         free_text_models(&body),
-        vec!["a/chat:free".to_string(), "d/modality-only:free".to_string()]
+        vec![
+            "a/chat:free".to_string(),
+            "d/modality-only:free".to_string()
+        ]
     );
 }
 
 #[test]
 fn malformed_payloads_yield_no_candidates() {
     assert_eq!(free_text_models(&json!({})), Vec::<String>::new());
-    assert_eq!(free_text_models(&json!({"data": "oops"})), Vec::<String>::new());
+    assert_eq!(
+        free_text_models(&json!({"data": "oops"})),
+        Vec::<String>::new()
+    );
 }
 
 #[test]
@@ -68,9 +74,5 @@ fn avoid_list_drops_recently_failed_models_only() {
         "回避期过了就恢复候选资格"
     );
 
-    assert_eq!(
-        filter_avoid(&models, &[]),
-        models,
-        "空回避名单不影响候选"
-    );
+    assert_eq!(filter_avoid(&models, &[]), models, "空回避名单不影响候选");
 }

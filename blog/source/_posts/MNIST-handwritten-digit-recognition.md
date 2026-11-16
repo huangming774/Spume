@@ -3,7 +3,7 @@ title: MNIST手写数字识别实战：逻辑回归、SVM与CNN对比
 date: 2026-05-09 12:00:00
 tags: [机器学习, 深度学习, MNIST, 手写数字识别, CNN, scikit-learn, TensorFlow]
 categories: [机器学习]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png
 ---
 
 {% note info %}
@@ -90,7 +90,7 @@ cnn_model.save("models/cnn_mnist.keras")
 
 在 MNIST 测试集（10000 张图片）上，使用 Accuracy、Precision、Recall 和 F1-Score 四个指标进行评估：
 
-![模型对比结果](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE3.png)
+![模型对比结果](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE3.png)
 
 | 模型 | Accuracy | 训练时间 |
 |------|----------|----------|
@@ -100,7 +100,7 @@ cnn_model.save("models/cnn_mnist.keras")
 
 CNN 的评估结果如下：
 
-![CNN评估结果](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-29-40.png)
+![CNN评估结果](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-29-40.png)
 
 {% note success %}
 三个模型在测试集上都达到了 91% 以上的准确率，说明 MNIST 是一个相对成熟的数据集。但 CNN 的各项指标接近 0.99，明显优于两个传统模型。
@@ -112,15 +112,15 @@ CNN 的评估结果如下：
 
 **逻辑回归混淆矩阵：**
 
-![逻辑回归混淆矩阵](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE4.png)
+![逻辑回归混淆矩阵](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE4.png)
 
 **SVM混淆矩阵：**
 
-![SVM混淆矩阵](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE5.png)
+![SVM混淆矩阵](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/%E6%88%AA%E5%9B%BE5.png)
 
 **CNN混淆矩阵：**
 
-![CNN混淆矩阵](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png)
+![CNN混淆矩阵](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-31-16.png)
 
 从混淆矩阵可以看出，三个模型的大部分预测都集中在对角线上。逻辑回归和 SVM 在数字 4/9、5/6、7/3 等形态相似的数字之间仍存在一定的误判。而 CNN 的混淆矩阵对角线更加集中，误分类数量明显更少。
 
@@ -128,7 +128,7 @@ CNN 的评估结果如下：
 
 标准测试集表现好 ≠ 实际效果好。为了检验模型的真实泛化能力，我用画图工具手写了 0~9 共 10 张数字图片：
 
-![自制手写数字图片](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-37-05.png)
+![自制手写数字图片](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-37-05.png)
 
 ### 图片预处理
 
@@ -174,15 +174,15 @@ def preprocess_image(image_path):
 
 **逻辑回归预测结果（6/10 = 60%）：**
 
-![逻辑回归自制图片预测](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-46.png)
+![逻辑回归自制图片预测](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-46.png)
 
 **SVM预测结果（6/10 = 60%）：**
 
-![SVM自制图片预测](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-55.png)
+![SVM自制图片预测](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-45-55.png)
 
 **CNN预测结果（9/10 = 90%）：**
 
-![CNN自制图片预测](https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-46-06.png)
+![CNN自制图片预测](https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/2026.5.9/Snipaste_2026-05-08_12-46-06.png)
 
 | 模型 | MNIST测试集 | 自制图片 |
 |------|------------|---------|

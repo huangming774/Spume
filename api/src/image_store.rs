@@ -60,11 +60,7 @@ pub async fn store_remote_image(
         None => String::new(),
         Some(value) => {
             let text = value.to_str().map_err(|_| ImageStoreError::Download)?;
-            text.split(';')
-                .next()
-                .unwrap_or("")
-                .trim()
-                .to_string()
+            text.split(';').next().unwrap_or("").trim().to_string()
         }
     };
     let bytes = response
@@ -164,7 +160,9 @@ fn sniff_image_mime(bytes: &[u8]) -> Option<&'static str> {
     if bytes.starts_with(b"BM") {
         return Some("image/bmp");
     }
-    if bytes.len() >= 12 && &bytes[4..8] == b"ftyp" && (&bytes[8..12] == b"avif" || &bytes[8..12] == b"avis")
+    if bytes.len() >= 12
+        && &bytes[4..8] == b"ftyp"
+        && (&bytes[8..12] == b"avif" || &bytes[8..12] == b"avis")
     {
         return Some("image/avif");
     }

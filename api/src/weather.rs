@@ -219,11 +219,7 @@ async fn fetch_current_weather(
     }
 }
 
-async fn fetch_open_meteo(
-    state: &AppState,
-    lat: f64,
-    lon: f64,
-) -> Result<CurrentWeather, String> {
+async fn fetch_open_meteo(state: &AppState, lat: f64, lon: f64) -> Result<CurrentWeather, String> {
     let url = format!(
         "https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
     );
@@ -332,12 +328,13 @@ async fn fetch_wttr(
 /// WorldWeatherOnline 天气代码 → WMO 代码，够区分图标和中文描述即可。
 fn wwo_to_wmo(code: i64) -> i64 {
     match code {
-        113 => 0,                   // Clear/Sunny
-        116 => 2,                   // Partly cloudy
-        119 | 122 => 3,             // Cloudy / Overcast
-        143 | 248 | 260 => 45,      // Mist / Fog / Freezing fog
+        113 => 0,                                                                    // Clear/Sunny
+        116 => 2,              // Partly cloudy
+        119 | 122 => 3,        // Cloudy / Overcast
+        143 | 248 | 260 => 45, // Mist / Fog / Freezing fog
         176 | 263 | 266 | 293 | 296 | 299 | 302 | 305 | 308 | 353 | 356 | 359 => 61, // Rain
-        179 | 182 | 185 | 227 | 230 | 311 | 314 | 317 | 320 | 323 | 326 | 329 | 332 | 335 | 338 | 350 | 368 | 371 | 374 | 377 => 71, // Snow/sleet
+        179 | 182 | 185 | 227 | 230 | 311 | 314 | 317 | 320 | 323 | 326 | 329 | 332 | 335 | 338
+        | 350 | 368 | 371 | 374 | 377 => 71, // Snow/sleet
         200 | 386 | 389 | 392 | 395 => 95, // Thunderstorm
         _ => 3,
     }

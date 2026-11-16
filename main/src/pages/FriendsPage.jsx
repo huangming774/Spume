@@ -5,7 +5,7 @@ import FriendsApplicationBoard from "../components/FriendsApplicationBoard";
 import { friendCards } from "../data/friendCards";
 import { cosAsset } from "../lib/cosAsset.js";
 
-const siteAvatarUrl = `https://taozhiyy.top${cosAsset("1.png")}`;
+const siteAvatarUrl = cosAsset("1.png");
 const copyBlock = `name: Spume
 desc: Spume的小屋
 url: https://taozhiyy.top

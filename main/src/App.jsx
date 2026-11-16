@@ -11,6 +11,7 @@ import GuestbookPage from "./pages/GuestbookPage";
 import GalleryAlbumPage from "./pages/GalleryAlbumPage";
 import GlimmerPage from "./pages/GlimmerPage";
 import AiGalleryPage from "./pages/AiGalleryPage";
+import AiImagePage from "./pages/AiImagePage";
 import AboutSitePage from "./pages/AboutSitePage";
 import AboutProjectPage from "./pages/AboutProjectPage";
 import {
@@ -64,6 +65,7 @@ function App() {
             <Route path="gallery" element={<Navigate to="/glimmer" replace />} />
             <Route path="gallery/:albumId" element={<GalleryAlbumPage />} />
             <Route path="ai-gallery" element={<AiGalleryPage />} />
+            <Route path="ai-image" element={<AiImagePage />} />
             <Route path="moments" element={<Navigate to="/glimmer" replace />} />
             <Route path="blog" element={<Suspense fallback={<SectionFallback />}><BlogIndexPage /></Suspense>} />
             <Route path="blog/*" element={<Suspense fallback={<SectionFallback />}><BlogPostPage /></Suspense>} />

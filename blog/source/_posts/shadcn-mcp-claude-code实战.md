@@ -3,7 +3,7 @@ title: Claude Code MCP 实战——shadcn MCP 搭配 React Bits 给 React 项目
 date: 2026-05-18 22:45:00
 tags: [Claude Code, MCP, shadcn/ui, React Bits, React, 前端]
 categories: [开发工具]
-cover: https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/shadcn-mcp-cover.png
+cover: https://fs.964643.xyz/AI%E8%87%AA%E5%8A%A8%E5%8C%96%E5%8D%9A%E5%AE%A2%E5%9B%BE%E7%89%87/shadcn-mcp-cover.png
 ---
 
 {% note info %}

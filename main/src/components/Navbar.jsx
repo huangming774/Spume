@@ -6,7 +6,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWindowScroll } from "react-use";
 import { cosAsset } from "../lib/cosAsset.js";
 import VisitorNetworkBadge from "./VisitorNetworkBadge";
-import { LuCommand, LuImages } from "react-icons/lu";
+import WeatherBadge from "./WeatherBadge";
+import SiteSearch from "./SiteSearch";
+import { LuCommand, LuImages, LuLogIn } from "react-icons/lu";
 import SiteConsole from "./site-console/SiteConsole";
 import "./cover-picker/cover-entry.css";
 
@@ -448,6 +450,7 @@ const NavBar = () => {
                     <LuImages aria-hidden="true" /><span>SWITCH COVER</span>
                   </button>
                   <VisitorNetworkBadge className="nav-left-network" />
+                  <WeatherBadge />
                 </>
               )}
             </div>
@@ -456,6 +459,21 @@ const NavBar = () => {
               <div className="hidden items-center justify-end md:flex">
                 {navLinks.map((item) => renderDesktopLink(item))}
               </div>
+
+              <SiteSearch triggerClassName={desktopLinkClass(false)} />
+
+              <button
+                type="button"
+                className={clsx(
+                  desktopLinkClass(false),
+                  "flex h-9 w-9 items-center justify-center rounded-full"
+                )}
+                aria-label="站长登录"
+                title="站长登录"
+                onClick={() => navigate("/app")}
+              >
+                <LuLogIn aria-hidden="true" />
+              </button>
 
               <button
                 ref={menuBtnRef}

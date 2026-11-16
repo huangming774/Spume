@@ -7,7 +7,10 @@ async function fetchJson(path, { signal } = {}) {
     headers: { Accept: "application/json" },
     signal,
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  }
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
     throw new Error("not json");

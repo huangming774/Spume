@@ -15,7 +15,7 @@ class CacheTests(unittest.TestCase):
         spec.loader.exec_module(cls.mod)
 
     def test_only_known_cos_location_is_modified_and_insertion_is_idempotent(self):
-        text = 'location /api/ { proxy_pass http://127.0.0.1; }\nlocation /cos/ {\n proxy_pass https://tzyy-1330068502.cos.ap-beijing.myqcloud.com/;\n}\n'
+        text = 'location /api/ { proxy_pass http://127.0.0.1; }\nlocation /cos/ {\n proxy_pass https://fs.964643.xyz/;\n}\n'
         patched = self.mod.patch_snippet(text)
         self.assertEqual(patched.count(self.mod.INCLUDE), 1)
         self.assertIn(text.splitlines()[0], patched)

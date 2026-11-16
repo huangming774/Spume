@@ -125,7 +125,10 @@ export async function getBiliOwnerFeed({ signal, fetchImpl = fetch } = {}) {
     cache: "no-cache",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || data.error || `HTTP ${response.status}`);
+  }
   if (!response.headers.get("content-type")?.includes("application/json"))
     throw new Error("Expected JSON owner video feed");
   return normalizeBiliOwnerFeed(await response.json());

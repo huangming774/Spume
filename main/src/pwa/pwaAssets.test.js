@@ -67,6 +67,7 @@ test("service worker does not stale-cache deployed app assets or about media", a
 
   assert.match(workerSource, /url\.pathname\.startsWith\("\/assets\/"\)/);
   assert.match(workerSource, /url\.pathname\.startsWith\("\/cos\/"\)/);
+  assert.match(workerSource, /url\.pathname\.startsWith\("\/ai-assistant\/"\)/);
   assert.match(workerSource, /url\.pathname === "\/about-preview\.html"/);
 });
 
