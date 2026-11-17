@@ -16,6 +16,7 @@ mod image_store;
 pub mod jobs;
 pub mod js_source;
 pub mod mail;
+pub mod map_tile;
 pub mod post_markdown;
 pub mod qstash;
 mod r2;

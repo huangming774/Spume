@@ -10,9 +10,6 @@ type Place = { lat: number; lon: number; label: string };
 
 type Tile = { key: string; src: string; left: number; top: number };
 
-/** 天地图浏览器端 tk，来自 main/.env.local 的 VITE_TIANDITU_TK。 */
-const TIANDITU_TK = (import.meta.env.VITE_TIANDITU_TK || "").trim();
-
 function finite(value: unknown): number | null {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : null;
@@ -46,6 +43,8 @@ async function locate(): Promise<Place> {
   return { lat: 31.2304, lon: 121.4737, label: "上海" };
 }
 
+/** 圆框里的瓦片。地址走 rust 后端代理（/api/client/map-tile），
+ *  天地图 tk 只存后端环境变量，不再进前端包。 */
 function tilesFor(lat: number, lon: number): Tile[] {
   const n = 2 ** ZOOM;
   const worldX = ((lon + 180) / 360) * n * TILE;
@@ -64,13 +63,12 @@ function tilesFor(lat: number, lon: number): Tile[] {
       const wrapped = ((tx % n) + n) % n;
       const left = tx * TILE - originX;
       const top = ty * TILE - originY;
-      const shard = Math.abs(wrapped + ty) % 8;
       for (const layer of LAYERS) {
         tiles.push({
           key: `${layer}-${wrapped}-${ty}`,
           left,
           top,
-          src: `https://t${shard}.tianditu.gov.cn/DataServer?T=${layer}&x=${wrapped}&y=${ty}&l=${ZOOM}&tk=${TIANDITU_TK}`,
+          src: `/api/client/map-tile/${layer}/${ZOOM}/${wrapped}/${ty}`,
         });
       }
     }

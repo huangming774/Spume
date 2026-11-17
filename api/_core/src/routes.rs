@@ -77,6 +77,10 @@ pub fn router(state: AppState) -> Router {
         .route("/api/server/info", get(server_info))
         .route("/api/client/network", get(client_network))
         .route("/api/client/place", get(crate::weather::place))
+        .route(
+            "/api/client/map-tile/{layer}/{z}/{x}/{y}",
+            get(crate::map_tile::tile),
+        )
         .route("/api/weather", get(crate::weather::get))
         .route("/api/content", get(content_recent))
         .route("/api/content/{kind}", get(content_list))
@@ -1397,7 +1401,7 @@ async fn acg_image(State(state): State<AppState>, Path(name): Path<String>) -> R
     }
 }
 
-fn sniffed_image_type(bytes: &[u8]) -> HeaderValue {
+pub(crate) fn sniffed_image_type(bytes: &[u8]) -> HeaderValue {
     let mime = if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
         "image/jpeg"
     } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {

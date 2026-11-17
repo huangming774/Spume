@@ -26,6 +26,11 @@ pub struct Config {
     pub cloudflare_ai_token: String,
     pub cloudflare_ai_model: String,
     pub bilibili_uid: String,
+    /// 天地图浏览器端 tk。只在后端拼进瓦片 URL，不下发给页面。
+    pub tianditu_tk: String,
+    /// 天地图瓦片服务地址，`{shard}` 是 DataServer 的负载均衡占位。
+    /// 测试时换成本地 mock 地址。
+    pub tianditu_tile_host: String,
     pub r2_account_id: String,
     pub r2_access_key: String,
     pub r2_secret_key: String,
@@ -130,6 +135,8 @@ impl Config {
                 "@cf/stabilityai/stable-diffusion-xl-base-1.0",
             ),
             bilibili_uid: env("BILIBILI_UID", "1061280173"),
+            tianditu_tk: env("TIANDITU_TK", ""),
+            tianditu_tile_host: env("TIANDITU_TILE_HOST", "https://t{shard}.tianditu.gov.cn"),
             r2_account_id: env("R2_ACCOUNT_ID", ""),
             r2_access_key: env("R2_ACCESS_KEY_ID", ""),
             r2_secret_key: env("R2_SECRET_ACCESS_KEY", ""),
@@ -191,6 +198,8 @@ impl Config {
             cloudflare_ai_token: String::new(),
             cloudflare_ai_model: "@cf/stabilityai/stable-diffusion-xl-base-1.0".into(),
             bilibili_uid: "1061280173".into(),
+            tianditu_tk: String::new(),
+            tianditu_tile_host: "https://t{shard}.tianditu.gov.cn".into(),
             r2_account_id: "account".into(),
             r2_access_key: "access".into(),
             r2_secret_key: "secret".into(),
