@@ -4,6 +4,7 @@
 //! `/api/client/map-tile/{layer}/{z}/{x}/{y}`，由这里异步去天地图拉瓦片
 //! 再回传，密钥不再进前端包（原 `VITE_TIANDITU_TK`）。
 
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use axum::extract::{Path, State};
@@ -20,8 +21,23 @@ const LAYERS: [&str; 2] = ["vec_w", "cva_w"];
 /// 天地图 web 墨卡托瓦片支持的级别上限。
 const MAX_ZOOM: u32 = 18;
 
-/// 单块瓦片拉取上限。图片很小，5 秒足够。
-const TILE_TIMEOUT: Duration = Duration::from_secs(5);
+/// 单块瓦片拉取上限。天地图在国内，Vercel 函数在海外，放宽到 8 秒。
+const TILE_TIMEOUT: Duration = Duration::from_secs(8);
+
+/// 天地图浏览器端 key 会校验 User-Agent，非浏览器 UA 直接 403
+/// 「Key权限类型为:浏览器端，请使用浏览器访问！」，这里伪装成 Chrome。
+const BROWSER_UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+/// 瓦片上游专用 client。共享 client 的 connect_timeout 只有 1 秒
+/// （给国内接口定的），跨洋连天地图握手经常超过 1 秒，这里放宽到 5 秒。
+static TILE_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .pool_idle_timeout(Duration::from_secs(30))
+        .pool_max_idle_per_host(8)
+        .build()
+        .unwrap_or_default()
+});
 
 /// `GET /api/client/map-tile/{layer}/{z}/{x}/{y}`。
 ///
@@ -48,10 +64,13 @@ pub async fn tile(
         );
     }
     let url = tile_url(&state.cfg.tianditu_tile_host, token, layer, z, x, y);
-    let response = match state
-        .http
+    // 浏览器以前直连天地图时会带本站 Referer，这里同样带上，
+    // 与旧版行为一致（key 若绑了域名白名单也能过）。
+    let referer = format!("{}/", state.cfg.public_origin.trim_end_matches('/'));
+    let response = match TILE_CLIENT
         .get(&url)
-        .header("User-Agent", "taozhiyy-map/1.0")
+        .header("User-Agent", BROWSER_UA)
+        .header("Referer", referer)
         .timeout(TILE_TIMEOUT)
         .send()
         .await

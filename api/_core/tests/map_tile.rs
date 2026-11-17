@@ -106,19 +106,25 @@ async fn tile_proxies_image_bytes_with_cache_headers() {
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
-    // 本地 mock 天地图：记录收到的查询串，回一张最小 PNG。
+    // 本地 mock 天地图：记录收到的查询串和 UA，回一张最小 PNG。
     #[derive(Clone)]
-    struct Seen(Arc<Mutex<HashMap<String, String>>>);
+    struct Seen(Arc<Mutex<(HashMap<String, String>, String)>>);
 
     async fn mock_tile(
         State(seen): State<Seen>,
         Query(params): Query<HashMap<String, String>>,
+        headers: axum::http::HeaderMap,
     ) -> Vec<u8> {
-        *seen.0.lock().expect("seen") = params;
+        let ua = headers
+            .get("user-agent")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        *seen.0.lock().expect("seen") = (params, ua);
         vec![0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n']
     }
 
-    let seen = Seen(Arc::new(Mutex::new(HashMap::new())));
+    let seen = Seen(Arc::new(Mutex::new((HashMap::new(), String::new()))));
     let mock = Router::new()
         .route("/DataServer", get(mock_tile))
         .with_state(seen.clone());
@@ -167,10 +173,15 @@ async fn tile_proxies_image_bytes_with_cache_headers() {
     assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
 
     // 后端把 tk 拼进上游 URL，回给浏览器的只有图片字节。
-    let params = seen.0.lock().expect("seen").clone();
+    let (params, ua) = seen.0.lock().expect("seen").clone();
     assert_eq!(params.get("T").map(String::as_str), Some("vec_w"));
     assert_eq!(params.get("x").map(String::as_str), Some("2047"));
     assert_eq!(params.get("y").map(String::as_str), Some("1365"));
     assert_eq!(params.get("l").map(String::as_str), Some("12"));
     assert_eq!(params.get("tk").map(String::as_str), Some("secret-tk"));
+    // 天地图浏览器端 key 校验 UA，必须伪装成浏览器请求。
+    assert!(
+        ua.starts_with("Mozilla/5.0"),
+        "上游应带浏览器 User-Agent，实际：{ua}"
+    );
 }
