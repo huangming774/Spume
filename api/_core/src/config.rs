@@ -73,8 +73,17 @@ impl Config {
     /// 启动时读取 `.env` 文件补全环境变量，行为和 Go 版 `loadOptionalEnvFiles` 一致：
     /// 依次尝试 `/opt/acg-api/.env`、`.env` 和 `../.env`，已有的环境变量不会被覆盖。
     /// `dotenvy` 本身就不覆盖已存在的变量，所以直接按顺序加载即可。
+    /// 天地图配置单独放 `.env.tianditu`（同样的三个位置），最后读，
+    /// 不配它时地图瓦片接口返回 503，不影响其他功能。
     pub fn load_env_files() {
-        for path in ["/opt/acg-api/.env", ".env", "../.env"] {
+        for path in [
+            "/opt/acg-api/.env",
+            ".env",
+            "../.env",
+            "/opt/acg-api/.env.tianditu",
+            ".env.tianditu",
+            "../.env.tianditu",
+        ] {
             if !std::path::Path::new(path).exists() {
                 continue;
             }

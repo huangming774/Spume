@@ -51,7 +51,7 @@ cargo check --manifest-path ../../Cargo.toml --bin index
 | `GUESTBOOK_MAIN_POSTS_ENABLED` | 主留言区是否接受新留言。友链分区不受影响 |
 | `ACG_CONTENT_ROOT` | 建站索引时读取的内容目录 |
 | `ACG_PUBLIC_ORIGIN` | 调度签名里核对的公开地址 |
-| `TIANDITU_TK` | 天地图 tk。瓦片代理 `/api/client/map-tile` 拼进上游 URL，不下发给前端 |
+| `TIANDITU_TK` | 天地图 tk，单独放 `.env.tianditu`（启动时和 `.env` 一起读）。瓦片代理 `/api/client/map-tile` 拼进上游 URL，不下发给前端 |
 
 ## 接口
 

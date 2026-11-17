@@ -37,6 +37,7 @@ acg-api/
 api/target/
 api/_core/target/
 api/.env
+api/.env.tianditu
 main/.env
 main/.env.*
 !main/.env.example
