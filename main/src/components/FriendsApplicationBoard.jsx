@@ -115,6 +115,10 @@ const FriendsApplicationBoard = () => {
   const [nickname, setNickname] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [content, setContent] = useState("");
+  const [friendName, setFriendName] = useState("");
+  const [friendUrl, setFriendUrl] = useState("");
+  const [friendDesc, setFriendDesc] = useState("");
+  const [friendAvatar, setFriendAvatar] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState({});
   const [replyTargetId, setReplyTargetId] = useState(null);
@@ -213,9 +217,15 @@ const FriendsApplicationBoard = () => {
     setNotice("");
     setError("");
 
-    const { ok, data } = await postGuestbookMessage(draft.payload, {
-      channel: FRIENDS_CHANNEL,
-    });
+    const extra = {};
+    if (friendName.trim()) extra.name = friendName.trim();
+    if (friendUrl.trim()) extra.url = friendUrl.trim();
+    if (friendDesc.trim()) extra.desc = friendDesc.trim();
+    if (friendAvatar.trim()) extra.avatar = friendAvatar.trim();
+    const { ok, data } = await postGuestbookMessage(
+      Object.keys(extra).length ? { ...draft.payload, extra } : draft.payload,
+      { channel: FRIENDS_CHANNEL },
+    );
 
     setSubmitting(false);
 
@@ -233,7 +243,15 @@ const FriendsApplicationBoard = () => {
     setContent("");
     setNickname("");
     setContactEmail("");
-    setNotice("留言已经提交成功。");
+    setFriendName("");
+    setFriendUrl("");
+    setFriendDesc("");
+    setFriendAvatar("");
+    setNotice(
+      Object.keys(extra).length
+        ? "友链申请已提交，站长通过后会自动展示在朋友页。"
+        : "留言已经提交成功。",
+    );
     if (data.item) {
       setCommentTotal((prev) => prev + 1);
       setExpandedThreads((prev) => ({ ...prev, [data.item.id]: false }));
@@ -371,6 +389,58 @@ const FriendsApplicationBoard = () => {
               </div>
             </div>
 
+            <div className="mb-3 rounded-[16px] border border-dashed border-[#CFE6F7] bg-white/50 px-4 py-3">
+              <p className="mb-2 text-xs font-bold text-[#7B5C61]">
+                申请友链（可选）：填好后站长在后台一键通过，自动展示到朋友页。
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold text-[#7B5C61]">站名</span>
+                  <input
+                    value={friendName}
+                    onChange={(event) => setFriendName(event.target.value)}
+                    maxLength={24}
+                    disabled={submitting}
+                    placeholder="你的站点名称"
+                    className="min-h-[42px] w-full rounded-[16px] border border-[#CFE6F7] bg-white/60 px-4 py-2.5 text-sm text-[#2B2B2B] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#74C0FC] focus:bg-white/80 disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold text-[#7B5C61]">站点 URL</span>
+                  <input
+                    value={friendUrl}
+                    onChange={(event) => setFriendUrl(event.target.value)}
+                    maxLength={300}
+                    disabled={submitting}
+                    placeholder="https://你的站点"
+                    className="min-h-[42px] w-full rounded-[16px] border border-[#CFE6F7] bg-white/60 px-4 py-2.5 text-sm text-[#2B2B2B] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#74C0FC] focus:bg-white/80 disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold text-[#7B5C61]">一句话描述</span>
+                  <input
+                    value={friendDesc}
+                    onChange={(event) => setFriendDesc(event.target.value)}
+                    maxLength={60}
+                    disabled={submitting}
+                    placeholder="站点简介"
+                    className="min-h-[42px] w-full rounded-[16px] border border-[#CFE6F7] bg-white/60 px-4 py-2.5 text-sm text-[#2B2B2B] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#74C0FC] focus:bg-white/80 disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold text-[#7B5C61]">头像 URL</span>
+                  <input
+                    value={friendAvatar}
+                    onChange={(event) => setFriendAvatar(event.target.value)}
+                    maxLength={300}
+                    disabled={submitting}
+                    placeholder="https://…/avatar.png"
+                    className="min-h-[42px] w-full rounded-[16px] border border-[#CFE6F7] bg-white/60 px-4 py-2.5 text-sm text-[#2B2B2B] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#74C0FC] focus:bg-white/80 disabled:cursor-not-allowed disabled:opacity-70"
+                  />
+                </label>
+              </div>
+            </div>
+
             <textarea
               value={content}
               onChange={(event) => setContent(event.target.value)}
@@ -496,6 +566,16 @@ const FriendsApplicationBoard = () => {
                 <p className="friends-comment-content mt-4 whitespace-pre-wrap wrap-break-word text-[15px] font-semibold leading-8 text-[#2B2B2B]">
                   {item.content}
                 </p>
+
+                {item.extra?.url ? (
+                  <p className="mt-2 text-xs font-semibold text-[#4D8FC6]">
+                    申请友链：
+                    <a href={item.extra.url} target="_blank" rel="noreferrer" className="underline">
+                      {item.extra.name || item.extra.url}
+                    </a>
+                    {item.extra.desc ? ` · ${item.extra.desc}` : ""}
+                  </p>
+                ) : null}
 
                 {isReplying && (
                   <div className="friends-comment-reply-editor relative z-30 mt-4 rounded-[18px] border border-white/70 bg-white/54 p-4">

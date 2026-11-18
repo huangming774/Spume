@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use sqlx::PgPool;
 use thiserror::Error;
 
-const KINDS: [&str; 7] = [
+const KINDS: [&str; 8] = [
     "about",
     "gallery",
     "moment",
@@ -13,6 +13,7 @@ const KINDS: [&str; 7] = [
     "article",
     "journal",
     "project",
+    "friend",
 ];
 
 /// 一条待写入的内容。

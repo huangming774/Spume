@@ -223,3 +223,6 @@ CREATE TABLE IF NOT EXISTS site_settings (
   value TEXT NOT NULL DEFAULT '',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 友链申请的结构化字段（站名/描述/链接/头像），普通留言为空对象。
+ALTER TABLE guestbook_messages ADD COLUMN IF NOT EXISTS extra JSONB NOT NULL DEFAULT '{}'::jsonb;

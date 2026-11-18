@@ -3,6 +3,7 @@ import { FiCopy, FiExternalLink } from "react-icons/fi";
 
 import FriendsApplicationBoard from "../components/FriendsApplicationBoard";
 import { friendCards } from "../data/friendCards";
+import { useEntries } from "../lib/siteEntries";
 import {
   defaultSiteAvatarUrl,
   fetchSiteProfile,
@@ -46,6 +47,22 @@ const FriendsPage = () => {
   const [failedFriendAvatars, setFailedFriendAvatars] = useState(() => new Set());
   const [siteAvatarUrl, setSiteAvatarUrl] = useState(defaultSiteAvatarUrl);
   const copyBlock = buildSiteFriendCard(siteAvatarUrl);
+  const { items: friendEntries } = useEntries("friend");
+  const dbFriendCards = friendEntries
+    .filter((entry) => entry.extra?.url)
+    .map((entry) => ({
+      name: entry.title,
+      desc: entry.extra?.desc || entry.body || "",
+      url: entry.extra.url,
+      avatar: entry.imageUrl || "",
+      note: "友链",
+    }));
+  const normalizeUrl = (value) => String(value || "").trim().replace(/\/+$/, "").toLowerCase();
+  const dbUrls = new Set(dbFriendCards.map((card) => normalizeUrl(card.url)));
+  const cards = [
+    ...friendCards.filter((card) => !dbUrls.has(normalizeUrl(card.url))),
+    ...dbFriendCards,
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -127,11 +144,11 @@ const FriendsPage = () => {
             </p>
           </div>
 
-          {friendCards.length ? null : (
+          {cards.length ? null : (
             <p className="mt-6 text-sm leading-7 text-[#6B7280]">还没有友链。可以在站长后台添加。</p>
           )}
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {friendCards.map((friend) => {
+            {cards.map((friend) => {
               const avatarFailed = !friend.avatar || failedFriendAvatars.has(friend.name);
 
               return (

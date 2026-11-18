@@ -111,6 +111,10 @@ export async function publishOwnerFriend(payload) {
   return parseResponse(res);
 }
 
+export async function approveOwnerFriend(id) {
+  return ownerJson("/api/owner/friends/approve", "POST", { id });
+}
+
 export async function publishOwnerMoment(payload) {
   const res = await fetch("/api/owner/moments", {
     method: "POST",

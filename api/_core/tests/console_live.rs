@@ -37,6 +37,13 @@ async fn deploy_status_is_honest_without_github_config() {
 }
 
 #[tokio::test]
+async fn friend_approve_requires_login() {
+    let (status, body) = request("/api/owner/friends/approve", "POST", r#"{"id":1}"#).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(body["error"], "UNAUTHORIZED");
+}
+
+#[tokio::test]
 async fn owner_ai_generate_requires_login() {
     let (status, body) = request(
         "/api/owner/ai/generate",

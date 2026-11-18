@@ -4,6 +4,7 @@ import { FiBell, FiEye, FiEyeOff, FiRefreshCw, FiUpload, FiX } from "react-icons
 import AvatarCropDialog from "../components/owner-console/AvatarCropDialog";
 import { authLogin, authLogout, authUploadAvatar } from "../services/authApi";
 import {
+  approveOwnerFriend,
   createOwnerFixedAnswer,
   createOwnerDraft,
   fetchMusicConfig,
@@ -201,6 +202,7 @@ const AppConsolePage = () => {
   const [friendPublishBusy, setFriendPublishBusy] = useState(false);
   const [momentPublishBusy, setMomentPublishBusy] = useState(false);
   const [readingNotificationId, setReadingNotificationId] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
   const [deploy, setDeploy] = useState(null);
   const [mobileAiBusy, setMobileAiBusy] = useState(false);
   const [answersBusy, setAnswersBusy] = useState(false);
@@ -899,6 +901,37 @@ const AppConsolePage = () => {
       });
     } finally {
       setFriendPublishBusy(false);
+    }
+  };
+
+  const handleApproveFriend = async (item) => {
+    if (!item?.id) {
+      setError("这条申请没有可处理的 ID，请刷新后再试。");
+      return;
+    }
+    setApprovingId(item.id);
+    setError("");
+    try {
+      const data = await approveOwnerFriend(item.id);
+      notifyEntriesChanged();
+      await loadConsole();
+      const name = data.item?.name || "友链";
+      setPublishView({ to: "/friends", label: "查看朋友页" });
+      setPublishState({
+        open: true,
+        title: "友链已通过",
+        activeIndex: -1,
+        failIndex: null,
+        simulated: false,
+        view: null,
+        toast: data.duplicate
+          ? `${name} 已在友链列表里，未重复添加。${data.githubNote || ""}`
+          : `${name} 已展示到朋友页。${data.githubNote || ""}`,
+      });
+    } catch (e) {
+      setError(e.message || "通过失败");
+    } finally {
+      setApprovingId(null);
     }
   };
 
@@ -2030,6 +2063,12 @@ const AppConsolePage = () => {
                     {item.content ? (
                       <blockquote className="owner-message-content">{item.content}</blockquote>
                     ) : null}
+                    {item.source === "friends" && item.extra?.url ? (
+                      <p className="owner-frontmatter-hint">
+                        申请友链：{item.extra.name || item.extra.url} · {item.extra.url}
+                        {item.extra.desc ? ` · ${item.extra.desc}` : ""}
+                      </p>
+                    ) : null}
                     {item.nickname || item.createdAt ? (
                       <small className="owner-message-meta">
                         {item.nickname || "访客"} · {item.createdAt || "时间未知"}
@@ -2052,13 +2091,23 @@ const AppConsolePage = () => {
                         {readingNotificationId === item.id ? "处理中..." : "标记已读"}
                       </button>
                       {item.source === "friends" ? (
-                        <button
-                          type="button"
-                          className="owner-primary"
-                          onClick={() => openScreen("friend")}
-                        >
-                          打开友链流程
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="owner-primary"
+                            onClick={() => handleApproveFriend(item)}
+                            disabled={approvingId === item.id}
+                          >
+                            {approvingId === item.id ? "通过中..." : "通过"}
+                          </button>
+                          <button
+                            type="button"
+                            className="owner-secondary"
+                            onClick={() => openScreen("friend")}
+                          >
+                            手动填写
+                          </button>
+                        </>
                       ) : null}
                     </div>
                   </article>

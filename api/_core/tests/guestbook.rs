@@ -158,5 +158,6 @@ fn sample(id: i64, parent_id: i64, created: chrono::DateTime<chrono::Utc>) -> St
         ip_masked: String::new(),
         user_agent_hash: String::new(),
         created_at: created,
+        extra: serde_json::json!({}),
     }
 }

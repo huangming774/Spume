@@ -45,6 +45,8 @@ pub struct StoredMessage {
     pub user_agent_hash: String,
     /// 写入时间。
     pub created_at: DateTime<Utc>,
+    /// 友链申请的结构化字段，普通留言为空对象。
+    pub extra: Value,
 }
 
 /// 留言被拒绝。
@@ -98,6 +100,7 @@ type MessageRow = (
     String,
     String,
     DateTime<Utc>,
+    String,
 );
 
 /// 环境变量是否打开主留言区。空值和其它值都是关闭。
@@ -411,7 +414,7 @@ pub fn thread_json(
         .collect()
 }
 
-const COLUMNS: &str = "id, parent_id, nickname, avatar, content, ip_region, is_login_user, is_admin_user, status, ip_masked, user_agent_hash, created_at";
+const COLUMNS: &str = "id, parent_id, nickname, avatar, content, ip_region, is_login_user, is_admin_user, status, ip_masked, user_agent_hash, created_at, extra::text";
 
 async fn load_descendants(
     pool: &PgPool,
@@ -486,6 +489,7 @@ fn stored_from_row(row: MessageRow) -> StoredMessage {
         ip_masked: row.9,
         user_agent_hash: row.10,
         created_at: row.11,
+        extra: serde_json::from_str(&row.12).unwrap_or_else(|_| json!({})),
     }
 }
 
@@ -537,6 +541,9 @@ fn item_json(
     });
     if item.is_admin_user {
         value["isAdminUser"] = json!(true);
+    }
+    if item.extra.as_object().is_some_and(|map| !map.is_empty()) {
+        value["extra"] = item.extra.clone();
     }
     if !replies.is_empty() {
         value["replies"] = json!(replies);

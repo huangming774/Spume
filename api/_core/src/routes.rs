@@ -106,6 +106,7 @@ pub fn router(state: AppState) -> Router {
             post(owner_gallery).delete(owner_gallery_delete),
         )
         .route("/api/owner/friends", post(owner_friends))
+        .route("/api/owner/friends/approve", post(owner_friend_approve))
         .route(
             "/api/owner/moments",
             post(owner_moments).delete(owner_moment_delete),
@@ -1003,6 +1004,8 @@ struct GuestbookBody {
     contact_email: Option<String>,
     #[serde(rename = "parentId")]
     parent_id: Option<i64>,
+    #[serde(default)]
+    extra: Option<Value>,
 }
 
 async fn guestbook_create(
@@ -1114,8 +1117,31 @@ async fn guestbook_create(
             "未知地区".to_string()
         }
     };
+    // 友链申请的结构化字段：只收白名单键、限长、链接必须公开 http(s)。
+    let mut extra = json!({});
+    if channel == "friends" && parent_id == 0 {
+        if let Some(map) = body.extra.as_ref().and_then(Value::as_object) {
+            let mut clean = serde_json::Map::new();
+            for key in ["name", "desc", "url", "avatar"] {
+                let Some(text) = map.get(key).and_then(Value::as_str).map(str::trim) else {
+                    continue;
+                };
+                if text.is_empty() || text.chars().count() > 300 {
+                    continue;
+                }
+                if matches!(key, "url" | "avatar") && !public_http_url(text) {
+                    continue;
+                }
+                clean.insert(key.to_string(), json!(text));
+            }
+            if !clean.is_empty() {
+                extra = Value::Object(clean);
+            }
+        }
+    }
+    let extra_text = serde_json::to_string(&extra).unwrap_or_else(|_| "{}".to_string());
     let row = sqlx::query_as::<_, (i64, DateTime<Utc>)>(
-        "INSERT INTO guestbook_messages (user_id, nickname, avatar, channel, content, contact_email, content_hash, ip_hash, ip_region, ip_masked, user_agent_hash, parent_id, is_login_user, is_admin_user) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id, created_at",
+        "INSERT INTO guestbook_messages (user_id, nickname, avatar, channel, content, contact_email, content_hash, ip_hash, ip_region, ip_masked, user_agent_hash, parent_id, is_login_user, is_admin_user, extra) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb) RETURNING id, created_at",
     )
     .bind(user.as_ref().map(|item| item.id))
     .bind(&composed.nickname)
@@ -1131,6 +1157,7 @@ async fn guestbook_create(
     .bind(parent_id)
     .bind(user.is_some())
     .bind(admin)
+    .bind(&extra_text)
     .fetch_one(pool)
     .await;
     let Ok((id, created)) = row else {
@@ -1187,6 +1214,7 @@ async fn guestbook_create(
         ip_masked: String::new(),
         user_agent_hash: String::new(),
         created_at: created,
+        extra,
     };
     let Some(mut item) = crate::guestbook::thread_json(vec![item], Vec::new(), false)
         .into_iter()
@@ -4453,14 +4481,14 @@ async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
     let Some(pool) = pool else {
         return Ok(Vec::new());
     };
-    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>)>(
-        "SELECT gm.id, gm.channel, gm.nickname, gm.content, gm.contact_email, COALESCE(u.email, ''), gm.created_at FROM guestbook_messages gm LEFT JOIN users u ON u.id = gm.user_id WHERE gm.status = 'visible' AND gm.owner_read_at IS NULL ORDER BY gm.id DESC LIMIT 30",
+    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>, String)>(
+        "SELECT gm.id, gm.channel, gm.nickname, gm.content, gm.contact_email, COALESCE(u.email, ''), gm.created_at, gm.extra::text FROM guestbook_messages gm LEFT JOIN users u ON u.id = gm.user_id WHERE gm.status = 'visible' AND gm.owner_read_at IS NULL ORDER BY gm.id DESC LIMIT 30",
     )
     .fetch_all(pool).await?;
     Ok(rows
         .into_iter()
         .map(
-            |(id, channel, nickname, content, contact_email, account_email, created)| {
+            |(id, channel, nickname, content, contact_email, account_email, created, extra_text)| {
                 let submitted = contact_email.trim().to_lowercase();
                 let account = account_email.trim().to_lowercase();
                 let contact = if submitted.is_empty() {
@@ -4468,7 +4496,8 @@ async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
                 } else {
                     submitted
                 };
-                json!({
+                let extra: Value = serde_json::from_str(&extra_text).unwrap_or_else(|_| json!({}));
+                let mut item = json!({
                     "id": id,
                     "source": channel,
                     "title": crate::guestbook::notice_title(&channel),
@@ -4478,7 +4507,11 @@ async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
                     "contactEmail": contact,
                     "createdAt": crate::guestbook::china_clock(created),
                     "count": 1
-                })
+                });
+                if extra.as_object().is_some_and(|map| !map.is_empty()) {
+                    item["extra"] = extra;
+                }
+                item
             },
         )
         .collect())
@@ -4743,12 +4776,329 @@ fn _rate_window(last: &mut Instant) -> bool {
     true
 }
 
+/// 公开 http(s) 链接校验：友链地址与头像必须是可公开访问的网址。
+fn public_http_url(value: &str) -> bool {
+    let Some(rest) = value
+        .strip_prefix("https://")
+        .or_else(|| value.strip_prefix("http://"))
+    else {
+        return false;
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let host = authority.rsplit('@').next().unwrap_or("");
+    !host.is_empty() && !host.starts_with(':')
+}
+
 async fn client_deploy_status(State(state): State<AppState>) -> Response {
     let mut body = crate::deploy_status::snapshot(&state).await;
     // 只暴露「是否配置」，不暴露凭据本身；前端据此区分未配置与读取失败。
     body["githubConfigured"] = json!(!state.cfg.github_token.is_empty() && !state.cfg.github_repo.is_empty());
     body["aiConfigured"] = json!(!state.cfg.deepseek_api_key.is_empty());
     Json(body).into_response()
+}
+
+#[derive(Deserialize)]
+struct FriendApproveBody {
+    id: i64,
+}
+
+/// 收件箱「通过」：把 friends 分区的申请转成友链条目，朋友页实时展示。
+/// 结构化 extra 优先，其次按四行规则解析正文；GitHub 配置存在时直写主分支同步源码。
+async fn owner_friend_approve(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<FriendApproveBody>,
+) -> Response {
+    let owner = match require_owner(&state, &headers).await {
+        Ok(user) => user,
+        Err(response) => return *response,
+    };
+    let pool = match db_required(&state) {
+        Ok(pool) => pool,
+        Err(response) => return *response,
+    };
+    let row = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT nickname, content, extra::text, channel FROM guestbook_messages WHERE id = $1 AND status = 'visible'",
+    )
+    .bind(body.id)
+    .fetch_optional(pool)
+    .await;
+    let Ok(Some((nickname, content, extra_text, channel))) = row else {
+        return fail(StatusCode::NOT_FOUND, "APPLICATION_NOT_FOUND", "这条申请不存在或已隐藏。");
+    };
+    if channel != "friends" {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_CHANNEL", "只有朋友页申请可以一键通过。");
+    }
+    let extra: Value = serde_json::from_str(&extra_text).unwrap_or_else(|_| json!({}));
+    let pick = |key: &str| {
+        extra
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .unwrap_or("")
+            .to_string()
+    };
+    let parsed = parse_friend_lines(&content);
+    let mut url = pick("url");
+    if url.is_empty() {
+        url = parsed.2.clone();
+    }
+    if !public_http_url(&url) {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "NO_URL",
+            "申请里没有有效的站点 URL，请改用友链表单手动填写。",
+        );
+    }
+    let mut name = pick("name");
+    if name.is_empty() {
+        name = parsed.0.clone();
+    }
+    if name.is_empty() {
+        name = nickname.trim().to_string();
+    }
+    if name.is_empty() {
+        return fail(StatusCode::BAD_REQUEST, "NO_NAME", "申请里没有站名，请改用友链表单手动填写。");
+    }
+    let mut desc = pick("desc");
+    if desc.is_empty() {
+        desc = parsed.1.clone();
+    }
+    let mut avatar = pick("avatar");
+    if avatar.is_empty() || !public_http_url(&avatar) {
+        avatar = parsed.3.clone();
+    }
+    if !avatar.is_empty() && !public_http_url(&avatar) {
+        avatar = String::new();
+    }
+    // 同 URL 去重：静态卡片或已通过条目里已有就不再落库。
+    let existing = crate::site_store::list(pool, "friend").await.unwrap_or_default();
+    let normalized = url.trim_end_matches('/').to_lowercase();
+    let duplicate = existing.iter().any(|entry| {
+        entry
+            .extra
+            .get("url")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim_end_matches('/')
+            .to_lowercase()
+            == normalized
+    });
+    let entry_id = if duplicate {
+        0
+    } else {
+        match crate::site_store::insert(
+            pool,
+            crate::site_store::NewEntry {
+                kind: "friend".to_string(),
+                title: name.clone(),
+                body: desc.clone(),
+                image_url: avatar.clone(),
+                extra: json!({ "url": url, "desc": desc, "applicationId": body.id }),
+            },
+        )
+        .await
+        {
+            Ok(saved) => saved.id,
+            Err(error) => return content_error(error, "FRIEND_APPROVE_FAILED"),
+        }
+    };
+    let _ = sqlx::query("UPDATE guestbook_messages SET owner_read_at = now() WHERE id = $1")
+        .bind(body.id)
+        .execute(pool)
+        .await;
+    // GitHub 同步是可选增强：未配置或失败都不阻塞「通过」，页面靠数据库实时展示。
+    let mut github_synced = false;
+    let mut github_note = String::from("未配置 GitHub，朋友页已实时展示");
+    let branch = if state.cfg.github_branch.is_empty() { "main" } else { state.cfg.github_branch.as_str() };
+    if let Ok((gh_owner, gh_repo, gh_branch)) = crate::github_publish::repo_from_config(
+        &state.cfg.github_token,
+        &state.cfg.github_repo,
+        branch,
+    ) {
+        let spec = crate::github_publish::RepoSpec {
+            api_base: "https://api.github.com",
+            token: &state.cfg.github_token,
+            owner: gh_owner,
+            repo: gh_repo,
+            branch: gh_branch,
+        };
+        let input = crate::js_source::FriendInput {
+            name: &name,
+            desc: &desc,
+            url: &url,
+            avatar: &avatar,
+        };
+        match crate::github_publish::publish_friend_direct(&state.http, &spec, input, Utc::now()).await {
+            Ok(_) => {
+                github_synced = true;
+                github_note = format!("已直写 {gh_branch} 分支，无需合并 PR");
+            }
+            Err(error) => {
+                github_note = format!("GitHub 同步失败（{error}），朋友页已实时展示");
+            }
+        }
+    }
+    if let Err(response) = note_audit(
+        &state,
+        &headers,
+        AuditNote {
+            event: "owner.friend_approve",
+            outcome: "success",
+            actor: owner.id,
+            target_type: "guestbook_message",
+            target_id: &body.id.to_string(),
+            detail: "approved",
+        },
+    )
+    .await
+    {
+        return *response;
+    }
+    Json(json!({
+        "ok": true,
+        "duplicate": duplicate,
+        "entryId": entry_id,
+        "githubSynced": github_synced,
+        "githubNote": github_note,
+        "item": { "name": name, "url": url, "desc": desc, "avatar": avatar },
+    }))
+    .into_response()
+}
+
+/// 四行友链文本解析（与前端 friendQuickInput 同款规则）：
+/// 返回 (站名, 描述, 站点URL, 头像URL)。带标签行优先，其余按评分挑选。
+fn parse_friend_lines(content: &str) -> (String, String, String, String) {
+    let mut name = String::new();
+    let mut desc = String::new();
+    let mut url = String::new();
+    let mut avatar = String::new();
+    let mut text_lines: Vec<String> = Vec::new();
+    let mut url_lines: Vec<String> = Vec::new();
+    for raw in content.lines() {
+        let line: String = raw.split_whitespace().collect::<Vec<_>>().join(" ");
+        if line.is_empty() {
+            continue;
+        }
+        if let Some((label, value)) = split_friend_label(&line) {
+            let matched = match label.as_str() {
+                "name" | "名称" | "站名" | "站点" | "网站" | "博客" => {
+                    name = value.clone();
+                    true
+                }
+                "desc" | "description" | "描述" | "简介" | "介绍" | "说明" => {
+                    desc = value.clone();
+                    true
+                }
+                "url" | "link" | "链接" | "地址" | "网址" | "站点地址" | "网站地址" => {
+                    url = value.clone();
+                    true
+                }
+                "avatar" | "头像" | "图标" | "logo" | "图片" => {
+                    avatar = value.clone();
+                    true
+                }
+                _ => false,
+            };
+            if matched {
+                continue;
+            }
+        }
+        if public_http_url(&line) {
+            url_lines.push(line);
+        } else {
+            text_lines.push(line);
+        }
+    }
+    for value in url_lines {
+        if looks_like_avatar(&value) && avatar.is_empty() {
+            avatar = value;
+        } else if url.is_empty() {
+            url = value;
+        } else if avatar.is_empty() {
+            avatar = value;
+        }
+    }
+    let mut remaining: Vec<String> = text_lines
+        .into_iter()
+        .filter(|line| line != &name && line != &desc)
+        .collect();
+    if name.is_empty() && !remaining.is_empty() {
+        remaining.sort_by_key(|line| std::cmp::Reverse(friend_name_score(line) - friend_desc_score(line)));
+        name = remaining.remove(0);
+    }
+    if desc.is_empty() && !remaining.is_empty() {
+        remaining.sort_by_key(|line| std::cmp::Reverse(friend_desc_score(line)));
+        desc = remaining.remove(0);
+    }
+    (name, desc, url, avatar)
+}
+
+fn split_friend_label(line: &str) -> Option<(String, String)> {
+    if public_http_url(line) {
+        return None;
+    }
+    let (label, value) = line.split_once([':', '：'])?;
+    let label = label.trim();
+    if label.is_empty() || label.chars().count() > 12 {
+        return None;
+    }
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+    Some((label.to_lowercase(), value.to_string()))
+}
+
+fn looks_like_avatar(value: &str) -> bool {
+    let lower = value.to_lowercase();
+    let path = lower.split(['?', '#']).next().unwrap_or("");
+    [".avif", ".gif", ".ico", ".jpg", ".jpeg", ".png", ".svg", ".webp"]
+        .iter()
+        .any(|ext| path.ends_with(ext))
+        || ["avatar", "head", "logo", "icon", "favicon", "upload"]
+            .iter()
+            .any(|word| path.contains(word))
+}
+
+fn friend_name_score(value: &str) -> i32 {
+    let mut score = 0;
+    if value.chars().any(|c| "。.!！?？,，；;".contains(c)) {
+        score -= 3;
+    }
+    let lower = value.to_lowercase();
+    if ["blog", "博客", "小窝", "小屋", "主页", "站", "site", "log", "space", "空间", "の"]
+        .iter()
+        .any(|word| lower.contains(word))
+    {
+        score += 3;
+    }
+    if ["愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里"]
+        .iter()
+        .any(|word| value.contains(word))
+    {
+        score -= 1;
+    }
+    if value.chars().count() <= 24 {
+        score += 1;
+    }
+    score
+}
+
+fn friend_desc_score(value: &str) -> i32 {
+    let mut score = 0;
+    if value.chars().any(|c| "。.!！?？,，；;".contains(c)) {
+        score += 2;
+    }
+    if ["愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里"]
+        .iter()
+        .any(|word| value.contains(word))
+    {
+        score += 2;
+    }
+    score += (value.chars().count() as i32 / 20).min(2);
+    score
 }
 
 #[derive(Deserialize)]
@@ -5070,6 +5420,27 @@ mod tests {
         );
         assert_eq!(daily[0].1, 2);
         assert_eq!(daily[1], (today, 4, 0, 0, 0, 0, 1, 3));
+    }
+
+    #[test]
+    fn friend_lines_parse_labels_urls_and_scores() {
+        let content = "站名: 小明的博客\n描述: 记录生活与技术\nhttps://example.com\nhttps://example.com/avatar.png";
+        let (name, desc, url, avatar) = parse_friend_lines(content);
+        assert_eq!(name, "小明的博客");
+        assert_eq!(desc, "记录生活与技术");
+        assert_eq!(url, "https://example.com");
+        assert_eq!(avatar, "https://example.com/avatar.png");
+
+        let free = "一个分享生活的小窝\n这里记录日常\nhttps://foo.bar";
+        let (name2, _, url2, _) = parse_friend_lines(free);
+        assert_eq!(url2, "https://foo.bar");
+        assert!(!name2.is_empty());
+
+        let (n, d, u, a) = parse_friend_lines("没有链接的普通留言");
+        assert!(u.is_empty());
+        assert!(a.is_empty());
+        assert_eq!(n, "没有链接的普通留言");
+        assert!(d.is_empty());
     }
 
     #[test]

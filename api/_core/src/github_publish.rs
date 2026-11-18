@@ -202,6 +202,52 @@ pub async fn publish_friend(
     })
 }
 
+/// 友链申请「通过」：直接写基线分支，不开分支和 PR。
+/// 朋友页同时读数据库实时渲染，这里写回只为仓库源码与展示保持一致。
+pub async fn publish_friend_direct(
+    http: &reqwest::Client,
+    repo: &RepoSpec<'_>,
+    input: FriendInput<'_>,
+    now: DateTime<Utc>,
+) -> Result<FriendPublished, PublishError> {
+    let file = get_file(http, repo, FRIEND_CARDS_PATH).await?;
+    let update = js_source::update_friend_cards(&file.content, input)?;
+    let commit_message = format!(
+        "feat: approve friend link {} {}",
+        update.name,
+        now.format("%Y%m%d-%H%M%S")
+    );
+    if !update.changed {
+        return Ok(unchanged_friend(
+            update.name,
+            update.url,
+            repo.branch,
+            &commit_message,
+        ));
+    }
+    let put = put_file(
+        http,
+        repo,
+        FRIEND_CARDS_PATH,
+        &commit_message,
+        &update.source,
+        &file.sha,
+        repo.branch,
+    )
+    .await?;
+    Ok(FriendPublished {
+        name: update.name.to_string(),
+        url: update.url.to_string(),
+        path: put.path,
+        commit_sha: put.sha,
+        changed: true,
+        branch: repo.branch.to_string(),
+        commit_message,
+        pull_request_url: String::new(),
+        pull_request_number: 0,
+    })
+}
+
 /// 发布一条碎语，直接写基线分支。
 pub async fn publish_moment(
     http: &reqwest::Client,
