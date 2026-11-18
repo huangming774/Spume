@@ -6,6 +6,7 @@ pub mod chat_prompt;
 pub mod chat_quota;
 pub mod config;
 mod db;
+pub mod deploy_status;
 pub mod feed;
 mod fixed_answers;
 pub mod github_publish;

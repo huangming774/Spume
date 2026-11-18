@@ -124,6 +124,24 @@ export async function publishOwnerMoment(payload) {
   return parseResponse(res);
 }
 
+export async function fetchDeployStatus() {
+  const res = await fetch("/api/client/deploy-status", { headers: JSON_HEADERS });
+  return parseResponse(res);
+}
+
+export async function generateOwnerAi(payload) {
+  const res = await fetch("/api/owner/ai/generate", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...JSON_HEADERS,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return parseResponse(res);
+}
+
 export async function createOwnerFixedAnswer(payload) {
   const res = await fetch("/api/owner/ai/fixed-answers", {
     method: "POST",

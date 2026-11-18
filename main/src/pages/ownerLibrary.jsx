@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { notifyEntriesChanged, useEntries } from "../lib/siteEntries";
 import {
   deleteOwnerEntry,
@@ -15,6 +16,16 @@ function RecordList({ items, empty, onDelete, busyId }) {
       {items.map((item) => (
         <li key={item.id}>
           <span>{item.label}</span>
+          {item.viewTo ? (
+            <Link className="owner-secondary" to={item.viewTo}>
+              查看
+            </Link>
+          ) : null}
+          {item.viewHref ? (
+            <a className="owner-secondary" href={item.viewHref} target="_blank" rel="noreferrer">
+              查看
+            </a>
+          ) : null}
           <button type="button" onClick={() => onDelete(item)} disabled={busyId === item.id}>
             {busyId === item.id ? "删除中..." : "删除"}
           </button>
@@ -38,11 +49,13 @@ export function ArticleLibrary() {
     id: item.id,
     kind: "article",
     label: `文章 · ${item.title}`,
+    viewTo: `/blog/${item.id}`,
   }));
   const journalItems = journals.map((item) => ({
     id: item.id,
     kind: "journal",
     label: `建站日志 · ${item.title}`,
+    viewTo: `/build/post/${item.id}`,
   }));
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
@@ -79,6 +92,7 @@ export function GalleryLibrary() {
     id: item.id,
     kind: "gallery",
     label: `${item.title || "相册"} · ${item.imageUrl}`,
+    viewTo: `/gallery/${item.extra?.albumId || item.id}`,
   }));
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
@@ -114,6 +128,7 @@ export function MomentLibrary() {
     id: item.id,
     kind: "moment",
     label: `${item.extra?.year || ""}.${item.extra?.date || ""} · ${item.title}`,
+    viewTo: "/glimmer",
   }));
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
@@ -145,7 +160,7 @@ export function MomentLibrary() {
 
 export function AboutPanel() {
   const { items: stored } = useEntries("about");
-  const items = stored.map((entry) => ({ id: entry.id, label: entry.title }));
+  const items = stored.map((entry) => ({ id: entry.id, label: entry.title, viewTo: "/about" }));
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [image, setImage] = useState("");
@@ -225,7 +240,11 @@ export function AboutPanel() {
           </button>
         </div>
         {error ? <p className="owner-record-error">{error}</p> : null}
-        {notice ? <p className="owner-record-empty">{notice}</p> : null}
+        {notice ? (
+          <p className="owner-record-empty">
+            {notice} <Link to="/about">查看关于我</Link>
+          </p>
+        ) : null}
         <RecordList items={items} empty="还没有关于我的内容。" onDelete={remove} busyId={busyId} />
       </div>
     </div>
@@ -234,7 +253,7 @@ export function AboutPanel() {
 
 export function BiliPanel() {
   const { items: stored } = useEntries("bili");
-  const items = stored.map((video) => ({ id: video.id, label: video.title }));
+  const items = stored.map((video) => ({ id: video.id, label: video.title, viewTo: "/bili" }));
   const [bvid, setBvid] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -243,6 +262,7 @@ export function BiliPanel() {
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const upload = async (event) => {
     const file = event.target.files?.[0];
@@ -265,6 +285,7 @@ export function BiliPanel() {
     try {
       await publishOwnerBili({ bvid, title, description, cover, duration });
       notifyEntriesChanged();
+      setNotice("已写入哔哩视频列表。");
       setBvid("");
       setTitle("");
       setDescription("");
@@ -324,6 +345,11 @@ export function BiliPanel() {
           </button>
         </div>
         {error ? <p className="owner-record-error">{error}</p> : null}
+        {notice ? (
+          <p className="owner-record-empty">
+            {notice} <Link to="/bili">查看哔哩页</Link>
+          </p>
+        ) : null}
         <RecordList items={items} empty="还没有收录的视频。" onDelete={remove} busyId={busyId} />
       </div>
     </div>
@@ -332,7 +358,11 @@ export function BiliPanel() {
 
 export function ProjectPanel() {
   const { items: stored } = useEntries("project");
-  const items = stored.map((project) => ({ id: project.id, label: project.title }));
+  const items = stored.map((project) => ({
+    id: project.id,
+    label: project.title,
+    viewTo: `/about/projects/${project.id}`,
+  }));
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [url, setUrl] = useState("");
@@ -424,7 +454,11 @@ export function ProjectPanel() {
           </button>
         </div>
         {error ? <p className="owner-record-error">{error}</p> : null}
-        {notice ? <p className="owner-record-empty">{notice}</p> : null}
+        {notice ? (
+          <p className="owner-record-empty">
+            {notice} <Link to="/projects">查看星空馆</Link>
+          </p>
+        ) : null}
         <RecordList items={items} empty="还没有星空馆项目。" onDelete={remove} busyId={busyId} />
       </div>
     </div>

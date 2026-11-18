@@ -92,7 +92,6 @@ export const ownerConsoleModules = [
     description: "博客文章与建站记录统一向导，写完提交真实发布接口。",
     icon: "W",
     tone: "blue",
-    status: "草稿 2",
   },
   {
     id: "gallery",
@@ -100,7 +99,6 @@ export const ownerConsoleModules = [
     description: "选择相册、上传到 S3，并发布或删除站内相册。",
     icon: "G",
     tone: "green",
-    status: "待上传 0",
   },
   {
     id: "moments",
@@ -116,7 +114,6 @@ export const ownerConsoleModules = [
     description: "输入站点信息，实时生成卡片预览。",
     icon: "F",
     tone: "sun",
-    status: "申请 1",
   },
   {
     id: "inbox",
@@ -124,7 +121,6 @@ export const ownerConsoleModules = [
     description: "留言板、朋友页评论、友链申请提醒集中处理。",
     icon: "M",
     tone: "sun",
-    status: "新消息 3",
   },
   {
     id: "emails",

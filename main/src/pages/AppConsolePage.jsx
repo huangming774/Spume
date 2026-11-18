@@ -7,6 +7,7 @@ import {
   createOwnerFixedAnswer,
   createOwnerDraft,
   fetchMusicConfig,
+  generateOwnerAi,
   isPublicImageURL,
   markOwnerNotificationRead,
   publishOwnerArticle,
@@ -37,6 +38,7 @@ import {
 } from "../pwa/appConsoleBlueprint";
 import {
   getBackendHealthLabel,
+  getDeployLabel,
   getOwnerFixedAnswers,
   getOwnerGuestbookContacts,
   getOwnerSessionLabel,
@@ -51,31 +53,21 @@ import {
 
 const screenMap = Object.fromEntries(ownerConsoleScreens.map((screen) => [screen.id, screen]));
 
-const articleSeed = `---
-title: 站长控制器第一阶段接站记录
-date: 2026-06-07 01:10:00
-tags: [网站, 控制台]
-categories: [建站]
----
-
-# 站长控制器第一阶段接站记录
-
-这一版开始把 App 控制台接到真实站点数据：
-
-- 真实 owner 状态
-- 真实图片上传
-- 真实 Markdown 草稿
-- 真实留言提醒与 AI 统计
-`;
-
 const defaultMobileMaterial =
   "今天把手机端 AI 发文流程接到真实草稿接口，图片和文字都能先保存到站长控制台。";
 
+const todayMoment = () => {
+  const now = new Date();
+  return {
+    year: String(now.getFullYear()),
+    date: `${now.getMonth() + 1}.${now.getDate()}`,
+  };
+};
+
 const defaultMoment = {
-  year: "2026",
-  date: "6.8",
+  ...todayMoment(),
   type: "碎碎念",
-  content: "今天也想把小碎片写下来",
+  content: "",
 };
 
 const initialCandidateAnswers = [
@@ -170,9 +162,9 @@ const AppConsolePage = () => {
   const [avatar, setAvatar] = useState(ownerConsoleAvatars[0]);
   const [avatarUploadBusy, setAvatarUploadBusy] = useState(false);
   const [avatarCropFile, setAvatarCropFile] = useState(null);
-  const [articleTitle, setArticleTitle] = useState("站长控制器第一阶段接站记录");
+  const [articleTitle, setArticleTitle] = useState("");
   const [articleKind, setArticleKind] = useState("博客");
-  const [articleBody, setArticleBody] = useState(articleSeed);
+  const [articleBody, setArticleBody] = useState("");
   const [articleImageURL, setArticleImageURL] = useState("");
   const [friendName, setFriendName] = useState("");
   const [friendDesc, setFriendDesc] = useState("");
@@ -209,6 +201,11 @@ const AppConsolePage = () => {
   const [friendPublishBusy, setFriendPublishBusy] = useState(false);
   const [momentPublishBusy, setMomentPublishBusy] = useState(false);
   const [readingNotificationId, setReadingNotificationId] = useState(null);
+  const [deploy, setDeploy] = useState(null);
+  const [mobileAiBusy, setMobileAiBusy] = useState(false);
+  const [answersBusy, setAnswersBusy] = useState(false);
+  const [publishView, setPublishView] = useState(null);
+  const articleTextareaRef = useRef(null);
   const [publishState, setPublishState] = useState({
     open: false,
     title: "发布任务",
@@ -216,6 +213,7 @@ const AppConsolePage = () => {
     failIndex: null,
     simulated: false,
     toast: "第一阶段主要提供真实上传和真实草稿，不直接改线上正式内容。",
+    view: null,
   });
   const publishTimerRef = useRef(null);
 
@@ -234,7 +232,7 @@ const AppConsolePage = () => {
   }, []);
 
   const refreshSignals = useCallback(async () => {
-    const [healthResult, statsResult, ownerStatusResult, ownerEmailsResult] =
+    const [healthResult, statsResult, ownerStatusResult, ownerEmailsResult, deployResult] =
       await Promise.allSettled([
         fetchWithin("/api/v1/health", { headers: { Accept: "application/json" } }, 3000).then(
           readJson,
@@ -252,11 +250,17 @@ const AppConsolePage = () => {
           { credentials: "include", headers: { Accept: "application/json" } },
           8000,
         ).then(readJson),
+        fetchWithin(
+          "/api/client/deploy-status",
+          { headers: { Accept: "application/json" } },
+          6000,
+        ).then(readJson),
       ]);
     if (healthResult.status === "fulfilled") setHealth(healthResult.value);
     if (statsResult.status === "fulfilled") setStats(statsResult.value);
     if (ownerStatusResult.status === "fulfilled") setOwnerStatus(ownerStatusResult.value);
     if (ownerEmailsResult.status === "fulfilled") setOwnerEmails(ownerEmailsResult.value);
+    if (deployResult.status === "fulfilled") setDeploy(deployResult.value);
   }, []);
 
   const loadConsole = useCallback(async () => {
@@ -289,6 +293,17 @@ const AppConsolePage = () => {
   const fixedAnswers = getOwnerFixedAnswers(ownerStatus);
   const liveDrafts = ownerStatus?.drafts?.items || [];
   const draftCount = ownerStatus?.drafts?.total ?? liveDrafts.length;
+  const friendPending = liveNotifications.filter((item) => item.source === "friends").length;
+  const deployLabel = getDeployLabel(deploy);
+  const deployRun = deploy?.available ? (deploy.runs || [])[0] : null;
+  const moduleStatus = {
+    article: `草稿 ${draftCount}`,
+    gallery: `待上传 ${galleryUploads.length}`,
+    moments: "轻量发布",
+    friend: `申请 ${friendPending}`,
+    inbox: `新消息 ${notificationTotal}`,
+    emails: "后台可见",
+  };
   const previewBody = useMemo(
     () => articleBody.replaceAll("---", "").trim().slice(0, 420) || "Markdown 预览",
     [articleBody],
@@ -426,6 +441,7 @@ const AppConsolePage = () => {
         activeIndex: -1,
         failIndex: null,
         simulated: false,
+        view: null,
         toast: nextUser.avatar || "头像已写入对象存储",
       });
     } finally {
@@ -515,9 +531,14 @@ const AppConsolePage = () => {
     coverUrl = "",
     publishTitle = "发布文章",
   }) => {
+    if (!title.trim() || !body.trim()) {
+      setError("请先填写标题和正文，再发布。");
+      return;
+    }
     setPublishBusy(true);
     clearPublishTimer();
     setError("");
+    setPublishView(null);
     setPublishState({
       open: true,
       title: publishTitle,
@@ -537,6 +558,14 @@ const AppConsolePage = () => {
             coverUrl,
           });
       const item = data.item || {};
+      setPublishView(
+        item.id
+          ? {
+              to: articleKind === "建站记录" ? `/build/post/${item.id}` : `/blog/${item.id}`,
+              label: articleKind === "建站记录" ? "查看建站日志" : "查看线上文章",
+            }
+          : null,
+      );
       setPublishState({
         open: true,
         title: publishTitle,
@@ -565,10 +594,19 @@ const AppConsolePage = () => {
     }
   };
 
-  const generateMobileArticle = () => {
-    const draft = buildMobileArticleDraft(mobileMaterial);
-    setMobileDraft(draft);
-    setMobileToast("AI 已生成待审核草稿，确认后会保存到真实草稿箱。");
+  const generateMobileArticle = async () => {
+    setMobileAiBusy(true);
+    try {
+      const data = await generateOwnerAi({ kind: "draft", input: mobileMaterial });
+      setMobileDraft({ title: data.title || "AI 草稿", body: data.body || "" });
+      setMobileToast(`AI 已生成待审核草稿（${data.model || "模型"}），确认后会保存到真实草稿箱。`);
+    } catch (e) {
+      const draft = buildMobileArticleDraft(mobileMaterial);
+      setMobileDraft(draft);
+      setMobileToast(`AI 接口不可用（${e.message || "请求失败"}），已改用本地模板草稿，请人工审核。`);
+    } finally {
+      setMobileAiBusy(false);
+    }
   };
 
   const approveMobileArticle = async () => {
@@ -695,6 +733,8 @@ const AppConsolePage = () => {
             : entry,
         ),
       );
+      const albumId = item.extra?.albumId || latest.albumId || item.id;
+      setPublishView(albumId ? { to: `/gallery/${albumId}`, label: "查看线上相册" } : null);
       setPublishState({
         open: true,
         title: "发布相册图片",
@@ -746,6 +786,7 @@ const AppConsolePage = () => {
     try {
       const data = await publishOwnerMoment({ year, date, type, content });
       const item = data.item || {};
+      setPublishView({ to: "/glimmer", label: "查看线上碎语" });
       setPublishState({
         open: true,
         title: "发布碎语",
@@ -785,11 +826,11 @@ const AppConsolePage = () => {
     setError("");
     setPublishState({
       open: true,
-      title: "友链 AI 识别",
+      title: "友链快速识别",
       activeIndex: -1,
       failIndex: null,
       simulated: false,
-      toast: "已自动识别站名、描述、站点 URL 和头像 URL，并填入友链表单。",
+      toast: "已按四行格式识别站名、描述、站点 URL 和头像 URL（本地规则），并填入友链表单。",
     });
   };
 
@@ -826,6 +867,11 @@ const AppConsolePage = () => {
     try {
       const data = await publishOwnerFriend({ name, desc, url, avatar: avatarUrl });
       const item = data.item || {};
+      setPublishView(
+        item.pullRequestURL
+          ? { href: item.pullRequestURL, label: "查看友链 PR" }
+          : { to: "/friends", label: "查看朋友页" },
+      );
       setFriendName("");
       setFriendDesc("");
       setFriendUrl("");
@@ -881,6 +927,54 @@ const AppConsolePage = () => {
     }
   };
 
+  const applyMarkdownTool = (tool) => {
+    const textarea = articleTextareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart ?? articleBody.length;
+    const end = textarea.selectionEnd ?? start;
+    const selected = articleBody.slice(start, end);
+    const wrap = (before, after, placeholder) => {
+      const inner = selected || placeholder;
+      return { text: before + inner + after, cursor: start + before.length + inner.length };
+    };
+    let next;
+    switch (tool) {
+      case "H1": {
+        const lineStart = articleBody.lastIndexOf("\n", start - 1) + 1;
+        const insert = "# ";
+        next = {
+          text: articleBody.slice(0, lineStart) + insert + articleBody.slice(lineStart),
+          cursor: end + insert.length,
+        };
+        break;
+      }
+      case "B":
+        next = wrap("**", "**", "加粗文字");
+        break;
+      case "I":
+        next = wrap("*", "*", "斜体文字");
+        break;
+      case "Link":
+        next = wrap("[", "](https://)", selected || "链接文字");
+        break;
+      case "Img":
+        next = wrap("![", "](https://)", selected || "图片描述");
+        break;
+      case "Code":
+        next = selected.includes("\n")
+          ? wrap("```\n", "\n```", "代码")
+          : wrap("`", "`", "代码");
+        break;
+      default:
+        return;
+    }
+    setArticleBody(next.text);
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(next.cursor, next.cursor);
+    });
+  };
+
   const handleArticleImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -909,15 +1003,31 @@ const AppConsolePage = () => {
     }
   };
 
-  const testAiQuestion = () => {
-    const question = aiQuestion.trim() || "用户问题";
-    setCandidateAnswers([
-      `关于“${question}”，可以先在控制台内调试回答，再保存为网站 AI 的固定回复。`,
-      "保存后的固定答案会进入后端库，用户侧 AI 助手遇到同样问题会优先命中。",
-      "没有命中固定答案的问题会继续走模型聊天，不影响原来的 AI 使用流程。",
-    ]);
-    setSelectedAnswerIndex(0);
-    setAnswerToast("已生成 3 条候选答案。");
+  const testAiQuestion = async () => {
+    const question = aiQuestion.trim();
+    if (!question) {
+      setAnswerToast("请先填写测试问题。");
+      return;
+    }
+    setAnswersBusy(true);
+    try {
+      const data = await generateOwnerAi({ kind: "answers", input: question });
+      const answers = Array.isArray(data.answers) ? data.answers.filter(Boolean) : [];
+      if (!answers.length) throw new Error("模型没有返回候选答案");
+      setCandidateAnswers(answers.slice(0, 3));
+      setSelectedAnswerIndex(0);
+      setAnswerToast(`AI 已生成 ${Math.min(answers.length, 3)} 条候选答案（${data.model || "模型"}）。`);
+    } catch (e) {
+      setCandidateAnswers([
+        `关于“${question}”，可以先在控制台内调试回答，再保存为网站 AI 的固定回复。`,
+        '保存后的固定答案会进入后端库，用户侧 AI 助手遇到同样问题会优先命中。',
+        '没有命中固定答案的问题会继续走模型聊天，不影响原来的 AI 使用流程。',
+      ]);
+      setSelectedAnswerIndex(0);
+      setAnswerToast(`AI 接口不可用（${e.message || "请求失败"}），已改用模板候选，请人工改写后保存。`);
+    } finally {
+      setAnswersBusy(false);
+    }
   };
 
   const saveFixedAnswer = async () => {
@@ -951,18 +1061,7 @@ const AppConsolePage = () => {
     }
   };
 
-  const visibleDrafts = liveDrafts.length
-    ? liveDrafts
-    : [
-        {
-          id: "seed-1",
-          title: articleTitle,
-          kind: "article",
-          body: articleBody,
-          updatedAt: "本地预览",
-          status: "draft",
-        },
-      ];
+  const visibleDrafts = liveDrafts;
 
   // 站长登录界面：没登录只给账号密码表单，登录后才进控制台。
   if (!auth) {
@@ -1125,10 +1224,23 @@ const AppConsolePage = () => {
                   {logoutBusy ? "退出中…" : "退出登录"}
                 </button>
               </div>
-              <span className="owner-pill">
-                <span className="owner-status-dot" />
-                最新部署：等待发布阶段
-              </span>
+              {deployRun?.url ? (
+                <a
+                  className="owner-pill"
+                  href={deployRun.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="查看 GitHub 部署运行"
+                >
+                  <span className="owner-status-dot" />
+                  最新部署：{deployLabel}
+                </a>
+              ) : (
+                <span className="owner-pill">
+                  <span className="owner-status-dot" />
+                  最新部署：{deployLabel}
+                </span>
+              )}
               <div className="owner-notify-wrap">
                 <button
                   type="button"
@@ -1258,7 +1370,7 @@ const AppConsolePage = () => {
                         </span>
                         <span className={moduleToneClass[module.tone]}>{module.icon}</span>
                       </span>
-                      <span className="owner-tiny-status">{module.status}</span>
+                      <span className="owner-tiny-status">{moduleStatus[module.id] || ""}</span>
                     </button>
                   ))}
                 </div>
@@ -1336,7 +1448,7 @@ const AppConsolePage = () => {
                     </div>
                     <div className="owner-task-row">
                       <span>部署</span>
-                      <strong>后续阶段</strong>
+                      <strong>{deployLabel}</strong>
                     </div>
                   </div>
                   <button type="button" className="owner-secondary" onClick={handleSync}>
@@ -1395,6 +1507,7 @@ const AppConsolePage = () => {
                   <input
                     id="articleTitle"
                     value={articleTitle}
+                    placeholder="给文章起个标题"
                     onChange={(e) => setArticleTitle(e.target.value)}
                   />
                 </div>
@@ -1430,13 +1543,23 @@ const AppConsolePage = () => {
                 <div className="owner-md-editor">
                   <div className="owner-md-toolbar">
                     {["H1", "B", "I", "Link", "Img", "Code"].map((tool) => (
-                      <button type="button" key={tool}>
+                      <button
+                        type="button"
+                        key={tool}
+                        title={`插入 ${tool} 标记`}
+                        onClick={() => applyMarkdownTool(tool)}
+                      >
                         {tool}
                       </button>
                     ))}
                     <span>.md</span>
                   </div>
-                  <textarea value={articleBody} onChange={(e) => setArticleBody(e.target.value)} />
+                  <textarea
+                    ref={articleTextareaRef}
+                    value={articleBody}
+                    placeholder="在这里写 Markdown 正文，或到移动端用 AI 生成草稿。"
+                    onChange={(e) => setArticleBody(e.target.value)}
+                  />
                 </div>
                 <div className="owner-quick-line">
                   <button
@@ -1510,8 +1633,13 @@ const AppConsolePage = () => {
                   />
                 </div>
                 <div className="owner-quick-line">
-                  <button type="button" className="owner-secondary" onClick={generateMobileArticle}>
-                    生成 AI 草稿
+                  <button
+                    type="button"
+                    className="owner-secondary"
+                    onClick={generateMobileArticle}
+                    disabled={mobileAiBusy}
+                  >
+                    {mobileAiBusy ? "AI 生成中..." : "生成 AI 草稿"}
                   </button>
                   <button type="button" className="owner-primary" onClick={approveMobileArticle}>
                     保存确认后的草稿
@@ -1560,6 +1688,11 @@ const AppConsolePage = () => {
                 </div>
               </div>
               <div className="owner-draft-list">
+                {visibleDrafts.length ? null : (
+                  <p className="owner-record-empty">
+                    草稿箱是空的。去「发文章」写一篇，保存草稿后会出现在这里。
+                  </p>
+                )}
                 {visibleDrafts.map((item, index) => (
                   <article className="owner-draft-item" key={item.id || `${item.title}-${index}`}>
                     <span>
@@ -1778,7 +1911,7 @@ const AppConsolePage = () => {
             <div className="owner-form-shell owner-glass">
               <div>
                 <div className="owner-field">
-                  <label htmlFor="friendQuickInput">AI 识别四行友链</label>
+                  <label htmlFor="friendQuickInput">四行友链快速识别</label>
                   <textarea
                     id="friendQuickInput"
                     value={friendQuickInput}
@@ -1788,7 +1921,7 @@ const AppConsolePage = () => {
                 </div>
                 <div className="owner-quick-line">
                   <button type="button" className="owner-secondary" onClick={handleFriendQuickFill}>
-                    AI 识别填表
+                    智能识别填表
                   </button>
                 </div>
                 <div className="owner-field">
@@ -1903,9 +2036,13 @@ const AppConsolePage = () => {
                       </small>
                     ) : null}
                     <div className="owner-quick-line">
-                      <button type="button" className="owner-secondary">
+                      <Link
+                        className="owner-secondary"
+                        to={item.source === "friends" ? "/friends#friends-guestbook" : "/guestbook"}
+                        onClick={() => setNotificationsOpen(false)}
+                      >
                         稍后回复
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         className="owner-secondary"
@@ -2038,8 +2175,13 @@ const AppConsolePage = () => {
                   />
                 </div>
                 <div className="owner-quick-line">
-                  <button type="button" className="owner-secondary" onClick={testAiQuestion}>
-                    生成候选答案
+                  <button
+                    type="button"
+                    className="owner-secondary"
+                    onClick={testAiQuestion}
+                    disabled={answersBusy}
+                  >
+                    {answersBusy ? "AI 生成中..." : "生成候选答案"}
                   </button>
                   <button
                     type="button"
@@ -2168,6 +2310,24 @@ const AppConsolePage = () => {
             })}
           </div>
           <p className="owner-toast">{publishState.toast}</p>
+          {publishView ? (
+            <div className="owner-quick-line">
+              {publishView.href ? (
+                <a
+                  className="owner-primary"
+                  href={publishView.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {publishView.label}
+                </a>
+              ) : (
+                <Link className="owner-primary" to={publishView.to} onClick={closePublish}>
+                  {publishView.label}
+                </Link>
+              )}
+            </div>
+          ) : null}
           {publishState.simulated ? (
             <div className="owner-quick-line">
               <button type="button" className="owner-secondary" onClick={simulateFail}>

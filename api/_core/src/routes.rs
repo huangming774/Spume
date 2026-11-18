@@ -82,6 +82,7 @@ pub fn router(state: AppState) -> Router {
             get(crate::map_tile::tile),
         )
         .route("/api/weather", get(crate::weather::get))
+        .route("/api/client/deploy-status", get(client_deploy_status))
         .route("/api/client/music", get(client_music))
         .route("/api/client/music/playlist", get(client_music_playlist))
         .route("/api/owner/music", axum::routing::put(owner_music_save))
@@ -125,6 +126,7 @@ pub fn router(state: AppState) -> Router {
             "/api/owner/ai/fixed-answers",
             get(fixed_answers).post(fixed_answer_create),
         )
+        .route("/api/owner/ai/generate", post(owner_ai_generate))
         .route(
             "/api/owner/notifications/{id}/read",
             axum::routing::patch(notification_read),
@@ -4741,6 +4743,169 @@ fn _rate_window(last: &mut Instant) -> bool {
     true
 }
 
+async fn client_deploy_status(State(state): State<AppState>) -> Response {
+    let mut body = crate::deploy_status::snapshot(&state).await;
+    // 只暴露「是否配置」，不暴露凭据本身；前端据此区分未配置与读取失败。
+    body["githubConfigured"] = json!(!state.cfg.github_token.is_empty() && !state.cfg.github_repo.is_empty());
+    body["aiConfigured"] = json!(!state.cfg.deepseek_api_key.is_empty());
+    Json(body).into_response()
+}
+
+#[derive(Deserialize)]
+struct OwnerAiGenerateBody {
+    kind: String,
+    #[serde(default)]
+    input: String,
+}
+
+/// 站长控制台的真实 AI 生成：文章草稿 / 固定答案候选。
+/// 复用聊天的模型轮换链路，但不占用户聊天配额、不走用户侧系统提示词。
+async fn owner_ai_generate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<OwnerAiGenerateBody>,
+) -> Response {
+    if let Err(response) = require_owner(&state, &headers).await {
+        return *response;
+    }
+    let kind = body.kind.trim();
+    if kind != "draft" && kind != "answers" {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_KIND", "kind 只能是 draft 或 answers。");
+    }
+    let input = body.input.trim();
+    if input.is_empty() || input.chars().count() > 4000 {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_INPUT", "请填写素材或问题（4000 字以内）。");
+    }
+    if state.cfg.deepseek_api_key.is_empty() {
+        return fail(StatusCode::SERVICE_UNAVAILABLE, "AI_NOT_CONFIGURED", "服务器尚未配置 AI 密钥。");
+    }
+    let (system, user, max_tokens) = if kind == "draft" {
+        (
+            "你是博客站长的写作助手。根据站长提供的素材写一篇 Markdown 文章草稿：\
+             第一行是「# 标题」，正文包含「## 素材摘要」与「## 发布建议」两个小节，\
+             语气自然、不编造素材里没有的事实，全文 600 字以内。只输出 Markdown 正文。",
+            format!("素材：\n{input}"),
+            1200_u32,
+        )
+    } else {
+        (
+            "你是网站 AI 助手的调试助手。针对用户问题给出 3 条互不相同的候选回答，\
+             每条 120 字以内、口语化、不编造事实。只输出一个 JSON 字符串数组，\
+             例如 [\"回答一\",\"回答二\",\"回答三\"]，不要输出其它内容。",
+            format!("用户问题：{input}"),
+            800_u32,
+        )
+    };
+    let endpoint = format!(
+        "{}/v1/chat/completions",
+        state.cfg.deepseek_base_url.trim_end_matches('/')
+    );
+    let mut model = crate::ai_model::resolve(&state).await;
+    let mut attempts = 0_u8;
+    let response = loop {
+        attempts += 1;
+        let sent = state
+            .http
+            .post(&endpoint)
+            .bearer_auth(&state.cfg.deepseek_api_key)
+            .timeout(Duration::from_secs(45))
+            .json(&json!({
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.7,
+                "max_tokens": max_tokens,
+            }))
+            .send()
+            .await;
+        let sent = match sent {
+            Ok(item) => item,
+            Err(error) => {
+                return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", &format!("模型请求失败: {error}"));
+            }
+        };
+        let status = sent.status();
+        if status.is_success() {
+            break sent;
+        }
+        let detail = sent.text().await.unwrap_or_default();
+        let model_rejected = matches!(status.as_u16(), 403 | 404 | 429);
+        if !model_rejected || attempts >= 3 {
+            return fail(
+                StatusCode::BAD_GATEWAY,
+                "AI_UPSTREAM",
+                &format!("HTTP {}: {}", status, detail.chars().take(200).collect::<String>()),
+            );
+        }
+        crate::ai_model::mark_failed(&state, &model);
+        model = crate::ai_model::resolve(&state).await;
+    };
+    let payload: Value = match response.json().await {
+        Ok(payload) => payload,
+        Err(error) => {
+            return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", &format!("模型响应无法解析: {error}"));
+        }
+    };
+    let Some(reply) = payload["choices"][0]["message"]["content"]
+        .as_str()
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+    else {
+        return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", "模型没有返回内容。");
+    };
+    if kind == "draft" {
+        let title = reply
+            .lines()
+            .find_map(|line| line.strip_prefix("# "))
+            .map(str::trim)
+            .filter(|text| !text.is_empty())
+            .unwrap_or("AI 草稿")
+            .to_string();
+        return Json(json!({ "ok": true, "title": title, "body": reply, "model": model })).into_response();
+    }
+    let answers = parse_candidate_answers(reply);
+    if answers.is_empty() {
+        return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", "模型没有返回可用的候选答案。");
+    }
+    Json(json!({ "ok": true, "answers": answers, "model": model })).into_response()
+}
+
+/// 候选答案优先按 JSON 数组解析；模型没守格式时按行拆兜底。
+fn parse_candidate_answers(reply: &str) -> Vec<String> {
+    let trimmed = reply.trim();
+    let start = trimmed.find('[');
+    let end = trimmed.rfind(']');
+    if let (Some(start), Some(end)) = (start, end) {
+        if end > start {
+            if let Ok(Value::Array(items)) = serde_json::from_str::<Value>(&trimmed[start..=end]) {
+                let answers: Vec<String> = items
+                    .iter()
+                    .filter_map(|item| item.as_str())
+                    .map(str::trim)
+                    .filter(|text| !text.is_empty())
+                    .map(str::to_string)
+                    .collect();
+                if !answers.is_empty() {
+                    return answers.into_iter().take(3).collect();
+                }
+            }
+        }
+    }
+    reply
+        .lines()
+        .map(|line| {
+            line.trim()
+                .trim_start_matches(|c: char| c.is_ascii_digit() || matches!(c, '.' | '、' | ')' | '）' | '-' | '*' | ' '))
+                .trim()
+                .to_string()
+        })
+        .filter(|text| !text.is_empty())
+        .take(3)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4905,6 +5070,21 @@ mod tests {
         );
         assert_eq!(daily[0].1, 2);
         assert_eq!(daily[1], (today, 4, 0, 0, 0, 0, 1, 3));
+    }
+
+    #[test]
+    fn candidate_answers_parse_json_and_line_fallback() {
+        let json_reply = "好的，候选如下：\n[\"答案一\", \"答案二\", \"答案三\", \"答案四\"]";
+        assert_eq!(
+            parse_candidate_answers(json_reply),
+            vec!["答案一", "答案二", "答案三"]
+        );
+        let lines = "1. 第一条回答\n2、第二条回答\n- 第三条回答\n第四条多余";
+        assert_eq!(
+            parse_candidate_answers(lines),
+            vec!["第一条回答", "第二条回答", "第三条回答"]
+        );
+        assert!(parse_candidate_answers("   ").is_empty());
     }
 
     #[test]

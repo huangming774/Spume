@@ -8,6 +8,19 @@ export function getBackendHealthLabel(health) {
   return health?.status || "检查中";
 }
 
+export function getDeployLabel(deploy) {
+  if (!deploy) return "部署状态读取中";
+  if (!deploy.configured) return "未配置部署仓库";
+  if (!deploy.available) return "部署状态读取失败";
+  const run = (deploy.runs || [])[0];
+  if (!run) return "暂无部署记录";
+  if (run.status !== "completed") return "部署进行中";
+  const sha = (run.sha || "").slice(0, 7);
+  if (run.conclusion === "success") return `部署成功 ${sha}`;
+  if (run.conclusion === "failure") return `部署失败 ${sha}`;
+  return `部署结束 ${sha}`;
+}
+
 export function getStatsSnapshot(stats) {
   const summary = stats?.summary || {};
   return {
