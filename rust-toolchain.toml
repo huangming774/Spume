@@ -1,0 +1,5 @@
+# Vercel 构建机预装的 Rust 可能落后于依赖的 MSRV（sqlx 0.9 要求 1.94+）。
+# rustup 读到本文件会自动安装并使用锁定的工具链，本地与线上保持一致。
+[toolchain]
+channel = "1.94.0"
+profile = "minimal"

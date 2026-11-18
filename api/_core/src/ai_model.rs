@@ -109,12 +109,22 @@ fn available_models(state: &AppState, body: &Value) -> Vec<String> {
 
 /// 去掉回避期内的模型。纯函数，方便测试。
 pub fn filter_avoid(models: &[String], avoid: &[(String, Instant)]) -> Vec<String> {
+    filter_avoid_for(models, avoid, AVOID_FOR)
+}
+
+/// 回避期可注入的版本。测试用短时长，避免 Windows 上 Instant
+/// 锚定开机时刻、减不出 24 小时前时间点的问题。
+pub fn filter_avoid_for(
+    models: &[String],
+    avoid: &[(String, Instant)],
+    avoid_for: Duration,
+) -> Vec<String> {
     models
         .iter()
         .filter(|model| {
             !avoid
                 .iter()
-                .any(|(item, at)| item == *model && at.elapsed() < AVOID_FOR)
+                .any(|(item, at)| item == *model && at.elapsed() < avoid_for)
         })
         .cloned()
         .collect()

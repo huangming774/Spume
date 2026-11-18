@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use serde_json::json;
-use taozhiyy_api::ai_model::{filter_avoid, free_text_models, pick_random, AVOID_FOR};
+use taozhiyy_api::ai_model::{filter_avoid, filter_avoid_for, free_text_models, pick_random};
 
 #[test]
 fn free_models_are_filtered_by_suffix_price_and_text_output() {
@@ -64,12 +64,14 @@ fn avoid_list_drops_recently_failed_models_only() {
         "回避期内的模型不再参与轮换"
     );
 
-    let expired_at = Instant::now()
-        .checked_sub(AVOID_FOR + Duration::from_secs(60))
-        .expect("clock supports subtract");
+    // 用可注入的短回避期验证过期分支：Windows 的 Instant 锚定开机时刻，
+    // 减不出 24 小时前的时间点，短时长 + 小睡跨平台都稳定。
+    let short = Duration::from_millis(50);
+    let expired_at = Instant::now();
+    std::thread::sleep(Duration::from_millis(120));
     let expired = vec![("bad:free".to_string(), expired_at)];
     assert_eq!(
-        filter_avoid(&models, &expired),
+        filter_avoid_for(&models, &expired, short),
         models,
         "回避期过了就恢复候选资格"
     );
