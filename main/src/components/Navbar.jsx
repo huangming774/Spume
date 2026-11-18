@@ -241,9 +241,12 @@ const NavBar = () => {
       }
     };
 
-    if (currentScrollY === 0) {
+    // 移动端三条杠是唯一导航入口，导航条必须常驻；桌面端保留下滚隐藏。
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+    if (currentScrollY === 0 || !isDesktop) {
       setIsNavVisible(true);
       removeClasses();
+      if (currentScrollY > 0) addThemeClass();
     } else if (currentScrollY > lastScrollY) {
       setIsNavVisible(false);
       removeClasses();
