@@ -82,6 +82,9 @@ pub fn router(state: AppState) -> Router {
             get(crate::map_tile::tile),
         )
         .route("/api/weather", get(crate::weather::get))
+        .route("/api/client/music", get(client_music))
+        .route("/api/client/music/playlist", get(client_music_playlist))
+        .route("/api/owner/music", axum::routing::put(owner_music_save))
         .route("/api/content", get(content_recent))
         .route("/api/content/{kind}", get(content_list))
         .route("/api/owner/status", get(owner_status))
@@ -852,6 +855,89 @@ async fn site_avatar(State(state): State<AppState>) -> Json<Value> {
         None => (String::new(), String::new()),
     };
     Json(json!({"avatar": avatar, "displayName": display_name}))
+}
+
+const MUSIC_SETTING_KEY: &str = "netease_playlist";
+
+/// 读站长配置的网易云歌单。返回 `{enabled, playlistId, raw}`；没配过 enabled=false。
+async fn music_setting(state: &AppState) -> (bool, String, String) {
+    let Some(pool) = state.db.as_ref() else {
+        return (false, String::new(), String::new());
+    };
+    let raw: Option<String> = sqlx::query_scalar("SELECT value FROM site_settings WHERE key = $1")
+        .bind(MUSIC_SETTING_KEY)
+        .fetch_optional(pool)
+        .await
+        .unwrap_or(None);
+    let raw = raw.unwrap_or_default();
+    let id = crate::music::parse_playlist_id(&raw).unwrap_or_default();
+    (!id.is_empty(), id, raw)
+}
+
+/// `GET /api/client/music`：公开的音乐配置，前端据此决定播歌单还是回退 loop.mp3。
+async fn client_music(State(state): State<AppState>) -> Json<Value> {
+    let (enabled, playlist_id, raw) = music_setting(&state).await;
+    Json(json!({"enabled": enabled, "playlistId": playlist_id, "raw": raw}))
+}
+
+/// `GET /api/client/music/playlist`：解析后的播放列表。
+/// 没配置返回 404，上游失败返回 502，前端两种情况都回退 loop.mp3。
+async fn client_music_playlist(State(state): State<AppState>) -> Response {
+    let (enabled, playlist_id, _) = music_setting(&state).await;
+    if !enabled {
+        return fail(StatusCode::NOT_FOUND, "MUSIC_NOT_CONFIGURED", "还没有配置歌单");
+    }
+    match crate::music::resolve(&state, &playlist_id).await {
+        Ok(body) => Json(body).into_response(),
+        Err(error) => {
+            tracing::warn!(%error, playlist = %playlist_id, "netease playlist resolve failed");
+            fail(StatusCode::BAD_GATEWAY, "MUSIC_UNAVAILABLE", "歌单暂时解析不了")
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct MusicBody {
+    #[serde(default)]
+    playlist: String,
+}
+
+/// `PUT /api/owner/music`：站长保存歌单链接/ID。传空串等于停用。
+async fn owner_music_save(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<MusicBody>,
+) -> Response {
+    if let Err(response) = require_owner(&state, &headers).await {
+        return *response;
+    }
+    let raw = body.playlist.trim();
+    if !raw.is_empty() && crate::music::parse_playlist_id(raw).is_none() {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_PLAYLIST",
+            "请填网易云歌单链接或数字 ID",
+        );
+    }
+    let Some(pool) = state.db.as_ref() else {
+        return fail(StatusCode::SERVICE_UNAVAILABLE, "DB_UNAVAILABLE", "数据库还没有连上");
+    };
+    if let Err(error) = sqlx::query(
+        "INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, now())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+    )
+    .bind(MUSIC_SETTING_KEY)
+    .bind(raw)
+    .execute(pool)
+    .await
+    {
+        return query_failed(&error);
+    }
+    if let Some(id) = crate::music::parse_playlist_id(raw) {
+        crate::music::invalidate(&id);
+    }
+    let (enabled, playlist_id, raw) = music_setting(&state).await;
+    Json(json!({"ok": true, "enabled": enabled, "playlistId": playlist_id, "raw": raw})).into_response()
 }
 
 /// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。

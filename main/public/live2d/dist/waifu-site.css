@@ -1,0 +1,15 @@
+/* 本站适配：widget 默认 z-index:1 会被首页封面盖住，
+   抬到内容之上、导航(z-50)/菜单弹层(z-80)/AI 面板之下。 */
+#waifu {
+  z-index: 40;
+}
+#waifu-toggle {
+  z-index: 40;
+}
+/* 手机端不加载看板娘（autoload.js 已按屏宽跳过），双保险隐藏 */
+@media (max-width: 767px) {
+  #waifu,
+  #waifu-toggle {
+    display: none !important;
+  }
+}

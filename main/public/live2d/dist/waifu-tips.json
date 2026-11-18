@@ -1,0 +1,76 @@
+{
+  "mouseover": [
+    { "selector": "#waifu-tool-hitokoto", "text": ["猜猜我要说些什么？", "想听一句一言吗～"] },
+    { "selector": "#waifu-tool-asteroids", "text": ["要来一场小行星射击吗？", "按下这个按钮会有彩蛋哦～"] },
+    { "selector": "#waifu-tool-switch-model", "text": ["想看看我的小伙伴吗？", "点我可以换一位看板娘哦～"] },
+    { "selector": "#waifu-tool-switch-texture", "text": ["想看我换装吗？", "这套衣服穿久了，换一套试试？"] },
+    { "selector": "#waifu-tool-photo", "text": ["要给我拍照吗？", "茄子～"] },
+    { "selector": "#waifu-tool-info", "text": ["想了解这个看板娘项目吗？"] },
+    { "selector": "#waifu-tool-quit", "text": ["要送我回去休息了吗？", "下次还要来找我玩哦～"] },
+    { "selector": "a[href='/']", "text": ["要回首页了吗？", "首页的封面每次都不一样哦～"] },
+    { "selector": "a[href='/about']", "text": ["想了解站长<span>清沫</span>吗？", "关于页里有站长的小故事哦～"] },
+    { "selector": "a[href='/glimmer']", "text": ["<span>浮光集</span>里收着照片和短句～", "去看看那些被记住的瞬间吧！"] },
+    { "selector": "a[href='/bili']", "text": ["站长的<span>B站</span>动态都在这里～", "要去看看番剧进度吗？"] },
+    { "selector": "a[href='/blog']", "text": ["要去读<span>文章</span>了吗？", "写下来的东西，都值得慢慢看～"] },
+    { "selector": "a[href='/build']", "text": ["<span>建站日志</span>记录了这座小屋的搭建过程～"] },
+    { "selector": "a[href='/projects']", "text": ["<span>星空馆</span>里漂着站长的项目哦～", "去三维星空里逛一逛吧！"] },
+    { "selector": "a[href='/friends']", "text": ["要去<span>友链</span>页串门吗？", "欢迎交换友链哦～"] },
+    { "selector": "a[href='/guestbook']", "text": ["去<span>留言板</span>贴张小纸条吧～", "想对站长说什么，都可以写下来哦！"] },
+    { "selector": ".nav-cover-trigger", "text": ["想给首页换个封面吗？", "四张封面，随机相遇～"] },
+    { "selector": ".visitor-network-badge", "text": ["这里显示你的来访地区和网络延迟～"] },
+    { "selector": ".weather-badge", "text": ["今天天气怎么样呀？", "出门记得看天气哦～"] },
+    { "selector": "#blog-ai-toggle", "text": ["有问题可以问<span>博客小精灵</span>哦～", "AI 小助手还能帮你画画！"] },
+    { "selector": ".friends-winter-card", "text": ["要去<span>{text}</span>的小屋看看吗？"] },
+    { "selector": ".glimmer-polaroid", "text": ["要翻开这本相册吗？"] },
+    { "selector": "#live2d", "text": ["干嘛呀，痒痒的～", "再摸我就要害羞了！", "喵？"] }
+  ],
+  "click": [
+    { "selector": "#live2d", "text": ["是…是不小心碰到了吗？", "呀！你吓到我了！", "再这样我要闹了哦～"] },
+    { "selector": "textarea", "text": ["要写点什么呢？", "认真写下的话，都会被好好收到哦～"] },
+    { "selector": "input[type='text'], input[type='email'], input[type='search']", "text": ["输入的时候要小心错别字哦～"] }
+  ],
+  "seasons": [
+    { "date": "01/01", "text": "<span>元旦</span>了呢，新的一年开始了，今年是 {year} 年～" },
+    { "date": "02/14", "text": "又是一年<span>情人节</span>，今天有约吗～" },
+    { "date": "03/08", "text": "今天是<span>国际妇女节</span>！" },
+    { "date": "04/01", "text": "悄悄告诉你～<span>今天是愚人节，别被骗了哦～</span>" },
+    { "date": "05/01", "text": "<span>五一假期</span>快乐！打算去哪里玩呀～" },
+    { "date": "06/01", "text": "<span>儿童节</span>快乐！保持童心最重要啦～" },
+    { "date": "09/10", "text": "今天是<span>教师节</span>，记得谢谢老师哦～" },
+    { "date": "10/01-10/07", "text": "<span>国庆假期</span>快乐！好好休息一下吧～" },
+    { "date": "12/24-12/25", "text": "<span>圣诞节</span>快乐！记得吃个苹果哦～" },
+    { "date": "12/31", "text": "今年就要结束了呢，明年也要一起加油呀～" }
+  ],
+  "time": [
+    { "hour": "6-7", "text": "早上好！一日之计在于晨，美好的一天开始了～" },
+    { "hour": "8-11", "text": "上午好！工作学习顺利吗？记得起来走动走动哦～" },
+    { "hour": "12-13", "text": "中午好！吃午饭了吗？要好好吃饭哦～" },
+    { "hour": "14-17", "text": "下午好！犯困的话，起来伸个懒腰吧～" },
+    { "hour": "18-19", "text": "傍晚好！夕阳很好看，别忘了吃晚饭～" },
+    { "hour": "20-21", "text": "晚上好！今天过得怎么样呀？" },
+    { "hour": "22-23", "text": "夜深了，早点休息哦，熬夜会秃头的！" },
+    { "hour": "0-5", "text": "嘘——都这个点了还不睡吗？要注意身体呀！" }
+  ],
+  "message": {
+    "default": [
+      "好久不见，日子过得好快呢～",
+      "嗨～快来逗我玩吧！",
+      "这座小屋是站长一行行代码搭起来的哦～",
+      "无聊的话，可以去找博客小精灵聊天呀！",
+      "记得把小家加入收藏夹哦～"
+    ],
+    "console": "哈哈，你打开了控制台，是想看看我的小秘密吗？",
+    "copy": "你都复制了些什么呀？转载记得注明出处哦！",
+    "visibilitychange": "哇，你终于回来了～",
+    "changeSuccess": "我的新衣服好看吗？",
+    "changeFail": "我还没有其他衣服呢！",
+    "photo": "照好了吗？是不是很可爱呢～",
+    "goodbye": "愿你有一天能与重要的人重逢。",
+    "hitokoto": "这句一言来自 <span>「$1」</span>，是 <span>$2</span> 在 hitokoto.cn 投稿的。",
+    "welcome": "欢迎来到<span>「$1」</span>",
+    "referrer": "Hello！来自 <span>$1</span> 的朋友～",
+    "hoverBody": ["干嘛呢你，快把手拿开～～", "鼠…鼠标放错地方了！", "你要干嘛呀？", "喵喵喵？"],
+    "tapBody": ["呀！你碰到我了！", "是…是不小心碰到了吗？", "别闹啦～", "再摸就换你陪我玩了哦！"]
+  },
+  "models": []
+}

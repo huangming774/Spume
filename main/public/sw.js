@@ -36,6 +36,8 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/cos/")) return;
   // 小精灵的 CSS/JS 在 shared/ 里随时会改，缓存了就再也拿不到新版（滚动条/布局会停留在旧样式）。
   if (url.pathname.startsWith("/ai-assistant/")) return;
+  // 看板娘 widget 与模型同理，走网络不缓存，换模型/改文案即时生效。
+  if (url.pathname.startsWith("/live2d/")) return;
   if (url.pathname === "/about-preview.html") return;
   if (url.pathname.startsWith("/showcase/") || url.pathname.startsWith("/web/")) return;
 

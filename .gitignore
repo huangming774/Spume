@@ -18,6 +18,8 @@ main/public/**
 !main/public/showcase/**
 !main/public/web/
 !main/public/web/**
+!main/public/live2d/
+!main/public/live2d/**
 !main/public/manifest.webmanifest
 !main/public/pwa-icon.svg
 !main/public/pwa-icon-192.png

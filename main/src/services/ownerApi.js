@@ -32,6 +32,24 @@ export async function fetchOwnerDrafts() {
   return parseResponse(res);
 }
 
+export async function fetchMusicConfig() {
+  const res = await fetch("/api/client/music", { headers: JSON_HEADERS });
+  return parseResponse(res);
+}
+
+export async function saveMusicConfig(playlist) {
+  const res = await fetch("/api/owner/music", {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      ...JSON_HEADERS,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ playlist }),
+  });
+  return parseResponse(res);
+}
+
 export async function createOwnerDraft(payload) {
   const res = await fetch("/api/owner/drafts", {
     method: "POST",

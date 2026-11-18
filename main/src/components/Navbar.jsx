@@ -5,11 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWindowScroll } from "react-use";
 import { cosAsset } from "../lib/cosAsset.js";
+import { usePlaylistAudio } from "../lib/usePlaylistAudio.js";
 import VisitorNetworkBadge from "./VisitorNetworkBadge";
 import WeatherBadge from "./WeatherBadge";
 import SiteSearch from "./SiteSearch";
-import NavOwnerAvatar from "./NavOwnerAvatar";
-import { LuCommand, LuImages } from "react-icons/lu";
+import { LuCommand, LuImages, LuLogIn } from "react-icons/lu";
 import SiteConsole from "./site-console/SiteConsole";
 import WhereOverlay from "./WhereOverlay";
 import "./cover-picker/cover-entry.css";
@@ -49,8 +49,6 @@ const getNavTheme = (pathname) => {
 const NavBar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [isIndicatorActive, setIsIndicatorActive] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [drawerMounted, setDrawerMounted] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -58,7 +56,6 @@ const NavBar = () => {
   const [whereOpen, setWhereOpen] = useState(false);
   const [whereWarm, setWhereWarm] = useState(false);
 
-  const audioElementRef = useRef(null);
   const navContainerRef = useRef(null);
   const menuBtnRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -155,10 +152,17 @@ const NavBar = () => {
     });
   }, []);
 
-  const toggleAudioIndicator = () => {
-    setIsAudioPlaying((prev) => !prev);
-    setIsIndicatorActive((prev) => !prev);
-  };
+  const {
+    audioRef: audioElementRef,
+    isPlaying: isAudioPlaying,
+    toggle: toggleAudioIndicator,
+    trackLabel,
+    onEnded: onMusicEnded,
+    onError: onMusicError,
+    onPlaying: onMusicPlaying,
+    mode: musicMode,
+  } = usePlaylistAudio(loopAudioSrc);
+  const isIndicatorActive = isAudioPlaying;
 
   useEffect(() => {
     setDrawerVisible(false);
@@ -200,17 +204,6 @@ const NavBar = () => {
       document.body.style.overflow = "";
     };
   }, []);
-
-  useEffect(() => {
-    if (isAudioPlaying) {
-      audioElementRef.current?.play()?.catch(() => {
-        setIsAudioPlaying(false);
-        setIsIndicatorActive(false);
-      });
-    } else {
-      audioElementRef.current?.pause();
-    }
-  }, [isAudioPlaying]);
 
   useEffect(() => {
     if (!navContainerRef.current) return;
@@ -506,7 +499,18 @@ const NavBar = () => {
 
               <SiteSearch triggerClassName={desktopLinkClass(false)} />
 
-              <NavOwnerAvatar className={desktopLinkClass(false)} />
+              <button
+                type="button"
+                className={clsx(
+                  desktopLinkClass(false),
+                  "flex h-9 w-9 items-center justify-center rounded-full"
+                )}
+                aria-label="站长登录"
+                title="站长登录"
+                onClick={() => navigate("/app")}
+              >
+                <LuLogIn aria-hidden="true" />
+              </button>
 
               <button
                 ref={menuBtnRef}
@@ -530,12 +534,16 @@ const NavBar = () => {
                 className="ml-0.5 flex shrink-0 items-center space-x-0.5 sm:ml-2 md:ml-4"
                 type="button"
                 aria-label="Toggle background music"
+                title={trackLabel || "背景音乐"}
               >
                 <audio
                   ref={audioElementRef}
                   className="hidden"
                   src={loopAudioSrc}
-                  loop
+                  loop={musicMode === "fallback"}
+                  onEnded={onMusicEnded}
+                  onError={onMusicError}
+                  onPlaying={onMusicPlaying}
                 />
                 {[1, 2, 3, 4].map((bar) => (
                   <div

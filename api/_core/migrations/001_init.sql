@@ -217,3 +217,9 @@ CREATE TABLE IF NOT EXISTS guestbook_ip_cache (
 );
 
 ALTER TABLE ai_image_quota ADD COLUMN IF NOT EXISTS last_request_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS site_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

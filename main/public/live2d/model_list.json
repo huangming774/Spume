@@ -1,0 +1,16 @@
+{
+  "models": [
+    "bilibili-live/22",
+    "bilibili-live/33",
+    ["ShizukuTalk/shizuku-48", "ShizukuTalk/shizuku-pajama"],
+    "KantaiCollection/murakumo",
+    "HyperdimensionNeptunia/neptune_classic"
+  ],
+  "messages": [
+    "来自 Bilibili Live 的 22 哦～",
+    "来自 Bilibili Live 的 33 的说～",
+    "Shizuku Talk！这里是 Shizuku～",
+    "舰队 Collection 的叢雲哦～",
+    "Nep！Nep！我是海王星系列的涅普迪努～"
+  ]
+}

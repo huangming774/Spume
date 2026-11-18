@@ -6,6 +6,7 @@ import { authLogin, authLogout, authUploadAvatar } from "../services/authApi";
 import {
   createOwnerFixedAnswer,
   createOwnerDraft,
+  fetchMusicConfig,
   isPublicImageURL,
   markOwnerNotificationRead,
   publishOwnerArticle,
@@ -13,6 +14,7 @@ import {
   publishOwnerGalleryImage,
   publishOwnerJournal,
   publishOwnerMoment,
+  saveMusicConfig,
   uploadOwnerAsset,
 } from "../services/ownerApi";
 import { parseFriendQuickInput } from "../lib/friendQuickInput";
@@ -296,6 +298,45 @@ const AppConsolePage = () => {
     setActiveScreen(screenId);
     setNotificationsOpen(false);
     setAvatarOpen(false);
+  };
+
+  const [musicInput, setMusicInput] = useState("");
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [musicBusy, setMusicBusy] = useState(false);
+  const [musicNotice, setMusicNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMusicConfig()
+      .then((data) => {
+        if (cancelled) return;
+        setMusicInput(data.raw || "");
+        setMusicEnabled(!!data.enabled);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleMusicSave = async () => {
+    setMusicBusy(true);
+    setMusicNotice("");
+    try {
+      const data = await saveMusicConfig(musicInput.trim());
+      setMusicEnabled(!!data.enabled);
+      setMusicInput(data.raw || "");
+      setMusicNotice(
+        data.enabled
+          ? `已保存，前台将播放歌单 ${data.playlistId}（版权受限曲目自动跳过）`
+          : "已停用歌单，前台回退站点默认音乐",
+      );
+      window.dispatchEvent(new CustomEvent("blog-music-config-updated"));
+    } catch (e) {
+      setMusicNotice(e.message || "保存失败");
+    } finally {
+      setMusicBusy(false);
+    }
   };
 
   const clearPublishTimer = () => {
@@ -1300,6 +1341,35 @@ const AppConsolePage = () => {
                   </div>
                   <button type="button" className="owner-secondary" onClick={handleSync}>
                     <FiRefreshCw aria-hidden /> 刷新后端状态
+                  </button>
+                </section>
+
+                <section className="owner-panel owner-glass">
+                  <div className="owner-panel-title">
+                    <h2>背景音乐</h2>
+                    <StatusTag>{musicEnabled ? "歌单播放" : "默认音乐"}</StatusTag>
+                  </div>
+                  <div className="owner-field">
+                    <label htmlFor="musicPlaylist">网易云歌单链接或 ID</label>
+                    <input
+                      id="musicPlaylist"
+                      value={musicInput}
+                      placeholder="https://music.163.com/playlist?id=… 或数字 ID"
+                      onChange={(event) => setMusicInput(event.target.value)}
+                      disabled={musicBusy}
+                    />
+                  </div>
+                  <p className="owner-frontmatter-hint">
+                    保存后导航栏音乐按钮播放该歌单；版权/VIP 曲目自动跳过，清空保存则回退默认音乐。
+                  </p>
+                  {musicNotice ? <p className="owner-frontmatter-hint">{musicNotice}</p> : null}
+                  <button
+                    type="button"
+                    className="owner-primary"
+                    onClick={handleMusicSave}
+                    disabled={musicBusy}
+                  >
+                    {musicBusy ? "保存中..." : "保存歌单配置"}
                   </button>
                 </section>
               </aside>
