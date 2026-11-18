@@ -10,7 +10,7 @@ use std::time::Duration;
 use chrono::{DateTime, Datelike, Utc};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use sqlx::PgPool;
+use sqlx::{AssertSqlSafe, PgPool};
 
 const CONTENT_MAX: usize = 300;
 const NICK_MAX: usize = 12;
@@ -375,15 +375,15 @@ pub async fn load_page(
     } else {
         "status = 'visible'"
     };
-    let total: i64 = sqlx::query_scalar(&format!(
+    let total: i64 = sqlx::query_scalar(AssertSqlSafe(format!(
         "SELECT COUNT(*) FROM guestbook_messages WHERE channel = $1 AND parent_id = 0 AND {status}"
-    ))
+    )))
     .bind(channel)
     .fetch_one(pool)
     .await?;
     let roots = fetch_rows(
         pool,
-        &format!(
+        format!(
             "SELECT {COLUMNS} FROM guestbook_messages WHERE channel = $1 AND parent_id = 0 AND {status} ORDER BY id DESC LIMIT $2 OFFSET $3"
         ),
         channel,
@@ -434,7 +434,7 @@ async fn load_descendants(
         }
         let rows = fetch_rows(
             pool,
-            &format!(
+            format!(
                 "SELECT {COLUMNS} FROM guestbook_messages WHERE channel = $1 AND parent_id = ANY($2) AND {status} ORDER BY id ASC"
             ),
             channel,
@@ -450,20 +450,20 @@ async fn load_descendants(
 
 async fn fetch_rows(
     pool: &PgPool,
-    sql: &str,
+    sql: String,
     channel: &str,
     page: Option<(i64, i64)>,
     parents: Option<&[i64]>,
 ) -> Result<Vec<StoredMessage>, sqlx::Error> {
     let rows = if let Some((limit, offset)) = page {
-        sqlx::query_as::<_, MessageRow>(sql)
+        sqlx::query_as::<_, MessageRow>(AssertSqlSafe(sql))
             .bind(channel)
             .bind(limit)
             .bind(offset)
             .fetch_all(pool)
             .await?
     } else {
-        sqlx::query_as::<_, MessageRow>(sql)
+        sqlx::query_as::<_, MessageRow>(AssertSqlSafe(sql))
             .bind(channel)
             .bind(parents.unwrap_or(&[]))
             .fetch_all(pool)

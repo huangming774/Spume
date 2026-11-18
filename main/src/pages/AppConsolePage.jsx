@@ -496,7 +496,6 @@ const AppConsolePage = () => {
             coverUrl,
           });
       const item = data.item || {};
-      const commitSha = item.commitSha ? `（commit ${item.commitSha.slice(0, 7)}）` : "";
       setPublishState({
         open: true,
         title: publishTitle,
@@ -644,7 +643,6 @@ const AppConsolePage = () => {
         imageUrl: latest.url,
       });
       const item = data.item || {};
-      const commitSha = item.commitSha ? `（commit ${item.commitSha.slice(0, 7)}）` : "";
       setGalleryUploads((current) =>
         current.map((entry, index) =>
           index === 0
@@ -707,7 +705,6 @@ const AppConsolePage = () => {
     try {
       const data = await publishOwnerMoment({ year, date, type, content });
       const item = data.item || {};
-      const commitSha = item.commitSha ? `（commit ${item.commitSha.slice(0, 7)}）` : "";
       setPublishState({
         open: true,
         title: "发布碎语",

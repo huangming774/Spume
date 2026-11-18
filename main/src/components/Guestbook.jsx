@@ -196,8 +196,8 @@ const Guestbook = ({ theme = "dark" }) => {
                 <p
                   className={
                     candy
-                      ? "mt-3 break-words text-sm leading-relaxed text-[#2D2A3A]/80"
-                      : "mt-3 break-words text-sm leading-relaxed text-white/85"
+                      ? "mt-3 wrap-break-word text-sm leading-relaxed text-[#2D2A3A]/80"
+                      : "mt-3 wrap-break-word text-sm leading-relaxed text-white/85"
                   }
                 >
                   {row.content}

@@ -98,7 +98,7 @@ const About = () => {
 
         <AnimatedTitle
           title="FEEL FRE<b>E</b> TO KEEP <br /> SCROLLING D<b>O</b>WN"
-          containerClass="mt-5 !text-black text-center"
+          containerClass="mt-5 text-black! text-center"
         />
 
         <div className="about-subtext text-[#5f4b52]">
@@ -128,7 +128,7 @@ const About = () => {
             className="taoyao-screen-image absolute left-0 top-0 size-full scale-100 object-cover md:scale-[1.08]"
           />
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#160d14]/60 via-transparent to-white/10" />
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#160d14]/60 via-transparent to-white/10" />
           <div className="taoyao-postcard-detail pointer-events-none absolute inset-5 z-30 border border-white/30" />
           <div className="taoyao-postcard-detail pointer-events-none absolute bottom-8 left-6 right-6 text-blue-50 md:left-10 md:right-auto md:max-w-xl">
             <p className="font-general text-xs uppercase tracking-[0.35em] text-pink-100/80">

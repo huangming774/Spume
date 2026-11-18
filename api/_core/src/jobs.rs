@@ -180,7 +180,7 @@ fn store_error(error: ImageStoreError) -> JobError {
 }
 
 async fn delete_count(pool: &sqlx::PgPool, sql: &str) -> Result<u64, JobError> {
-    Ok(sqlx::query(sql)
+    Ok(sqlx::query(sqlx::AssertSqlSafe(sql))
         .execute(pool)
         .await
         .map_err(|error| JobError::Database(error.to_string()))?

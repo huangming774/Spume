@@ -51,7 +51,7 @@ cargo check --manifest-path ../../Cargo.toml --bin index
 | `GUESTBOOK_MAIN_POSTS_ENABLED` | 主留言区是否接受新留言。友链分区不受影响 |
 | `ACG_CONTENT_ROOT` | 建站索引时读取的内容目录 |
 | `ACG_PUBLIC_ORIGIN` | 调度签名里核对的公开地址 |
-| `TIANDITU_TK` | 天地图 tk，单独放 `.env.tianditu`（启动时和 `.env` 一起读）。瓦片代理 `/api/client/map-tile` 拼进上游 URL，不下发给前端 |
+| `OSM_TILE_HOST` | 可选。OpenStreetMap 瓦片源，默认 `https://tile.openstreetmap.org`，无需密钥。瓦片代理 `/api/client/map-tile` 按 `{z}/{x}/{y}.png` 拉取 |
 
 ## 接口
 
@@ -65,7 +65,7 @@ cargo check --manifest-path ../../Cargo.toml --bin index
 | GET | `/api/server/info` | 主机名以外的运行信息：系统、内存、CPU、启动时长 |
 | GET | `/api/client/network` | 访客地区和掩码后的 IP |
 | GET | `/api/client/place` | 访客 IP 定位的坐标和城市，给菜单圆框地图用 |
-| GET | `/api/client/map-tile/{layer}/{z}/{x}/{y}` | 天地图瓦片代理。图层限 `vec_w`/`cva_w`，tk 只存后端 |
+| GET | `/api/client/map-tile/{layer}/{z}/{x}/{y}` | OpenStreetMap 瓦片代理。图层限 `osm`，z 1~19，无需密钥 |
 
 ### 账号
 

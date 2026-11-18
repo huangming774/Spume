@@ -8,7 +8,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use serde_json::Value;
 
 use crate::AppState;
@@ -183,6 +183,6 @@ fn text_output(item: &Value) -> bool {
 
 /// 从候选里随机挑一个（每次现检换一个，形成每日轮换）。空列表返回 None。
 pub fn pick_random(models: &[String]) -> Option<String> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     models.choose(&mut rng).cloned()
 }

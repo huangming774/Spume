@@ -493,7 +493,7 @@ const FriendsApplicationBoard = () => {
                   </div>
                 </div>
 
-                <p className="friends-comment-content mt-4 whitespace-pre-wrap break-words text-[15px] font-semibold leading-8 text-[#2B2B2B]">
+                <p className="friends-comment-content mt-4 whitespace-pre-wrap wrap-break-word text-[15px] font-semibold leading-8 text-[#2B2B2B]">
                   {item.content}
                 </p>
 
@@ -605,7 +605,7 @@ const FriendsApplicationBoard = () => {
                                   />
                                 </button>
                               </div>
-                              <p className="friends-comment-content mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#4B5563]">
+                              <p className="friends-comment-content mt-3 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-[#4B5563]">
                                 {reply.content}
                               </p>
                             </div>

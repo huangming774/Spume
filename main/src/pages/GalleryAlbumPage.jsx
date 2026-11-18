@@ -26,7 +26,7 @@ const GalleryAlbumPage = () => {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fff8f1] pt-24 text-[#241322]">
       <div
-        className={`pointer-events-none fixed inset-0 -z-10 bg-gradient-to-br ${album.tone}`}
+        className={`pointer-events-none fixed inset-0 -z-10 bg-linear-to-br ${album.tone}`}
         aria-hidden="true"
       />
       <div className="pointer-events-none fixed -right-24 top-28 -z-10 h-80 w-80 rounded-full bg-white/55 blur-3xl" />
@@ -53,11 +53,11 @@ const GalleryAlbumPage = () => {
             </p>
           </div>
 
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/45 p-3 shadow-[0_28px_90px_rgba(95,75,82,0.16)]">
+          <div className="relative overflow-hidden rounded-4xl border border-white/70 bg-white/45 p-3 shadow-[0_28px_90px_rgba(95,75,82,0.16)]">
             <img
               src={album.cover}
               alt={album.title}
-              className="h-[22rem] w-full rounded-[1.45rem] object-cover md:h-[30rem]"
+              className="h-88 w-full rounded-[1.45rem] object-cover md:h-120"
               fetchPriority="high"
             />
             <div className="absolute bottom-6 right-6 rounded-full border border-white/45 bg-white/75 px-4 py-2 font-general text-[10px] uppercase tracking-[0.28em] text-[#5f4b52] backdrop-blur-md">

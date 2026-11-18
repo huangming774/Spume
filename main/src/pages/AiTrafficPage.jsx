@@ -90,7 +90,7 @@ const StatCard = ({ label, value, hint, accent, children }) => (
     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6B7280]">
       {label}
     </p>
-    <div className="mt-2 min-h-[2rem] font-zentry text-2xl font-black text-[#2B2B2B] md:text-3xl">
+    <div className="mt-2 min-h-8 font-zentry text-2xl font-black text-[#2B2B2B] md:text-3xl">
       {children ?? value}
     </div>
     {hint ? <p className="mt-1.5 text-xs leading-snug text-[#6B7280]">{hint}</p> : null}
@@ -222,11 +222,11 @@ const AiTrafficPage = () => {
             </div>
 
             <div className="mt-10 mb-3 flex items-center gap-3">
-              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#F2E6C9] to-transparent" />
+              <span className="h-px flex-1 bg-linear-to-r from-transparent via-[#F2E6C9] to-transparent" />
               <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#FF8FAB]">
                 ✦ AI 调用流量
               </span>
-              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#F2E6C9] to-transparent" />
+              <span className="h-px flex-1 bg-linear-to-r from-transparent via-[#F2E6C9] to-transparent" />
             </div>
 
             <div className="mt-6 space-y-6">

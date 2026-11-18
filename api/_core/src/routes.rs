@@ -948,9 +948,9 @@ async fn guestbook_create(
         } else {
             "status = 'visible'"
         };
-        let count: i64 = match sqlx::query_scalar(&format!(
+        let count: i64 = match sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT COUNT(*) FROM guestbook_messages WHERE id = $1 AND channel = $2 AND {visible}"
-        ))
+        )))
         .bind(parent_id)
         .bind(&channel)
         .fetch_one(pool)
@@ -1363,7 +1363,7 @@ async fn list_simple(state: &AppState, sql: &str) -> Result<Vec<Value>, sqlx::Er
     let Some(pool) = state.db.as_ref() else {
         return Ok(Vec::new());
     };
-    let rows = sqlx::query_as::<_, (String, String, i32, i32, i32, String, String)>(sql)
+    let rows = sqlx::query_as::<_, (String, String, i32, i32, i32, String, String)>(sqlx::AssertSqlSafe(sql))
         .fetch_all(pool)
         .await?;
     Ok(rows.into_iter().map(|(id, title, watched, total, latest, cover, link)| {

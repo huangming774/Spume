@@ -168,14 +168,14 @@ const AiGalleryPage = () => {
 
         {/* Mosaic grid with mixed tile spans */}
         {tiles.length > 0 && (
-          <div className="grid auto-rows-[8rem] grid-cols-2 gap-3 [grid-auto-flow:dense] md:auto-rows-[10rem] md:grid-cols-4 md:gap-4 lg:grid-cols-6">
+          <div className="grid auto-rows-32 grid-cols-2 gap-3 grid-flow-dense md:auto-rows-40 md:grid-cols-4 md:gap-4 lg:grid-cols-6">
             {tiles.map((it, idx) => (
               <button
                 key={`${it.imageUrl}-${idx}`}
                 type="button"
                 onClick={() => setActive(it)}
                 aria-label="查看提示词与作者"
-                className={`iridescent-tile group relative ${it._span} overflow-hidden rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff8fab]`}
+                className={`iridescent-tile group relative ${it._span} overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff8fab]`}
               >
                 <img
                   src={it.imageUrl}
@@ -186,7 +186,7 @@ const AiGalleryPage = () => {
                 {/* subtle scrim on hover so users notice it's clickable */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100"
+                  className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-transparent opacity-0 transition duration-500 group-hover:opacity-100"
                 />
 
                 {/* always-on hint: tiny breathing dot bottom-left */}
@@ -231,7 +231,7 @@ const AiGalleryPage = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a0c14]/85 p-4 backdrop-blur-sm md:p-10"
+          className="fixed inset-0 z-100 flex items-center justify-center bg-[#1a0c14]/85 p-4 backdrop-blur-sm md:p-10"
           onClick={() => setActive(null)}
         >
           <button

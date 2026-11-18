@@ -208,7 +208,7 @@ const GuestbookPage = () => {
               <button
                 type="submit"
                 disabled={GUESTBOOK_SUBMISSIONS_DISABLED || submitting}
-                className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-[#FFD43B] bg-gradient-to-r from-[#FFFDF5] to-[#FFF8E7] px-6 py-3 text-sm font-bold text-[#2B2B2B] shadow-[0_8px_24px_rgba(255,212,59,0.25)] transition hover:border-[#FF8FAB] hover:shadow-[0_10px_28px_rgba(255,143,171,0.2)] disabled:opacity-60 sm:flex-none"
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full border-2 border-[#FFD43B] bg-linear-to-r from-[#FFFDF5] to-[#FFF8E7] px-6 py-3 text-sm font-bold text-[#2B2B2B] shadow-[0_8px_24px_rgba(255,212,59,0.25)] transition hover:border-[#FF8FAB] hover:shadow-[0_10px_28px_rgba(255,143,171,0.2)] disabled:opacity-60 sm:flex-none"
               >
                 {GUESTBOOK_SUBMISSIONS_DISABLED
                   ? "暂停提交"
@@ -280,7 +280,7 @@ const GuestbookPage = () => {
                     </span>
                   )}
                 </p>
-                <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-[#2B2B2B]">
+                <p className="mt-3 whitespace-pre-wrap wrap-break-word text-[15px] leading-relaxed text-[#2B2B2B]">
                   {item.content}
                 </p>
                 <p className="mt-4 text-xs text-[#6B7280]">

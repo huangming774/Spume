@@ -59,7 +59,7 @@ const LazyVideo = ({ src, className = "", priority = false }) => {
         />
       ) : (
         <div
-          className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900"
+          className="absolute inset-0 bg-linear-to-br from-neutral-800 to-neutral-900"
           aria-hidden
         />
       )}

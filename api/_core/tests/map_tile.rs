@@ -6,22 +6,15 @@ use taozhiyy_api::{router, AppState, Config};
 use tower::ServiceExt;
 
 #[test]
-fn tile_url_moves_the_shard_placeholder_like_the_old_frontend() {
+fn tile_url_is_standard_osm_xyz() {
     assert_eq!(
-        tile_url(
-            "https://t{shard}.tianditu.gov.cn",
-            "tk",
-            "vec_w",
-            12,
-            2047,
-            1365
-        ),
-        "https://t4.tianditu.gov.cn/DataServer?T=vec_w&x=2047&y=1365&l=12&tk=tk"
+        tile_url("https://tile.openstreetmap.org", 12, 2047, 1365),
+        "https://tile.openstreetmap.org/12/2047/1365.png"
     );
-    // 测试或自建网关不含占位符时原样使用。
+    // host 末尾带斜杠时规整掉；测试指向本地 mock 同样适用。
     assert_eq!(
-        tile_url("http://127.0.0.1:9", "tk", "cva_w", 12, 0, 0),
-        "http://127.0.0.1:9/DataServer?T=cva_w&x=0&y=0&l=12&tk=tk"
+        tile_url("http://127.0.0.1:9/", 12, 0, 0),
+        "http://127.0.0.1:9/12/0/0.png"
     );
 }
 
@@ -29,23 +22,24 @@ fn tile_url_moves_the_shard_placeholder_like_the_old_frontend() {
 fn tile_coords_are_bounded_by_the_zoom_level() {
     assert_eq!(parse_coord("12", "0", "0"), Some((12, 0, 0)));
     assert_eq!(parse_coord("12", "4095", "4095"), Some((12, 4095, 4095)));
+    // OSM 支持到 19 级。
+    assert_eq!(parse_coord("19", "0", "0"), Some((19, 0, 0)));
     // x/y 超出 [0, 2^z)。
     assert_eq!(parse_coord("12", "4096", "0"), None);
     assert_eq!(parse_coord("1", "0", "2"), None);
-    // z 为 0 或超过 18 级。
+    // z 为 0 或超过 19 级。
     assert_eq!(parse_coord("0", "0", "0"), None);
-    assert_eq!(parse_coord("19", "0", "0"), None);
+    assert_eq!(parse_coord("20", "0", "0"), None);
     // 非十进制、空串、超长数字都拒绝。
     assert_eq!(parse_coord("12", "0x10", "0"), None);
     assert_eq!(parse_coord("12", "", "0"), None);
     assert_eq!(parse_coord("12", "00000000000", "0"), None);
 }
 
-async fn tile_response(uri: &str, tianditu_tk: &str) -> (StatusCode, Vec<u8>) {
+async fn tile_response(uri: &str) -> (StatusCode, Vec<u8>) {
     let mut config = Config::for_test();
-    config.tianditu_tk = tianditu_tk.into();
     // 指到不存在的端口：瓦片拉取失败时也要走 502 分支，而不是连不上就超时。
-    config.tianditu_tile_host = "http://127.0.0.1:9".into();
+    config.osm_tile_host = "http://127.0.0.1:9".into();
     let app = router(AppState::new(config, None, reqwest::Client::new()));
     let response = app
         .oneshot(
@@ -68,7 +62,7 @@ async fn tile_response(uri: &str, tianditu_tk: &str) -> (StatusCode, Vec<u8>) {
 
 #[tokio::test]
 async fn tile_rejects_unknown_layer() {
-    let (status, body) = tile_response("/api/client/map-tile/img_w/12/1/1", "tk").await;
+    let (status, body) = tile_response("/api/client/map-tile/vec_w/12/1/1").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     let payload: serde_json::Value = serde_json::from_slice(&body).expect("json");
     assert_eq!(payload["error"], "INVALID_LAYER");
@@ -76,23 +70,15 @@ async fn tile_rejects_unknown_layer() {
 
 #[tokio::test]
 async fn tile_rejects_out_of_range_coords() {
-    let (status, body) = tile_response("/api/client/map-tile/vec_w/12/4096/0", "tk").await;
+    let (status, body) = tile_response("/api/client/map-tile/osm/12/4096/0").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     let payload: serde_json::Value = serde_json::from_slice(&body).expect("json");
     assert_eq!(payload["error"], "INVALID_TILE");
 }
 
 #[tokio::test]
-async fn tile_without_token_reports_missing_key() {
-    let (status, body) = tile_response("/api/client/map-tile/vec_w/12/1/1", "").await;
-    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-    let payload: serde_json::Value = serde_json::from_slice(&body).expect("json");
-    assert_eq!(payload["error"], "MAP_TOKEN_MISSING");
-}
-
-#[tokio::test]
 async fn tile_upstream_failure_is_bad_gateway() {
-    let (status, body) = tile_response("/api/client/map-tile/vec_w/12/1/1", "tk").await;
+    let (status, body) = tile_response("/api/client/map-tile/osm/12/1/1").await;
     assert_eq!(status, StatusCode::BAD_GATEWAY);
     let payload: serde_json::Value = serde_json::from_slice(&body).expect("json");
     assert_eq!(payload["error"], "MAP_TILE_UNAVAILABLE");
@@ -100,19 +86,18 @@ async fn tile_upstream_failure_is_bad_gateway() {
 
 #[tokio::test]
 async fn tile_proxies_image_bytes_with_cache_headers() {
-    use axum::extract::{Query, State};
+    use axum::extract::State;
     use axum::routing::get;
     use axum::Router;
-    use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
-    // 本地 mock 天地图：记录收到的查询串和 UA，回一张最小 PNG。
+    // 本地 mock OSM：记录收到的路径和 UA，回一张最小 PNG。
     #[derive(Clone)]
-    struct Seen(Arc<Mutex<(HashMap<String, String>, String)>>);
+    struct Seen(Arc<Mutex<(String, String)>>);
 
     async fn mock_tile(
         State(seen): State<Seen>,
-        Query(params): Query<HashMap<String, String>>,
+        uri: axum::http::Uri,
         headers: axum::http::HeaderMap,
     ) -> Vec<u8> {
         let ua = headers
@@ -120,13 +105,14 @@ async fn tile_proxies_image_bytes_with_cache_headers() {
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
             .to_string();
-        *seen.0.lock().expect("seen") = (params, ua);
+        *seen.0.lock().expect("seen") = (uri.path().to_string(), ua);
         vec![0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n']
     }
 
-    let seen = Seen(Arc::new(Mutex::new((HashMap::new(), String::new()))));
+    let seen = Seen(Arc::new(Mutex::new((String::new(), String::new()))));
+    // axum 每段只允许一个参数，`{y}` 会连 `.png` 后缀一起捕获，路径断言不受影响。
     let mock = Router::new()
-        .route("/DataServer", get(mock_tile))
+        .route("/{z}/{x}/{y}", get(mock_tile))
         .with_state(seen.clone());
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -137,13 +123,12 @@ async fn tile_proxies_image_bytes_with_cache_headers() {
     });
 
     let mut config = Config::for_test();
-    config.tianditu_tk = "secret-tk".into();
-    config.tianditu_tile_host = format!("http://{address}");
+    config.osm_tile_host = format!("http://{address}");
     let app = router(AppState::new(config, None, reqwest::Client::new()));
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/client/map-tile/vec_w/12/2047/1365")
+                .uri("/api/client/map-tile/osm/12/2047/1365")
                 .body(Body::empty())
                 .expect("request"),
         )
@@ -172,16 +157,12 @@ async fn tile_proxies_image_bytes_with_cache_headers() {
         .to_bytes();
     assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
 
-    // 后端把 tk 拼进上游 URL，回给浏览器的只有图片字节。
-    let (params, ua) = seen.0.lock().expect("seen").clone();
-    assert_eq!(params.get("T").map(String::as_str), Some("vec_w"));
-    assert_eq!(params.get("x").map(String::as_str), Some("2047"));
-    assert_eq!(params.get("y").map(String::as_str), Some("1365"));
-    assert_eq!(params.get("l").map(String::as_str), Some("12"));
-    assert_eq!(params.get("tk").map(String::as_str), Some("secret-tk"));
-    // 天地图浏览器端 key 校验 UA，必须伪装成浏览器请求。
+    // 上游收到的是标准 XYZ 路径，回给浏览器的只有图片字节。
+    let (path, ua) = seen.0.lock().expect("seen").clone();
+    assert_eq!(path, "/12/2047/1365.png");
+    // OSM 瓦片政策要求能识别应用的 User-Agent，不能伪装成通用浏览器。
     assert!(
-        ua.starts_with("Mozilla/5.0"),
-        "上游应带浏览器 User-Agent，实际：{ua}"
+        ua.starts_with("taozhiyy-blog/"),
+        "上游应带可识别应用的 User-Agent，实际：{ua}"
     );
 }

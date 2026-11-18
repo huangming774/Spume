@@ -112,7 +112,7 @@ export const ExhibitCard = ({
     return (
       <div className="group relative size-full overflow-hidden">
         <LazyVideo src={src} priority={videoPriority} />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-tr from-black/20 via-transparent to-white/10" />
         {index && (
           <div className="pointer-events-none absolute left-5 top-5 rounded-full border border-white/20 bg-white/12 px-4 py-2 font-general text-[10px] uppercase tracking-[0.35em] text-blue-50/80 backdrop-blur-md">
             片段 {index}
@@ -124,7 +124,7 @@ export const ExhibitCard = ({
             aria-label={linkText}
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute inset-0 z-20 flex items-end justify-between gap-4 p-6 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-pink-200 md:p-10"
+            className="absolute inset-0 z-20 flex items-end justify-between gap-4 p-6 text-white focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-pink-200 md:p-10"
           >
             <span className="min-w-0 text-3xl font-semibold drop-shadow-lg md:text-5xl">{title}</span>
             <span className="inline-flex shrink-0 items-center gap-2 border-b border-white/60 pb-2 text-xs font-semibold md:text-sm">
@@ -135,7 +135,7 @@ export const ExhibitCard = ({
           <Link
             to={linkUrl}
             aria-label={linkText}
-            className="absolute inset-0 z-20 flex items-end justify-between gap-4 p-6 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-pink-200 md:p-10"
+            className="absolute inset-0 z-20 flex items-end justify-between gap-4 p-6 text-white focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-pink-200 md:p-10"
           >
             <span className="min-w-0 text-3xl font-semibold drop-shadow-lg md:text-5xl">{title}</span>
             <span className="inline-flex shrink-0 items-center gap-2 border-b border-white/60 pb-2 text-xs font-semibold md:text-sm">
@@ -153,8 +153,8 @@ export const ExhibitCard = ({
         <LazyVideo src={src} priority={videoPriority} />
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-br from-black/20 via-black/5 to-[#160d14]/78" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-gradient-to-r from-transparent via-pink-100/60 to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-linear-to-br from-black/20 via-black/5 to-[#160d14]/78" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-linear-to-r from-transparent via-pink-100/60 to-transparent opacity-0 transition duration-500 group-hover:opacity-100" />
       <div className="pointer-events-none absolute -left-1/3 top-0 z-10 h-full w-1/3 skew-x-[-18deg] bg-white/12 blur-xl transition duration-700 group-hover:left-full" />
 
       <div className="absolute inset-0 z-20 flex flex-col justify-between p-4 text-blue-50 md:p-5">
@@ -162,11 +162,11 @@ export const ExhibitCard = ({
           <p className="font-general text-[10px] uppercase tracking-[0.35em] text-pink-100/80">
             片段 {index}
           </p>
-          <h1 className="bento-title mt-2 break-words text-2xl font-black leading-none text-[#ffe7ef] md:text-4xl">
+          <h1 className="bento-title mt-2 wrap-break-word text-2xl font-black leading-none text-[#ffe7ef] md:text-4xl">
             {title}
           </h1>
           {description && (
-            <p className="features-bento-card-copy mt-3 break-words text-sm font-semibold leading-relaxed text-white/90 md:text-base">
+            <p className="features-bento-card-copy mt-3 wrap-break-word text-sm font-semibold leading-relaxed text-white/90 md:text-base">
               {description}
             </p>
           )}
@@ -239,7 +239,7 @@ const ArchiveBook = ({ open, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-[#120b10]/72 px-4 py-8 backdrop-blur-md md:px-10">
+    <div className="fixed inset-0 z-120 bg-[#120b10]/72 px-4 py-8 backdrop-blur-md md:px-10">
       <button
         type="button"
         className="absolute inset-0 cursor-default"
@@ -261,14 +261,14 @@ const ArchiveBook = ({ open, onClose }) => {
           </button>
         </div>
 
-        <div className="relative min-h-[76vh] overflow-hidden rounded-[2rem] border border-[#f6d8c8]/60 bg-[linear-gradient(120deg,#fff8ef,#ffe9df)] shadow-[0_34px_120px_rgba(0,0,0,0.38)]">
-          <div className="absolute left-1/2 top-0 h-full w-px bg-gradient-to-b from-transparent via-[#d8bba9] to-transparent opacity-70" />
-          <div className="absolute inset-6 rounded-[1.5rem] border border-[#f4d5c8]/70" />
+        <div className="relative min-h-[76vh] overflow-hidden rounded-4xl border border-[#f6d8c8]/60 bg-[linear-gradient(120deg,#fff8ef,#ffe9df)] shadow-[0_34px_120px_rgba(0,0,0,0.38)]">
+          <div className="absolute left-1/2 top-0 h-full w-px bg-linear-to-b from-transparent via-[#d8bba9] to-transparent opacity-70" />
+          <div className="absolute inset-6 rounded-3xl border border-[#f4d5c8]/70" />
 
           <div className="grid h-full min-h-[76vh] md:grid-cols-[1.7fr_0.42fr]">
-            <div className="relative flex items-center justify-center overflow-hidden p-3 md:p-5 [perspective:1600px]">
-              <div className="absolute inset-5 rounded-[1.5rem] bg-[#241322]/5" />
-              <div className="relative h-[62vh] w-full max-w-6xl [transform-style:preserve-3d]">
+            <div className="relative flex items-center justify-center overflow-hidden p-3 md:p-5 perspective-[1600px]">
+              <div className="absolute inset-5 rounded-3xl bg-[#241322]/5" />
+              <div className="relative h-[62vh] w-full max-w-6xl transform-3d">
                 {ARCHIVE_ITEMS.map((item, itemIndex) => {
                   const offset = itemIndex - activeIndex;
                   const absoluteOffset = Math.abs(offset);
@@ -279,7 +279,7 @@ const ArchiveBook = ({ open, onClose }) => {
                     <button
                       key={item.index}
                       type="button"
-                      className={`absolute left-1/2 top-[47%] aspect-video w-[100%] max-w-[980px] overflow-hidden rounded-[1.6rem] border bg-[#241322] text-left shadow-[0_26px_80px_rgba(0,0,0,0.28)] transition duration-700 [transform-style:preserve-3d] ${
+                      className={`absolute left-1/2 top-[47%] aspect-video w-full max-w-[980px] overflow-hidden rounded-[1.6rem] border bg-[#241322] text-left shadow-[0_26px_80px_rgba(0,0,0,0.28)] transition duration-700 transform-3d ${
                         visible ? "pointer-events-auto" : "pointer-events-none"
                       }`}
                       style={{
@@ -293,7 +293,7 @@ const ArchiveBook = ({ open, onClose }) => {
                       onClick={() => setActiveIndex(itemIndex)}
                     >
                       <LazyVideo src={item.src} priority={isActive} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/10 to-white/10" />
+                      <div className="absolute inset-0 bg-linear-to-t from-black/78 via-black/10 to-white/10" />
                       <div className="absolute left-5 top-5 rounded-full border border-white/20 bg-white/14 px-4 py-2 font-general text-[10px] uppercase tracking-[0.32em] text-blue-50/85 backdrop-blur-md">
                         档案卡 {item.index}
                       </div>

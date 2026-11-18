@@ -92,7 +92,7 @@ const FloatingImage = () => {
         <div className="relative size-full">
           <AnimatedTitle
             title="L<b>O</b>OK FORWARD <br /> TO IT TO THE F<b>U</b>LLEST"
-            containerClass="mt-5 pointer-events-none relative z-10 !text-[#241322]"
+            containerClass="mt-5 pointer-events-none relative z-10 text-[#241322]!"
           />
 
           <div className="story-img-container">

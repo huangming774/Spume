@@ -19,7 +19,7 @@ test("raises the active friends reply thread above following cards for emoji pan
     cssSource,
     /\.friends-comment-card,\s*\r?\n\.friends-comment-reply-card\s*\{[^}]*overflow:\s*visible/,
   );
-  assert.match(emojiSource, /z-\[90\]/);
+  assert.match(emojiSource, /z-(?:\[90\]|90)\b/);
 });
 
 test("loads every friends comment instead of five-item pages", () => {

@@ -5,6 +5,7 @@ import themeCss from "../../../previews/project-gallery/src/gallery-themes.css?i
 import readerCss from "../../../previews/project-gallery/src/reader.css?inline";
 import styleCss from "../../../previews/project-gallery/src/style.css?inline";
 import { asProjects, loadEntries } from "../lib/siteEntries";
+import { cosmosMarkup } from "./cosmosMarkup";
 
 const cosmosStyles = [styleCss, cosmosCss, themeCss, readerCss].join("\n");
 

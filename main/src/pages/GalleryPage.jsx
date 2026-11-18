@@ -30,17 +30,17 @@ const GalleryPage = () => (
         <Link
           key={album.id}
           to={`/gallery/${album.id}`}
-          className={`group relative min-h-[34rem] overflow-hidden rounded-[2rem] bg-gradient-to-br ${album.tone} p-4 text-[#241322] shadow-[0_28px_90px_rgba(95,75,82,0.14)] transition duration-500 hover:-translate-y-2 hover:shadow-[0_36px_110px_rgba(255,143,171,0.22)]`}
+          className={`group relative min-h-136 overflow-hidden rounded-4xl bg-linear-to-br ${album.tone} p-4 text-[#241322] shadow-[0_28px_90px_rgba(95,75,82,0.14)] transition duration-500 hover:-translate-y-2 hover:shadow-[0_36px_110px_rgba(255,143,171,0.22)]`}
         >
-          <div className="absolute inset-x-8 top-6 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-          <div className="relative h-[24rem] overflow-hidden rounded-[1.55rem] border border-white/70 bg-white/45 shadow-[0_18px_58px_rgba(95,75,82,0.12)]">
+          <div className="absolute inset-x-8 top-6 h-px bg-linear-to-r from-transparent via-white/80 to-transparent" />
+          <div className="relative h-96 overflow-hidden rounded-[1.55rem] border border-white/70 bg-white/45 shadow-[0_18px_58px_rgba(95,75,82,0.12)]">
             <img
               src={album.cover}
               alt={album.title}
               className="size-full object-cover transition duration-700 group-hover:scale-105"
               loading={index === 0 ? "eager" : "lazy"}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-white/15" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-white/15" />
             <span className="absolute left-4 top-4 rounded-full border border-white/40 bg-white/70 px-3 py-1 font-general text-[10px] uppercase tracking-[0.28em] text-[#5f4b52] backdrop-blur-md">
               {album.eyebrow}
             </span>

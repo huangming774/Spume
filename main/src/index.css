@@ -1,6 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@config "../tailwind.config.js";
+
+/* v3 的 .border-hsla 组件类在 v4 里注册成工具类，供 @apply 使用 */
+@utility border-hsla-util {
+  border: 1px solid hsla(0, 0%, 100%, 0.2);
+}
 
 body {
   width: 100%;
@@ -849,7 +854,7 @@ body {
   }
 
   .about-subtext {
-    @apply static mt-3 w-full max-w-96 text-center font-circular-web text-lg md:absolute md:bottom-[-80dvh] md:left-1/2 md:mt-0 md:max-w-[34rem] md:-translate-x-1/2;
+    @apply static mt-3 w-full max-w-96 text-center font-circular-web text-lg md:absolute md:bottom-[-80dvh] md:left-1/2 md:mt-0 md:max-w-136 md:-translate-x-1/2;
   }
 
   .about-image {
@@ -864,7 +869,7 @@ body {
       0 12px 36px rgba(95, 75, 82, 0.12);
   }
 
-  @screen md {
+  @media (width >= 48rem) {
     .taoyao-screen-window {
       border-radius: 2.25rem;
       clip-path: inset(0 round 2.25rem);
@@ -872,7 +877,7 @@ body {
   }
 
   .taoyao-screen-chrome {
-    @apply absolute left-4 right-4 top-4 z-30 flex items-center justify-between rounded-2xl border border-white/55 bg-white/[0.68] px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md;
+    @apply absolute left-4 right-4 top-4 z-30 flex items-center justify-between rounded-2xl border border-white/55 bg-white/68 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-md;
   }
 
   .taoyao-screen-reveal {
@@ -884,14 +889,14 @@ body {
   }
 
   .animated-word {
-    @apply special-font font-bold opacity-0;
+    @apply font-bold opacity-0;
     transform: translate3d(10px, 51px, -60px) rotateY(60deg) rotateX(-40deg);
     transform-origin: 50% 50% -150px !important;
     will-change: opacity, transform;
   }
 
   .bento-tilt_1 {
-    @apply relative border-hsla col-span-2 overflow-hidden rounded-md transition-transform duration-300 ease-out;
+    @apply relative border-hsla-util col-span-2 overflow-hidden rounded-md transition-transform duration-300 ease-out;
   }
 
   .bento-tilt_2 {
@@ -923,14 +928,14 @@ body {
 
   .archive-pass-bloom::before {
     content: "";
-    @apply absolute left-3 top-14 h-48 w-64 rounded-[42%_58%_48%_52%] border border-white/75 bg-[#fffaf4]/[0.82] shadow-[0_26px_75px_rgba(255,143,171,0.13)] md:left-1 md:top-14 md:h-52 md:w-72;
+    @apply absolute left-3 top-14 h-48 w-64 rounded-[42%_58%_48%_52%] border border-white/75 bg-[#fffaf4]/82 shadow-[0_26px_75px_rgba(255,143,171,0.13)] md:left-1 md:top-14 md:h-52 md:w-72;
     transform: rotate(-5deg);
     backdrop-filter: blur(14px);
   }
 
   .archive-pass-bloom::after {
     content: "";
-    @apply absolute right-4 top-24 h-40 w-44 rounded-full border border-white/70 bg-[#f6fbff]/[0.7] shadow-[0_22px_58px_rgba(132,216,255,0.12)] md:right-0 md:top-24 md:h-44 md:w-48;
+    @apply absolute right-4 top-24 h-40 w-44 rounded-full border border-white/70 bg-[#f6fbff]/70 shadow-[0_22px_58px_rgba(132,216,255,0.12)] md:right-0 md:top-24 md:h-44 md:w-48;
     transform: rotate(7deg);
     backdrop-filter: blur(14px);
   }
@@ -968,7 +973,7 @@ body {
 
   .archive-pass-spine::before {
     content: "";
-    @apply absolute left-1/2 top-3 h-[4.6rem] w-px -translate-x-1/2 bg-gradient-to-b from-[#b76e79]/0 via-[#b76e79]/35 to-[#b76e79]/0;
+    @apply absolute left-1/2 top-3 h-[4.6rem] w-px -translate-x-1/2 bg-linear-to-b from-[#b76e79]/0 via-[#b76e79]/35 to-[#b76e79]/0;
   }
 
   .archive-pass-stamp {
@@ -1003,7 +1008,7 @@ body {
 
   .archive-pass-fragment::before {
     content: "";
-    @apply absolute inset-1 rounded-[0.6rem] bg-gradient-to-br from-[#fff3f7] via-[#f9fbff] to-[#fff4c9];
+    @apply absolute inset-1 rounded-[0.6rem] bg-linear-to-br from-[#fff3f7] via-[#f9fbff] to-[#fff4c9];
   }
 
   .archive-pass-fragment-1 {
@@ -1036,7 +1041,7 @@ body {
   }
 
   .archive-pass-thread {
-    @apply absolute left-8 right-8 bottom-10 h-px bg-gradient-to-r from-transparent via-[#b76e79]/20 to-transparent md:left-3 md:right-5 md:bottom-10;
+    @apply absolute left-8 right-8 bottom-10 h-px bg-linear-to-r from-transparent via-[#b76e79]/20 to-transparent md:left-3 md:right-5 md:bottom-10;
     transform: rotate(-3deg);
   }
 
@@ -1067,7 +1072,7 @@ body {
     }
   }
 
-  @screen md {
+  @media (width >= 48rem) {
     .archive-pass-content {
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
     }
@@ -1101,7 +1106,7 @@ body {
     clip-path: none;
   }
 
-  @screen md {
+  @media (width >= 48rem) {
     .story-img-mask {
       clip-path: polygon(4% 0, 83% 18%, 100% 74%, 0% 100%);
       filter: url("#flt_tag");
@@ -1136,7 +1141,7 @@ body {
   /* ── Envelope CTA (editorial glass + light arc) ── */
 
   .story-envelope-cta {
-    @apply relative w-full overflow-hidden rounded-[1.25rem] border border-white/60 px-6 py-7 text-left shadow-[0_24px_70px_rgba(255,143,171,0.16),0_6px_20px_rgba(95,75,82,0.07)] md:rounded-[1.5rem] md:px-9 md:py-9;
+    @apply relative w-full overflow-hidden rounded-[1.25rem] border border-white/60 px-6 py-7 text-left shadow-[0_24px_70px_rgba(255,143,171,0.16),0_6px_20px_rgba(95,75,82,0.07)] md:rounded-3xl md:px-9 md:py-9;
     isolation: isolate;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 250, 247, 0.45) 100%);
@@ -1175,7 +1180,7 @@ body {
   /* ── Light arc (the hero detail) ── */
 
   .story-envelope-arc {
-    @apply pointer-events-none absolute -right-24 -top-32 h-[20rem] w-[20rem] md:-right-28 md:-top-36 md:h-[24rem] md:w-[24rem];
+    @apply pointer-events-none absolute -right-24 -top-32 h-80 w-[20rem] md:-right-28 md:-top-36 md:h-96 md:w-[24rem];
     background: radial-gradient(
       circle at center,
       rgba(255, 196, 213, 0.55) 0%,
@@ -1334,7 +1339,7 @@ body {
   }
 
   .gallery-img-4 {
-    @apply sm:size-80 md:h-96 md:w-[25rem] rounded-lg;
+    @apply sm:size-80 md:h-96 md:w-100 rounded-lg;
   }
 
   .sword-man-clip-path {

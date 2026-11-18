@@ -20,14 +20,14 @@ const MOBILE_BANGUMI_LIMIT = 3;
 const EXPAND_BTN =
   "rounded-full border border-[#00C2FF]/50 bg-white/60 px-5 py-2 font-mono text-xs uppercase tracking-wide text-[#2D2A3A] shadow-sm backdrop-blur-md transition-all duration-300 hover:border-[#00C2FF] hover:bg-[#00C2FF]/10 active:scale-[0.98]";
 
-const PosterFrame = ({ item, variant = "bangumi", aspectClass = "aspect-[3/4]" }) => {
+const PosterFrame = ({ item, variant = "bangumi", aspectClass = "aspect-3/4" }) => {
   const remote = hasRemoteCover(item);
   const src = remote ? resolveCoverSrc(item, API_BASE) : null;
 
   return (
     <div className={`relative w-full shrink-0 overflow-hidden ${aspectClass} bg-[#EAF6FF]/60`}>
       <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#EAF6FF]/80 via-[#FFEAF4]/40 to-[#F3E8FF]/90"
+        className="pointer-events-none absolute inset-0 bg-linear-to-b from-[#EAF6FF]/80 via-[#FFEAF4]/40 to-[#F3E8FF]/90"
         aria-hidden
       />
       {remote && src ? (
@@ -36,13 +36,13 @@ const PosterFrame = ({ item, variant = "bangumi", aspectClass = "aspect-[3/4]" }
           alt=""
           loading="lazy"
           decoding="async"
-          className="relative z-[1] h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
+          className="relative z-1 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
         />
       ) : (
         <img
           src={makePosterDataUri(item.title, variant)}
           alt=""
-          className="relative z-[1] h-full w-full object-cover object-center"
+          className="relative z-1 h-full w-full object-cover object-center"
         />
       )}
     </div>

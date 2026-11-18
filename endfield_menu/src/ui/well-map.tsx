@@ -4,7 +4,7 @@ import { WELL_R } from "../scene/meshes";
 const ZOOM = 12;
 const TILE = 256;
 const SIZE = WELL_R * 2;
-const LAYERS = ["vec_w", "cva_w"] as const;
+const LAYERS = ["osm"] as const;
 
 type Place = { lat: number; lon: number; label: string };
 
@@ -44,7 +44,7 @@ async function locate(): Promise<Place> {
 }
 
 /** 圆框里的瓦片。地址走 rust 后端代理（/api/client/map-tile），
- *  天地图 tk 只存后端环境变量，不再进前端包。 */
+ *  上游是 OpenStreetMap（无需密钥），OSM 标准图层自带地名注记。 */
 function tilesFor(lat: number, lon: number): Tile[] {
   const n = 2 ** ZOOM;
   const worldX = ((lon + 180) / 360) * n * TILE;
@@ -111,6 +111,7 @@ export function WellMap() {
         <>
           <i className="well-mark" />
           {place.label ? <span className="well-name">{place.label}</span> : null}
+          <span className="well-attr">© OpenStreetMap contributors</span>
         </>
       ) : null}
     </div>

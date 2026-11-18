@@ -231,7 +231,7 @@ const Hero = () => {
     >
       {loading && (
         <div
-          className="flex-center absolute z-[100] h-dvh w-screen overflow-hidden bg-violet-50"
+          className="flex-center absolute z-100 h-dvh w-screen overflow-hidden bg-violet-50"
           aria-label="封面加载中"
         >
           <div className="three-body">

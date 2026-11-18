@@ -26,11 +26,8 @@ pub struct Config {
     pub cloudflare_ai_token: String,
     pub cloudflare_ai_model: String,
     pub bilibili_uid: String,
-    /// 天地图浏览器端 tk。只在后端拼进瓦片 URL，不下发给页面。
-    pub tianditu_tk: String,
-    /// 天地图瓦片服务地址，`{shard}` 是 DataServer 的负载均衡占位。
-    /// 测试时换成本地 mock 地址。
-    pub tianditu_tile_host: String,
+    /// OpenStreetMap 瓦片服务地址（无需密钥）。测试时换成本地 mock 地址。
+    pub osm_tile_host: String,
     pub r2_account_id: String,
     pub r2_access_key: String,
     pub r2_secret_key: String,
@@ -73,17 +70,9 @@ impl Config {
     /// 启动时读取 `.env` 文件补全环境变量，行为和 Go 版 `loadOptionalEnvFiles` 一致：
     /// 依次尝试 `/opt/acg-api/.env`、`.env` 和 `../.env`，已有的环境变量不会被覆盖。
     /// `dotenvy` 本身就不覆盖已存在的变量，所以直接按顺序加载即可。
-    /// 天地图配置单独放 `.env.tianditu`（同样的三个位置），最后读，
-    /// 不配它时地图瓦片接口返回 503，不影响其他功能。
+    /// 地图瓦片走 OpenStreetMap，无需密钥；要换瓦片源时在 `.env` 配 `OSM_TILE_HOST`。
     pub fn load_env_files() {
-        for path in [
-            "/opt/acg-api/.env",
-            ".env",
-            "../.env",
-            "/opt/acg-api/.env.tianditu",
-            ".env.tianditu",
-            "../.env.tianditu",
-        ] {
+        for path in ["/opt/acg-api/.env", ".env", "../.env"] {
             if !std::path::Path::new(path).exists() {
                 continue;
             }
@@ -144,8 +133,9 @@ impl Config {
                 "@cf/stabilityai/stable-diffusion-xl-base-1.0",
             ),
             bilibili_uid: env("BILIBILI_UID", "1061280173"),
-            tianditu_tk: env("TIANDITU_TK", ""),
-            tianditu_tile_host: env("TIANDITU_TILE_HOST", "https://t{shard}.tianditu.gov.cn"),
+            osm_tile_host: env("OSM_TILE_HOST", "https://tile.openstreetmap.org")
+                .trim_end_matches('/')
+                .to_string(),
             r2_account_id: env("R2_ACCOUNT_ID", ""),
             r2_access_key: env("R2_ACCESS_KEY_ID", ""),
             r2_secret_key: env("R2_SECRET_ACCESS_KEY", ""),
@@ -207,8 +197,7 @@ impl Config {
             cloudflare_ai_token: String::new(),
             cloudflare_ai_model: "@cf/stabilityai/stable-diffusion-xl-base-1.0".into(),
             bilibili_uid: "1061280173".into(),
-            tianditu_tk: String::new(),
-            tianditu_tile_host: "https://t{shard}.tianditu.gov.cn".into(),
+            osm_tile_host: "https://tile.openstreetmap.org".into(),
             r2_account_id: "account".into(),
             r2_access_key: "access".into(),
             r2_secret_key: "secret".into(),
