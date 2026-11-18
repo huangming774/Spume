@@ -3,7 +3,12 @@ import { FiCopy, FiExternalLink } from "react-icons/fi";
 
 import FriendsApplicationBoard from "../components/FriendsApplicationBoard";
 import { friendCards } from "../data/friendCards";
-import { defaultSiteAvatarUrl, siteAvatarFromProfile } from "../lib/siteAvatar.js";
+import {
+  defaultSiteAvatarUrl,
+  fetchSiteProfile,
+  invalidateSiteProfile,
+  onAvatarUpdated,
+} from "../lib/siteAvatar.js";
 
 const buildSiteFriendCard = (avatarUrl) => `name: Spume
 desc: Spume的小屋
@@ -44,14 +49,19 @@ const FriendsPage = () => {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/site/avatar", { headers: { Accept: "application/json" } })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setSiteAvatarUrl(siteAvatarFromProfile(data));
-      })
-      .catch(() => {});
+    const load = (force) => {
+      fetchSiteProfile({ force }).then((profile) => {
+        if (!cancelled) setSiteAvatarUrl(profile.avatar);
+      });
+    };
+    load(false);
+    const unsubscribe = onAvatarUpdated(() => {
+      invalidateSiteProfile();
+      load(true);
+    });
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 

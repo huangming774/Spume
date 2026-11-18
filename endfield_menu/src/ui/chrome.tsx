@@ -44,16 +44,78 @@ export function NetInfo() {
   );
 }
 
+type SiteProfile = { avatar: string; displayName: string };
+
+const AVATAR_UPDATED_EVENT = "blog-avatar-updated";
+const AVATAR_REV_KEY = "spume-avatar-rev";
+
+async function readSiteProfile(): Promise<SiteProfile> {
+  try {
+    const res = await fetch("/api/site/avatar", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return { avatar: "", displayName: "" };
+    const data = await res.json();
+    const avatar = typeof data?.avatar === "string" ? data.avatar.trim() : "";
+    const displayName = typeof data?.displayName === "string" ? data.displayName.trim() : "";
+    const validAvatar = /^https?:\/\//.test(avatar) ? avatar : "";
+    return { avatar: validAvatar, displayName };
+  } catch {
+    return { avatar: "", displayName: "" };
+  }
+}
+
 export const Badge = memo(function Badge() {
+  const [profile, setProfile] = useState<SiteProfile>({ avatar: "", displayName: "" });
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      readSiteProfile().then((next) => {
+        if (!cancelled) {
+          setProfile(next);
+          setAvatarFailed(false);
+        }
+      });
+    };
+    load();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === AVATAR_REV_KEY) load();
+    };
+    window.addEventListener(AVATAR_UPDATED_EVENT, load);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(AVATAR_UPDATED_EVENT, load);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const showAvatar = profile.avatar && !avatarFailed;
+
   return (
     <div className="badge">
       <div className="badge-plate" />
       <div className="badge-streak" />
       <div className="badge-rim" />
       <div className="badge-inner">
-        <div className="avatar">avatar<i className="scan" /><i className="chip" /></div>
+        <div className="avatar">
+          {showAvatar ? (
+            <img
+              className="avatar-img"
+              src={profile.avatar}
+              alt="站长头像"
+              onError={() => setAvatarFailed(true)}
+            />
+          ) : (
+            "avatar"
+          )}
+          <i className="scan" /><i className="chip" />
+        </div>
         <div className="mid">
-          <div className="name">xxxxx</div>
+          <div className="name">{profile.displayName || "xxxxx"}</div>
           <div className="sub">[ X · · · ]</div>
           <div className="lv">60</div>
           <div className="bar" />

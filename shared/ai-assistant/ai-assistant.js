@@ -57,6 +57,28 @@
     return (state.user && state.user.avatar) || "";
   }
 
+  // 头像更换的全站广播：同页听事件，跨标签页听 storage。
+  var AVATAR_UPDATED_EVENT = "blog-avatar-updated";
+  var AVATAR_REV_KEY = "spume-avatar-rev";
+
+  function notifyAvatarUpdated(user) {
+    try {
+      window.dispatchEvent(new CustomEvent(AVATAR_UPDATED_EVENT, { detail: { user: user } }));
+    } catch (e) { /* 忽略 */ }
+    try {
+      localStorage.setItem(AVATAR_REV_KEY, String(Date.now()));
+    } catch (e) { /* 存储不可用时只靠同页事件 */ }
+  }
+
+  // 其它入口（后台/导航栏）换了头像时，刷新本面板的登录态与头像。
+  function subscribeAvatarUpdates() {
+    var refresh = function () { refreshAuthMe(); };
+    window.addEventListener(AVATAR_UPDATED_EVENT, refresh);
+    window.addEventListener("storage", function (event) {
+      if (event.key === AVATAR_REV_KEY) refresh();
+    });
+  }
+
   function userInitial() {
     var name = userDisplayName(state.user);
     return (name || "游").slice(0, 1);
@@ -113,6 +135,7 @@
       if (res.ok && res.data && res.data.user) {
         state.user = res.data.user;
         updateAuthBar();
+        notifyAvatarUpdated(state.user);
         appendMsg(ui.messages, "system", "头像更新好啦～");
       } else {
         appendMsg(ui.messages, "system", (res.data && res.data.message) || "头像上传失败，请稍后再试。");
@@ -825,6 +848,7 @@
     updateAuthBar();
     refreshAuthMe();
     refreshAllQuotas();
+    subscribeAvatarUpdates();
   }
 
   function setOpen(open) {

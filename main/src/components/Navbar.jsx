@@ -8,7 +8,8 @@ import { cosAsset } from "../lib/cosAsset.js";
 import VisitorNetworkBadge from "./VisitorNetworkBadge";
 import WeatherBadge from "./WeatherBadge";
 import SiteSearch from "./SiteSearch";
-import { LuCommand, LuImages, LuLogIn } from "react-icons/lu";
+import NavOwnerAvatar from "./NavOwnerAvatar";
+import { LuCommand, LuImages } from "react-icons/lu";
 import SiteConsole from "./site-console/SiteConsole";
 import WhereOverlay from "./WhereOverlay";
 import "./cover-picker/cover-entry.css";
@@ -505,18 +506,7 @@ const NavBar = () => {
 
               <SiteSearch triggerClassName={desktopLinkClass(false)} />
 
-              <button
-                type="button"
-                className={clsx(
-                  desktopLinkClass(false),
-                  "flex h-9 w-9 items-center justify-center rounded-full"
-                )}
-                aria-label="站长登录"
-                title="站长登录"
-                onClick={() => navigate("/app")}
-              >
-                <LuLogIn aria-hidden="true" />
-              </button>
+              <NavOwnerAvatar className={desktopLinkClass(false)} />
 
               <button
                 ref={menuBtnRef}

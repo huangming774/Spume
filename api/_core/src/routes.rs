@@ -826,22 +826,32 @@ async fn auth_avatar(
 
 async fn site_avatar(State(state): State<AppState>) -> Json<Value> {
     let Some(pool) = state.db.as_ref() else {
-        return Json(json!({"avatar": ""}));
+        return Json(json!({"avatar": "", "displayName": ""}));
     };
-    let avatar = match sqlx::query_scalar::<_, String>(
-        "SELECT avatar FROM users WHERE is_owner = true AND avatar <> '' ORDER BY id ASC LIMIT 1",
+    let row = match sqlx::query_as::<_, (String, String)>(
+        "SELECT avatar, COALESCE(display_name, '') FROM users WHERE is_owner = true ORDER BY id ASC LIMIT 1",
     )
     .fetch_optional(pool)
     .await
     {
-        Ok(Some(value)) if value.starts_with("http://") || value.starts_with("https://") => value,
-        Ok(_) => String::new(),
+        Ok(row) => row,
         Err(error) => {
             tracing::error!(error = %error, "site avatar lookup failed");
-            String::new()
+            None
         }
     };
-    Json(json!({"avatar": avatar}))
+    let (avatar, display_name) = match row {
+        Some((avatar, name)) => {
+            let avatar = if avatar.starts_with("http://") || avatar.starts_with("https://") {
+                avatar
+            } else {
+                String::new()
+            };
+            (avatar, name)
+        }
+        None => (String::new(), String::new()),
+    };
+    Json(json!({"avatar": avatar, "displayName": display_name}))
 }
 
 /// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。
@@ -4720,6 +4730,7 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let body: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["avatar"], "");
+        assert_eq!(body["displayName"], "");
     }
 
     #[tokio::test]

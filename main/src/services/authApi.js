@@ -1,3 +1,5 @@
+import { notifyAvatarUpdated } from "../lib/siteAvatar.js";
+
 const JSON_HEADERS = { "Content-Type": "application/json", Accept: "application/json" };
 
 async function parseJson(res) {
@@ -71,5 +73,9 @@ export async function authUploadAvatar(file) {
     headers: { Accept: "application/json" },
     body: form,
   });
-  return parseJson(res);
+  const result = await parseJson(res);
+  if (result.ok && result.data?.user) {
+    notifyAvatarUpdated(result.data.user);
+  }
+  return result;
 }
