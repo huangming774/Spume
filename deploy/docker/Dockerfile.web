@@ -26,6 +26,10 @@ RUN npm ci --prefix main
 
 # 再拷贝源码（这些变了才需要重新跑 vite build）。
 COPY main ./main
+# 导航「你在哪里」面板直接 import endfield_menu/src/App.tsx，
+# 裸导入由 main/vite.config.js 的 endfieldMenuDeps 插件重定向到 main/node_modules，
+# 所以这里只需源码，不用单独装依赖。
+COPY endfield_menu/src ./endfield_menu/src
 COPY blog/source/_posts ./blog/source/_posts
 COPY previews/project-gallery/src previews/project-gallery/src
 COPY previews/project-gallery/public previews/project-gallery/public

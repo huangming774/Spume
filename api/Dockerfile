@@ -7,11 +7,16 @@
 # 监听端口由 PORT 决定，没有 PORT 时用 ACG_API_ADDR，默认 :8080。
 # Vercel 容器可以在环境里把 PORT 设为 80。
 
-FROM rust:1.83-bookworm-slim AS builder
+# 标签命名是 <版本>-slim-bookworm；版本与 rust-toolchain.toml 锁定一致（sqlx 0.9 要求 1.94+）。
+FROM rust:1.94-slim-bookworm AS builder
 
 WORKDIR /usr/src/taozhiyy-api
 
-COPY _core/Cargo.toml _core/Cargo.lock ./
+# crate 实际在 _core/ 下，保持目录布局，避免迁移等相对路径失效。
+COPY _core ./_core
+WORKDIR /usr/src/taozhiyy-api/_core
+
+# 先用空 main 预编译依赖层，源码变动时不重编依赖。
 RUN mkdir -p src \
     && echo 'fn main() {}' > src/main.rs \
     && cargo build --release --locked \
@@ -32,7 +37,7 @@ RUN useradd --system --create-home --home-dir /opt/acg-api taozhiyy
 
 WORKDIR /opt/acg-api
 
-COPY --from=builder /usr/src/taozhiyy-api/target/release/taozhiyy-api /opt/acg-api/taozhiyy-api
+COPY --from=builder /usr/src/taozhiyy-api/_core/target/release/taozhiyy-api /opt/acg-api/taozhiyy-api
 
 RUN chown -R taozhiyy:taozhiyy /opt/acg-api
 USER taozhiyy
