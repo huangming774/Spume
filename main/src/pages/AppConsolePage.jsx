@@ -7,6 +7,7 @@ import {
   approveOwnerFriend,
   createOwnerFixedAnswer,
   createOwnerDraft,
+  deleteOwnerEntry,
   fetchMusicConfig,
   generateOwnerAi,
   isPublicImageURL,
@@ -359,6 +360,33 @@ const AppConsolePage = () => {
       setMusicNotice(e.message || "保存失败");
     } finally {
       setMusicBusy(false);
+    }
+  };
+
+  const [deleteKind, setDeleteKind] = useState("article");
+  const [deleteId, setDeleteId] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
+
+  const handleDeleteEntry = async () => {
+    const id = deleteId.trim();
+    if (!/^\d+$/.test(id)) {
+      setDeleteNotice("请输入内容 ID（纯数字，在各列表或发布结果里可见）。");
+      return;
+    }
+    if (!window.confirm(`确认删除 ${deleteKind} 类型 ID ${id}？线上页面会同步移除。`)) return;
+    setDeleteBusy(true);
+    setDeleteNotice("");
+    try {
+      await deleteOwnerEntry(id, deleteKind);
+      notifyEntriesChanged();
+      await loadConsole();
+      setDeleteId("");
+      setDeleteNotice(`已删除 ${deleteKind} ID ${id}。`);
+    } catch (e) {
+      setDeleteNotice(e.message || "删除失败");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -1521,6 +1549,53 @@ const AppConsolePage = () => {
                     disabled={musicBusy}
                   >
                     {musicBusy ? "保存中..." : "保存歌单配置"}
+                  </button>
+                </section>
+
+                <section className="owner-panel owner-glass">
+                  <div className="owner-panel-title">
+                    <h2>删除内容</h2>
+                    <StatusTag>按 ID</StatusTag>
+                  </div>
+                  <div className="owner-field">
+                    <label htmlFor="deleteKind">类型</label>
+                    <select
+                      id="deleteKind"
+                      value={deleteKind}
+                      onChange={(event) => setDeleteKind(event.target.value)}
+                      disabled={deleteBusy}
+                    >
+                      <option value="article">文章</option>
+                      <option value="journal">建站日志</option>
+                      <option value="gallery">相册图片</option>
+                      <option value="moment">碎语</option>
+                      <option value="about">关于我</option>
+                      <option value="bili">哔哩视频</option>
+                      <option value="project">星空馆</option>
+                      <option value="friend">友链</option>
+                    </select>
+                  </div>
+                  <div className="owner-field">
+                    <label htmlFor="deleteId">内容 ID</label>
+                    <input
+                      id="deleteId"
+                      value={deleteId}
+                      placeholder="纯数字 ID"
+                      onChange={(event) => setDeleteId(event.target.value)}
+                      disabled={deleteBusy}
+                    />
+                  </div>
+                  <p className="owner-frontmatter-hint">
+                    各分区列表自带删除按钮；这里可按 ID 删除任意类型，ID 见列表或发布结果。
+                  </p>
+                  {deleteNotice ? <p className="owner-frontmatter-hint">{deleteNotice}</p> : null}
+                  <button
+                    type="button"
+                    className="owner-secondary"
+                    onClick={handleDeleteEntry}
+                    disabled={deleteBusy}
+                  >
+                    {deleteBusy ? "删除中..." : "删除该内容"}
                   </button>
                 </section>
               </aside>
