@@ -12,7 +12,7 @@ export const CONSOLE_FRAGMENTS = [
     id: "02",
     title: "碎片独处",
     english: "THE GARDEN",
-    href: "https://bistutzyy.github.io/",
+    href: "https://github.com/huangming774",
     description: "收纳日常念头，也留住偶然经过的故事。",
     action: "进入花园",
     cover: "blog",
