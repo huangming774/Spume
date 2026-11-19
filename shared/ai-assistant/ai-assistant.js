@@ -64,7 +64,7 @@
           var a = data && typeof data.avatar === "string" ? data.avatar.trim() : "";
           if (/^https?:\/\//.test(a) && a !== siteAvatarCache) {
             siteAvatarCache = a;
-            if (ui.avatarBtn) fillAvatar(ui.avatarBtn, { clickable: true });
+            if (ui.avatarBtn) fillAvatar(ui.avatarBtn, { initialOnly: true });
             if (ui.brandLogo) ui.brandLogo.src = brandAvatarURL();
             var botImgs = document.querySelectorAll(".bai-msg.bot .bai-msg-role img");
             for (var i = 0; i < botImgs.length; i++) botImgs[i].src = brandAvatarURL();
@@ -114,10 +114,10 @@
     return (name || "游").slice(0, 1);
   }
 
-  // 填充一个头像容器：有 avatar 用图片，否则用首字
+  // 填充一个头像容器：有 avatar 用图片，否则用首字；initialOnly 强制首字（避免与品牌头像重复）。
   function fillAvatar(container, opts) {
     container.innerHTML = "";
-    var url = userAvatarURL();
+    var url = opts && opts.initialOnly ? "" : userAvatarURL();
     if (url) {
       var img = el("img");
       img.src = url;
@@ -150,13 +150,10 @@
   }
 
   function uploadAvatar(file) {
-    if (!ui.avatarBtn) return;
     var form = new FormData();
     form.append("file", file);
-    ui.avatarBtn.disabled = true;
-    var prev = ui.avatarBtn.innerHTML;
-    ui.avatarBtn.innerHTML = "";
-    ui.avatarBtn.appendChild(el("span", "bai-avatar-uploading", "上传中"));
+    if (ui.brandLogo) ui.brandLogo.style.opacity = "0.4";
+    appendMsg(ui.messages, "system", "头像上传中…");
     authFetchRaw(API_AVATAR, { method: "POST", body: form }).then(function (res) {
       return res.json().then(function (d) {
         return { ok: res.ok, status: res.status, data: d };
@@ -173,7 +170,7 @@
     }).catch(function () {
       appendMsg(ui.messages, "system", "头像上传失败，请稍后再试。");
     }).finally(function () {
-      ui.avatarBtn.disabled = false;
+      if (ui.brandLogo) ui.brandLogo.style.opacity = "";
       updateAuthBar();
     });
   }
@@ -242,7 +239,8 @@
       ui.avatarBtn = el("button", "bai-avatar");
       ui.avatarBtn.type = "button";
       ui.avatarBtn.setAttribute("aria-label", "更换头像");
-      fillAvatar(ui.avatarBtn, { clickable: true });
+      fillAvatar(ui.avatarBtn, { clickable: true, initialOnly: true });
+      ui.avatarBtn.title = "点击更换头像";
       var who = el("span", "blog-ai-auth-user", userDisplayName(state.user));
       if (state.user.email) who.title = state.user.email;
       var rename = el("button", "blog-ai-auth-link", "改名");
@@ -263,8 +261,13 @@
     }
     ui.avatarBtn = el("button", "bai-avatar");
     ui.avatarBtn.type = "button";
-    ui.avatarBtn.setAttribute("aria-label", "登录后可更换头像");
-    fillAvatar(ui.avatarBtn, { clickable: true });
+    ui.avatarBtn.setAttribute("aria-label", "登录 / 注册");
+    fillAvatar(ui.avatarBtn, { initialOnly: true });
+    ui.avatarBtn.classList.add("is-clickable");
+    ui.avatarBtn.title = "登录 / 注册";
+    ui.avatarBtn.addEventListener("click", function () {
+      openAuthModal("login");
+    });
     ui.authBar.appendChild(ui.avatarBtn);
     var login = el("button", "blog-ai-auth-link", "登录 / 注册");
     login.type = "button";
@@ -687,6 +690,9 @@
     logo.src = brandAvatarURL();
     logo.alt = "博客小精灵";
     ui.brandLogo = logo;
+    brandMark.classList.add("is-clickable");
+    brandMark.title = "点击更换头像";
+    brandMark.addEventListener("click", pickAvatar);
     brandMark.appendChild(logo);
     var brandText = el("div", "bai-brand-text");
     brandText.appendChild(el("b", null, "博客小精灵"));
