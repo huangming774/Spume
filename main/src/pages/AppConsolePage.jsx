@@ -227,17 +227,29 @@ const AppConsolePage = () => {
   const publishTimerRef = useRef(null);
 
   const readSession = useCallback(async () => {
-    try {
-      const res = await fetchWithin(
-        "/api/auth/me",
-        { credentials: "include", headers: { Accept: "application/json" } },
-        4000,
-      );
-      const data = await res.json().catch(() => ({}));
-      setAuth(res.ok ? data : { loggedIn: false });
-    } catch {
-      setAuth({ loggedIn: false });
+    // 只有后端明确说未登录才回登录页；冷启动超时/网络抖动保留当前会话，
+    // 避免点「通过」「上传」后刷新会话时被误踢回 /app 登录页。
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const res = await fetchWithin(
+          "/api/auth/me",
+          { credentials: "include", headers: { Accept: "application/json" } },
+          12000,
+        );
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.loggedIn === false) {
+          setAuth({ loggedIn: false });
+          return;
+        }
+        if (res.ok && data.loggedIn) {
+          setAuth(data);
+          return;
+        }
+      } catch {
+        // 超时/网络错误：重试一次，仍失败则保留现有会话。
+      }
     }
+    setAuth((current) => current ?? { loggedIn: false });
   }, []);
 
   const refreshSignals = useCallback(async () => {
