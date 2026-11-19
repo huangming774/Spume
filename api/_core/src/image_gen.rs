@@ -43,6 +43,9 @@ pub enum ImageGenError {
     /// 上游没有返回图片。具体原因只写进日志。
     #[error("{AGNES_FAILED}")]
     Provider,
+    /// 所有已配置上游都失败，携带最后一个上游的原始状态/错误，供接口透传诊断。
+    #[error("{AGNES_FAILED}")]
+    ProviderDetail(String),
 }
 
 /// 只接受 Go 版开放的三种尺寸，其它值回到方图。
@@ -165,7 +168,7 @@ pub async fn generate(
     if candidates.is_empty() {
         return Err(ImageGenError::NotConfigured);
     }
-    let mut last_err = ImageGenError::Provider;
+    let mut last_detail = String::new();
     for provider in candidates {
         let result = match provider {
             "cloudflare" => request_cloudflare(http, cfg, prompt, size).await,
@@ -175,13 +178,17 @@ pub async fn generate(
         match result {
             Ok(image) => return Ok(image),
             Err(ImageGenError::PromptRejected) => return Err(ImageGenError::PromptRejected),
+            Err(ImageGenError::ProviderDetail(detail)) => {
+                tracing::warn!(provider, %detail, "image provider failed; trying next configured provider");
+                last_detail = format!("{provider}: {detail}");
+            }
             Err(error) => {
                 tracing::warn!(provider, %error, "image provider failed; trying next configured provider");
-                last_err = error;
+                last_detail = format!("{provider}: {error}");
             }
         }
     }
-    Err(last_err)
+    Err(ImageGenError::ProviderDetail(last_detail))
 }
 
 async fn request_agnes(
@@ -208,11 +215,15 @@ async fn request_agnes(
     }
     if !(200..300).contains(&payload.status) {
         log_provider("agnes", payload.status, &payload.body);
-        return Err(ImageGenError::Provider);
+        return Err(ImageGenError::ProviderDetail(provider_detail(
+            "agnes",
+            payload.status,
+            &payload.body,
+        )));
     }
     let url = agnes_image_url(&payload.body).ok_or_else(|| {
         log_provider("agnes", payload.status, &payload.body);
-        ImageGenError::Provider
+        ImageGenError::ProviderDetail(provider_detail("agnes", payload.status, &payload.body))
     })?;
     Ok(GeneratedImage {
         url,
@@ -254,11 +265,15 @@ async fn request_dashscope(
     .await?;
     if !(200..300).contains(&payload.status) {
         log_provider("dashscope", payload.status, &payload.body);
-        return Err(ImageGenError::Provider);
+        return Err(ImageGenError::ProviderDetail(provider_detail(
+            "dashscope",
+            payload.status,
+            &payload.body,
+        )));
     }
     let mut image = dashscope_image(&payload.body).ok_or_else(|| {
         log_provider("dashscope", payload.status, &payload.body);
-        ImageGenError::Provider
+        ImageGenError::ProviderDetail(provider_detail("dashscope", payload.status, &payload.body))
     })?;
     image.model = cfg.dashscope_image_model.clone();
     image.size = size.to_string();
@@ -342,11 +357,15 @@ async fn request_cloudflare(
     }
     if !(200..300).contains(&raw.status) {
         log_provider("cloudflare", raw.status, &raw.body);
-        return Err(ImageGenError::Provider);
+        return Err(ImageGenError::ProviderDetail(provider_detail(
+            "cloudflare",
+            raw.status,
+            &raw.body,
+        )));
     }
     let bytes = cloudflare_image(&raw.content_type, &raw.bytes).ok_or_else(|| {
         log_provider("cloudflare", raw.status, &raw.body);
-        ImageGenError::Provider
+        ImageGenError::ProviderDetail(provider_detail("cloudflare", raw.status, &raw.body))
     })?;
     Ok(GeneratedImage {
         url: String::new(),
@@ -380,7 +399,7 @@ async fn send(
         .await
         .map_err(|error| {
             tracing::error!(%error, "image provider request failed");
-            ImageGenError::Provider
+            ImageGenError::ProviderDetail(format!("transport: {error}").chars().take(200).collect())
         })?;
     let status = response.status().as_u16();
     let body = response.json::<Value>().await.unwrap_or(Value::Null);
@@ -410,7 +429,7 @@ async fn send_raw(
         .await
         .map_err(|error| {
             tracing::error!(%error, "image provider request failed");
-            ImageGenError::Provider
+            ImageGenError::ProviderDetail(format!("transport: {error}").chars().take(200).collect())
         })?;
     let status = response.status().as_u16();
     let content_type = response
@@ -510,6 +529,15 @@ fn result_image(payload: &Value) -> Option<String> {
 fn log_provider(provider: &str, status: u16, payload: &Value) {
     let (code, message) = error_summary(payload);
     tracing::error!(provider, status, code = %code, message = %message, "image provider rejected the request");
+}
+
+/// 上游失败的原始摘要（状态 + 错误码/信息），截断到 200 字符供接口透传诊断。
+fn provider_detail(provider: &str, status: u16, payload: &Value) -> String {
+    let (code, message) = error_summary(payload);
+    format!("{provider} HTTP {status} {code} {message}")
+        .chars()
+        .take(200)
+        .collect()
 }
 
 #[cfg(test)]

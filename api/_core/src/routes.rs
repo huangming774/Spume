@@ -3202,6 +3202,13 @@ async fn image_generate_flow(
             body["message"] = json!("Agnes 生图暂时失败了，请稍后再试。");
             return (StatusCode::BAD_GATEWAY, Json(body)).into_response();
         }
+        Err(crate::image_gen::ImageGenError::ProviderDetail(detail)) => {
+            let mut body = quota;
+            body["error"] = json!("IMAGE_PROVIDER_ERROR");
+            body["message"] = json!("生图暂时失败了，请稍后再试。");
+            body["detail"] = json!(detail);
+            return (StatusCode::BAD_GATEWAY, Json(body)).into_response();
+        }
     };
     // Cloudflare 直接给图片字节，不用再下载；Agnes/百炼给临时地址。
     let stored = match &generated.bytes {
