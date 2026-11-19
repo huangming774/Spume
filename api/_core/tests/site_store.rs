@@ -69,7 +69,8 @@ fn entry_json_keeps_the_body_and_the_image_address() {
         body: "在写站点".into(),
         image_url: "https://fs.964643.xyz/me.jpg".into(),
         extra: json!({}),
-        created_at: chrono::TimeZone::with_ymd_and_hms(&chrono::Utc, 2026, 11, 16, 4, 0, 0).unwrap(),
+        created_at: chrono::TimeZone::with_ymd_and_hms(&chrono::Utc, 2026, 11, 16, 4, 0, 0)
+            .unwrap(),
     };
     let value = entry_json(&entry);
     assert_eq!(value["body"], "在写站点");

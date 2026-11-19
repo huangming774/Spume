@@ -31,7 +31,10 @@ fn playlist_id_accepts_bare_ids_and_netease_links() {
 fn playlist_id_rejects_junk_and_foreign_input() {
     assert_eq!(parse_playlist_id(""), None);
     assert_eq!(parse_playlist_id("abc"), None);
-    assert_eq!(parse_playlist_id("https://example.com/playlist?id=123"), None);
+    assert_eq!(
+        parse_playlist_id("https://example.com/playlist?id=123"),
+        None
+    );
     assert_eq!(parse_playlist_id("123; DROP TABLE users"), None);
     assert_eq!(parse_playlist_id(&"9".repeat(20)), None);
 }
@@ -76,8 +79,7 @@ async fn music_playlist_is_404_without_config() {
 
 #[tokio::test]
 async fn owner_music_requires_login() {
-    let (status, body) =
-        request("/api/owner/music", "PUT", r#"{"playlist":"3778678"}"#).await;
+    let (status, body) = request("/api/owner/music", "PUT", r#"{"playlist":"3778678"}"#).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(body["error"], "UNAUTHORIZED");
 }

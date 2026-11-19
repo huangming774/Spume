@@ -79,7 +79,11 @@ static CACHE: LazyLock<Mutex<HashMap<String, Cached>>> =
 fn cached(id: &str) -> Option<(Value, bool)> {
     let guard = CACHE.lock().ok()?;
     let entry = guard.get(id)?;
-    let ttl = if entry.negative { NEGATIVE_FOR } else { CACHE_FOR };
+    let ttl = if entry.negative {
+        NEGATIVE_FOR
+    } else {
+        CACHE_FOR
+    };
     if entry.fetched_at.elapsed() < ttl {
         Some((entry.body.clone(), entry.negative))
     } else {
@@ -91,7 +95,11 @@ fn store(id: &str, body: Value, negative: bool) {
     if let Ok(mut guard) = CACHE.lock() {
         guard.insert(
             id.to_string(),
-            Cached { fetched_at: Instant::now(), body, negative },
+            Cached {
+                fetched_at: Instant::now(),
+                body,
+                negative,
+            },
         );
     }
 }
@@ -117,7 +125,10 @@ async fn upstream_get(state: &AppState, url: &str) -> Result<Value, String> {
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }
-    response.json::<Value>().await.map_err(|error| error.to_string())
+    response
+        .json::<Value>()
+        .await
+        .map_err(|error| error.to_string())
 }
 
 async fn upstream_post_form(state: &AppState, url: &str, body: String) -> Result<Value, String> {
@@ -136,7 +147,10 @@ async fn upstream_post_form(state: &AppState, url: &str, body: String) -> Result
     if !response.status().is_success() {
         return Err(format!("HTTP {}", response.status()));
     }
-    response.json::<Value>().await.map_err(|error| error.to_string())
+    response
+        .json::<Value>()
+        .await
+        .map_err(|error| error.to_string())
 }
 
 /// 拉歌单：名称 + 曲目 id 列表（截断到 MAX_TRACKS）。
@@ -146,7 +160,11 @@ async fn playlist_meta(state: &AppState, id: &str) -> Result<(String, Vec<String
         return Err("playlist detail rejected".into());
     }
     let playlist = value.get("playlist").ok_or("playlist missing")?;
-    let name = playlist.get("name").and_then(Value::as_str).unwrap_or("").to_string();
+    let name = playlist
+        .get("name")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
     let ids: Vec<String> = playlist
         .get("trackIds")
         .and_then(Value::as_array)
@@ -184,8 +202,14 @@ async fn song_details(
     let mut out = HashMap::new();
     if let Some(songs) = value.get("songs").and_then(Value::as_array) {
         for song in songs {
-            let Some(id) = song.get("id").and_then(Value::as_i64) else { continue };
-            let name = song.get("name").and_then(Value::as_str).unwrap_or("").to_string();
+            let Some(id) = song.get("id").and_then(Value::as_i64) else {
+                continue;
+            };
+            let name = song
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
             let artist = song
                 .get("ar")
                 .and_then(Value::as_array)
@@ -205,7 +229,10 @@ async fn song_details(
 }
 
 /// 批量播放外链：id → 可播 url（拿不到为 None）。
-async fn player_urls(state: &AppState, ids: &[String]) -> Result<HashMap<String, Option<String>>, String> {
+async fn player_urls(
+    state: &AppState,
+    ids: &[String],
+) -> Result<HashMap<String, Option<String>>, String> {
     let ids_json = format!("[{}]", ids.join(","));
     let url = format!(
         "{UPSTREAM}/api/song/enhance/player/url?ids={}&br=320000",
@@ -215,7 +242,9 @@ async fn player_urls(state: &AppState, ids: &[String]) -> Result<HashMap<String,
     let mut out = HashMap::new();
     if let Some(items) = value.get("data").and_then(Value::as_array) {
         for item in items {
-            let Some(id) = item.get("id").and_then(Value::as_i64) else { continue };
+            let Some(id) = item.get("id").and_then(Value::as_i64) else {
+                continue;
+            };
             let playable = item
                 .get("url")
                 .and_then(Value::as_str)
@@ -229,13 +258,19 @@ async fn player_urls(state: &AppState, ids: &[String]) -> Result<HashMap<String,
 
 /// 只需要 encode 方括号和逗号，避免为此引一个 crate。
 fn urlencoding_min(raw: &str) -> String {
-    raw.replace('[', "%5B").replace(']', "%5D").replace(',', "%2C")
+    raw.replace('[', "%5B")
+        .replace(']', "%5D")
+        .replace(',', "%2C")
 }
 
 /// 解析整个歌单为前端播放列表。失败返回 Err（路由层转 502）。
 pub async fn resolve(state: &AppState, id: &str) -> Result<Value, String> {
     if let Some((body, negative)) = cached(id) {
-        return if negative { Err("cached failure".into()) } else { Ok(body) };
+        return if negative {
+            Err("cached failure".into())
+        } else {
+            Ok(body)
+        };
     }
     let result = resolve_uncached(state, id).await;
     match &result {

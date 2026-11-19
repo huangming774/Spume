@@ -888,13 +888,21 @@ async fn client_music(State(state): State<AppState>) -> Json<Value> {
 async fn client_music_playlist(State(state): State<AppState>) -> Response {
     let (enabled, playlist_id, _) = music_setting(&state).await;
     if !enabled {
-        return fail(StatusCode::NOT_FOUND, "MUSIC_NOT_CONFIGURED", "还没有配置歌单");
+        return fail(
+            StatusCode::NOT_FOUND,
+            "MUSIC_NOT_CONFIGURED",
+            "还没有配置歌单",
+        );
     }
     match crate::music::resolve(&state, &playlist_id).await {
         Ok(body) => Json(body).into_response(),
         Err(error) => {
             tracing::warn!(%error, playlist = %playlist_id, "netease playlist resolve failed");
-            fail(StatusCode::BAD_GATEWAY, "MUSIC_UNAVAILABLE", "歌单暂时解析不了")
+            fail(
+                StatusCode::BAD_GATEWAY,
+                "MUSIC_UNAVAILABLE",
+                "歌单暂时解析不了",
+            )
         }
     }
 }
@@ -923,7 +931,11 @@ async fn owner_music_save(
         );
     }
     let Some(pool) = state.db.as_ref() else {
-        return fail(StatusCode::SERVICE_UNAVAILABLE, "DB_UNAVAILABLE", "数据库还没有连上");
+        return fail(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "DB_UNAVAILABLE",
+            "数据库还没有连上",
+        );
     };
     if let Err(error) = sqlx::query(
         "INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, now())
@@ -940,7 +952,8 @@ async fn owner_music_save(
         crate::music::invalidate(&id);
     }
     let (enabled, playlist_id, raw) = music_setting(&state).await;
-    Json(json!({"ok": true, "enabled": enabled, "playlistId": playlist_id, "raw": raw})).into_response()
+    Json(json!({"ok": true, "enabled": enabled, "playlistId": playlist_id, "raw": raw}))
+        .into_response()
 }
 
 /// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。
@@ -1489,9 +1502,11 @@ async fn list_simple(state: &AppState, sql: &str) -> Result<Vec<Value>, sqlx::Er
     let Some(pool) = state.db.as_ref() else {
         return Ok(Vec::new());
     };
-    let rows = sqlx::query_as::<_, (String, String, i32, i32, i32, String, String)>(sqlx::AssertSqlSafe(sql))
-        .fetch_all(pool)
-        .await?;
+    let rows = sqlx::query_as::<_, (String, String, i32, i32, i32, String, String)>(
+        sqlx::AssertSqlSafe(sql),
+    )
+    .fetch_all(pool)
+    .await?;
     Ok(rows.into_iter().map(|(id, title, watched, total, latest, cover, link)| {
         let cover = crate::feed::proxied_cover(&id, &cover);
         json!({"id": id, "title": title, "watched": watched, "total": total, "latestEpisode": latest, "cover": cover, "coverUrl": cover, "linkUrl": link})
@@ -3268,10 +3283,14 @@ fn owner_payload(user: &SessionUser, item: Value) -> Value {
 
 fn content_error(error: crate::site_store::StoreError, code: &str) -> Response {
     match error {
-        crate::site_store::StoreError::Invalid(message) => fail(StatusCode::BAD_REQUEST, code, message),
-        crate::site_store::StoreError::Database(message) => {
-            fail(StatusCode::INTERNAL_SERVER_ERROR, "CONTENT_WRITE_FAILED", &message)
+        crate::site_store::StoreError::Invalid(message) => {
+            fail(StatusCode::BAD_REQUEST, code, message)
         }
+        crate::site_store::StoreError::Database(message) => fail(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "CONTENT_WRITE_FAILED",
+            &message,
+        ),
     }
 }
 
@@ -3316,7 +3335,10 @@ async fn save_entry(
     }
     let mut item = crate::site_store::entry_json(&saved);
     if let Some(object) = item.as_object_mut() {
-        object.insert("path".into(), Value::String(format!("site_entries/{}", saved.id)));
+        object.insert(
+            "path".into(),
+            Value::String(format!("site_entries/{}", saved.id)),
+        );
     }
     Json(owner_payload(owner, item)).into_response()
 }
@@ -3733,7 +3755,15 @@ async fn owner_post_delete(
     let Ok(id) = raw.parse::<i64>() else {
         return fail(StatusCode::BAD_REQUEST, "INVALID_POST", "文章编号无效");
     };
-    remove_entry(&state, &headers, "owner.post_delete", "INVALID_POST", id, "article").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.post_delete",
+        "INVALID_POST",
+        id,
+        "article",
+    )
+    .await
 }
 
 #[derive(Deserialize)]
@@ -3791,19 +3821,47 @@ async fn owner_journal_delete(
     Query(query): Query<JournalDeleteQuery>,
 ) -> Response {
     let Ok(id) = query.slug.parse::<i64>() else {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_JOURNAL", "建站日志编号无效");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_JOURNAL",
+            "建站日志编号无效",
+        );
     };
-    remove_entry(&state, &headers, "owner.journal_delete", "INVALID_JOURNAL", id, "journal").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.journal_delete",
+        "INVALID_JOURNAL",
+        id,
+        "journal",
+    )
+    .await
 }
 async fn owner_gallery_delete(
     State(state): State<AppState>,
     headers: HeaderMap,
     AppJson(body): AppJson<GalleryDeleteBody>,
 ) -> Response {
-    let Ok(id) = body.image_url.parse::<i64>().or_else(|_| body.album_id.parse::<i64>()) else {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_GALLERY_PUBLISH", "相册图片编号无效");
+    let Ok(id) = body
+        .image_url
+        .parse::<i64>()
+        .or_else(|_| body.album_id.parse::<i64>())
+    else {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_GALLERY_PUBLISH",
+            "相册图片编号无效",
+        );
     };
-    remove_entry(&state, &headers, "owner.gallery_delete", "INVALID_GALLERY_PUBLISH", id, "gallery").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.gallery_delete",
+        "INVALID_GALLERY_PUBLISH",
+        id,
+        "gallery",
+    )
+    .await
 }
 async fn owner_moment_delete(
     State(state): State<AppState>,
@@ -3811,9 +3869,21 @@ async fn owner_moment_delete(
     AppJson(body): AppJson<MomentDeleteBody>,
 ) -> Response {
     let Ok(id) = body.content.parse::<i64>() else {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_MOMENT_PUBLISH", "碎语编号无效");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_MOMENT_PUBLISH",
+            "碎语编号无效",
+        );
     };
-    remove_entry(&state, &headers, "owner.moment_delete", "INVALID_MOMENT_PUBLISH", id, "moment").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.moment_delete",
+        "INVALID_MOMENT_PUBLISH",
+        id,
+        "moment",
+    )
+    .await
 }
 async fn owner_about(
     State(state): State<AppState>,
@@ -3849,7 +3919,15 @@ async fn owner_about_delete(
     let Ok(id) = body.id.parse::<i64>() else {
         return fail(StatusCode::BAD_REQUEST, "INVALID_ABOUT", "关于我编号无效");
     };
-    remove_entry(&state, &headers, "owner.about_delete", "INVALID_ABOUT", id, "about").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.about_delete",
+        "INVALID_ABOUT",
+        id,
+        "about",
+    )
+    .await
 }
 async fn owner_bili(
     State(state): State<AppState>,
@@ -3861,7 +3939,9 @@ async fn owner_bili(
         Err(response) => return *response,
     };
     let published = if body.published_at.trim().is_empty() {
-        (Utc::now() + chrono::Duration::hours(8)).format("%Y-%m-%d").to_string()
+        (Utc::now() + chrono::Duration::hours(8))
+            .format("%Y-%m-%d")
+            .to_string()
     } else {
         body.published_at
     };
@@ -3894,7 +3974,15 @@ async fn owner_bili_delete(
     let Ok(id) = body.bvid.parse::<i64>() else {
         return fail(StatusCode::BAD_REQUEST, "INVALID_BILI", "哔哩视频编号无效");
     };
-    remove_entry(&state, &headers, "owner.bili_delete", "INVALID_BILI", id, "bili").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.bili_delete",
+        "INVALID_BILI",
+        id,
+        "bili",
+    )
+    .await
 }
 async fn owner_project(
     State(state): State<AppState>,
@@ -3930,7 +4018,15 @@ async fn owner_project_delete(
     let Ok(id) = body.id.parse::<i64>() else {
         return fail(StatusCode::BAD_REQUEST, "INVALID_PROJECT", "星空馆编号无效");
     };
-    remove_entry(&state, &headers, "owner.project_delete", "INVALID_PROJECT", id, "project").await
+    remove_entry(
+        &state,
+        &headers,
+        "owner.project_delete",
+        "INVALID_PROJECT",
+        id,
+        "project",
+    )
+    .await
 }
 async fn owner_gallery(
     State(state): State<AppState>,
@@ -4052,11 +4148,23 @@ async fn owner_moments(
         Ok(user) => user,
         Err(response) => return *response,
     };
-    let kind = if body.kind.trim().is_empty() { body.category.clone() } else { body.kind.clone() };
+    let kind = if body.kind.trim().is_empty() {
+        body.category.clone()
+    } else {
+        body.kind.clone()
+    };
     let now = Utc::now() + chrono::Duration::hours(8);
-    let year = if body.year.trim().is_empty() { now.format("%Y").to_string() } else { body.year.clone() };
+    let year = if body.year.trim().is_empty() {
+        now.format("%Y").to_string()
+    } else {
+        body.year.clone()
+    };
     let date = if body.date.trim().is_empty() {
-        format!("{}.{}", now.format("%m").to_string().trim_start_matches('0'), now.format("%d").to_string().trim_start_matches('0'))
+        format!(
+            "{}.{}",
+            now.format("%m").to_string().trim_start_matches('0'),
+            now.format("%d").to_string().trim_start_matches('0')
+        )
     } else {
         body.date.clone()
     };
@@ -4488,7 +4596,16 @@ async fn notification_items(pool: Option<&sqlx::PgPool>) -> Result<Vec<Value>, s
     Ok(rows
         .into_iter()
         .map(
-            |(id, channel, nickname, content, contact_email, account_email, created, extra_text)| {
+            |(
+                id,
+                channel,
+                nickname,
+                content,
+                contact_email,
+                account_email,
+                created,
+                extra_text,
+            )| {
                 let submitted = contact_email.trim().to_lowercase();
                 let account = account_email.trim().to_lowercase();
                 let contact = if submitted.is_empty() {
@@ -4792,7 +4909,8 @@ fn public_http_url(value: &str) -> bool {
 async fn client_deploy_status(State(state): State<AppState>) -> Response {
     let mut body = crate::deploy_status::snapshot(&state).await;
     // 只暴露「是否配置」，不暴露凭据本身；前端据此区分未配置与读取失败。
-    body["githubConfigured"] = json!(!state.cfg.github_token.is_empty() && !state.cfg.github_repo.is_empty());
+    body["githubConfigured"] =
+        json!(!state.cfg.github_token.is_empty() && !state.cfg.github_repo.is_empty());
     body["aiConfigured"] = json!(!state.cfg.deepseek_api_key.is_empty());
     Json(body).into_response()
 }
@@ -4824,10 +4942,18 @@ async fn owner_friend_approve(
     .fetch_optional(pool)
     .await;
     let Ok(Some((nickname, content, extra_text, channel))) = row else {
-        return fail(StatusCode::NOT_FOUND, "APPLICATION_NOT_FOUND", "这条申请不存在或已隐藏。");
+        return fail(
+            StatusCode::NOT_FOUND,
+            "APPLICATION_NOT_FOUND",
+            "这条申请不存在或已隐藏。",
+        );
     };
     if channel != "friends" {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_CHANNEL", "只有朋友页申请可以一键通过。");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_CHANNEL",
+            "只有朋友页申请可以一键通过。",
+        );
     }
     let extra: Value = serde_json::from_str(&extra_text).unwrap_or_else(|_| json!({}));
     let pick = |key: &str| {
@@ -4859,7 +4985,11 @@ async fn owner_friend_approve(
         name = nickname.trim().to_string();
     }
     if name.is_empty() {
-        return fail(StatusCode::BAD_REQUEST, "NO_NAME", "申请里没有站名，请改用友链表单手动填写。");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "NO_NAME",
+            "申请里没有站名，请改用友链表单手动填写。",
+        );
     }
     let mut desc = pick("desc");
     if desc.is_empty() {
@@ -4873,7 +5003,9 @@ async fn owner_friend_approve(
         avatar = String::new();
     }
     // 同 URL 去重：静态卡片或已通过条目里已有就不再落库。
-    let existing = crate::site_store::list(pool, "friend").await.unwrap_or_default();
+    let existing = crate::site_store::list(pool, "friend")
+        .await
+        .unwrap_or_default();
     let normalized = url.trim_end_matches('/').to_lowercase();
     let duplicate = existing.iter().any(|entry| {
         entry
@@ -4911,7 +5043,11 @@ async fn owner_friend_approve(
     // GitHub 同步是可选增强：未配置或失败都不阻塞「通过」，页面靠数据库实时展示。
     let mut github_synced = false;
     let mut github_note = String::from("未配置 GitHub，朋友页已实时展示");
-    let branch = if state.cfg.github_branch.is_empty() { "main" } else { state.cfg.github_branch.as_str() };
+    let branch = if state.cfg.github_branch.is_empty() {
+        "main"
+    } else {
+        state.cfg.github_branch.as_str()
+    };
     if let Ok((gh_owner, gh_repo, gh_branch)) = crate::github_publish::repo_from_config(
         &state.cfg.github_token,
         &state.cfg.github_repo,
@@ -4930,7 +5066,9 @@ async fn owner_friend_approve(
             url: &url,
             avatar: &avatar,
         };
-        match crate::github_publish::publish_friend_direct(&state.http, &spec, input, Utc::now()).await {
+        match crate::github_publish::publish_friend_direct(&state.http, &spec, input, Utc::now())
+            .await
+        {
             Ok(_) => {
                 github_synced = true;
                 github_note = format!("已直写 {gh_branch} 分支，无需合并 PR");
@@ -4991,7 +5129,8 @@ fn parse_friend_lines(content: &str) -> (String, String, String, String) {
                     desc = value.clone();
                     true
                 }
-                "url" | "link" | "链接" | "地址" | "网址" | "站点地址" | "网站地址" => {
+                "url" | "link" | "链接" | "地址" | "网址" | "站点地址" | "网站地址" =>
+                {
                     url = value.clone();
                     true
                 }
@@ -5025,7 +5164,9 @@ fn parse_friend_lines(content: &str) -> (String, String, String, String) {
         .filter(|line| line != &name && line != &desc)
         .collect();
     if name.is_empty() && !remaining.is_empty() {
-        remaining.sort_by_key(|line| std::cmp::Reverse(friend_name_score(line) - friend_desc_score(line)));
+        remaining.sort_by_key(|line| {
+            std::cmp::Reverse(friend_name_score(line) - friend_desc_score(line))
+        });
         name = remaining.remove(0);
     }
     if desc.is_empty() && !remaining.is_empty() {
@@ -5054,9 +5195,11 @@ fn split_friend_label(line: &str) -> Option<(String, String)> {
 fn looks_like_avatar(value: &str) -> bool {
     let lower = value.to_lowercase();
     let path = lower.split(['?', '#']).next().unwrap_or("");
-    [".avif", ".gif", ".ico", ".jpg", ".jpeg", ".png", ".svg", ".webp"]
-        .iter()
-        .any(|ext| path.ends_with(ext))
+    [
+        ".avif", ".gif", ".ico", ".jpg", ".jpeg", ".png", ".svg", ".webp",
+    ]
+    .iter()
+    .any(|ext| path.ends_with(ext))
         || ["avatar", "head", "logo", "icon", "favicon", "upload"]
             .iter()
             .any(|word| path.contains(word))
@@ -5068,15 +5211,19 @@ fn friend_name_score(value: &str) -> i32 {
         score -= 3;
     }
     let lower = value.to_lowercase();
-    if ["blog", "博客", "小窝", "小屋", "主页", "站", "site", "log", "space", "空间", "の"]
-        .iter()
-        .any(|word| lower.contains(word))
+    if [
+        "blog", "博客", "小窝", "小屋", "主页", "站", "site", "log", "space", "空间", "の",
+    ]
+    .iter()
+    .any(|word| lower.contains(word))
     {
         score += 3;
     }
-    if ["愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里"]
-        .iter()
-        .any(|word| value.contains(word))
+    if [
+        "愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里",
+    ]
+    .iter()
+    .any(|word| value.contains(word))
     {
         score -= 1;
     }
@@ -5091,9 +5238,11 @@ fn friend_desc_score(value: &str) -> i32 {
     if value.chars().any(|c| "。.!！?？,，；;".contains(c)) {
         score += 2;
     }
-    if ["愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里"]
-        .iter()
-        .any(|word| value.contains(word))
+    if [
+        "愿", "记录", "分享", "生活", "技术", "热爱", "欢迎", "一个", "这里",
+    ]
+    .iter()
+    .any(|word| value.contains(word))
     {
         score += 2;
     }
@@ -5120,14 +5269,26 @@ async fn owner_ai_generate(
     }
     let kind = body.kind.trim();
     if kind != "draft" && kind != "answers" {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_KIND", "kind 只能是 draft 或 answers。");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_KIND",
+            "kind 只能是 draft 或 answers。",
+        );
     }
     let input = body.input.trim();
     if input.is_empty() || input.chars().count() > 4000 {
-        return fail(StatusCode::BAD_REQUEST, "INVALID_INPUT", "请填写素材或问题（4000 字以内）。");
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_INPUT",
+            "请填写素材或问题（4000 字以内）。",
+        );
     }
     if state.cfg.deepseek_api_key.is_empty() {
-        return fail(StatusCode::SERVICE_UNAVAILABLE, "AI_NOT_CONFIGURED", "服务器尚未配置 AI 密钥。");
+        return fail(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "AI_NOT_CONFIGURED",
+            "服务器尚未配置 AI 密钥。",
+        );
     }
     let (system, user, max_tokens) = if kind == "draft" {
         (
@@ -5173,7 +5334,11 @@ async fn owner_ai_generate(
         let sent = match sent {
             Ok(item) => item,
             Err(error) => {
-                return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", &format!("模型请求失败: {error}"));
+                return fail(
+                    StatusCode::BAD_GATEWAY,
+                    "AI_UPSTREAM",
+                    &format!("模型请求失败: {error}"),
+                );
             }
         };
         let status = sent.status();
@@ -5186,7 +5351,11 @@ async fn owner_ai_generate(
             return fail(
                 StatusCode::BAD_GATEWAY,
                 "AI_UPSTREAM",
-                &format!("HTTP {}: {}", status, detail.chars().take(200).collect::<String>()),
+                &format!(
+                    "HTTP {}: {}",
+                    status,
+                    detail.chars().take(200).collect::<String>()
+                ),
             );
         }
         crate::ai_model::mark_failed(&state, &model);
@@ -5195,7 +5364,11 @@ async fn owner_ai_generate(
     let payload: Value = match response.json().await {
         Ok(payload) => payload,
         Err(error) => {
-            return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", &format!("模型响应无法解析: {error}"));
+            return fail(
+                StatusCode::BAD_GATEWAY,
+                "AI_UPSTREAM",
+                &format!("模型响应无法解析: {error}"),
+            );
         }
     };
     let Some(reply) = payload["choices"][0]["message"]["content"]
@@ -5213,11 +5386,16 @@ async fn owner_ai_generate(
             .filter(|text| !text.is_empty())
             .unwrap_or("AI 草稿")
             .to_string();
-        return Json(json!({ "ok": true, "title": title, "body": reply, "model": model })).into_response();
+        return Json(json!({ "ok": true, "title": title, "body": reply, "model": model }))
+            .into_response();
     }
     let answers = parse_candidate_answers(reply);
     if answers.is_empty() {
-        return fail(StatusCode::BAD_GATEWAY, "AI_UPSTREAM", "模型没有返回可用的候选答案。");
+        return fail(
+            StatusCode::BAD_GATEWAY,
+            "AI_UPSTREAM",
+            "模型没有返回可用的候选答案。",
+        );
     }
     Json(json!({ "ok": true, "answers": answers, "model": model })).into_response()
 }
@@ -5247,7 +5425,9 @@ fn parse_candidate_answers(reply: &str) -> Vec<String> {
         .lines()
         .map(|line| {
             line.trim()
-                .trim_start_matches(|c: char| c.is_ascii_digit() || matches!(c, '.' | '、' | ')' | '）' | '-' | '*' | ' '))
+                .trim_start_matches(|c: char| {
+                    c.is_ascii_digit() || matches!(c, '.' | '、' | ')' | '）' | '-' | '*' | ' ')
+                })
                 .trim()
                 .to_string()
         })

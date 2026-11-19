@@ -67,13 +67,7 @@ pub struct AppState {
 impl AppState {
     pub async fn connect(cfg: Config) -> Self {
         let db = if let Some(url) = cfg.database_url.clone() {
-            match db::connect(
-                &url,
-                cfg.timeouts.db_acquire,
-                cfg.timeouts.db_statement,
-            )
-            .await
-            {
+            match db::connect(&url, cfg.timeouts.db_acquire, cfg.timeouts.db_statement).await {
                 Ok(pool) => {
                     match account::ensure_owner(&pool, &cfg.owner_email).await {
                         Ok(account::OwnerSeed::Created) => {

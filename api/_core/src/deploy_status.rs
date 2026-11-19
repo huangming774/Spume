@@ -26,7 +26,11 @@ static CACHE: LazyLock<Mutex<Option<Cached>>> = LazyLock::new(|| Mutex::new(None
 fn cached() -> Option<Value> {
     let guard = CACHE.lock().ok()?;
     let entry = guard.as_ref()?;
-    let ttl = if entry.negative { NEGATIVE_FOR } else { CACHE_FOR };
+    let ttl = if entry.negative {
+        NEGATIVE_FOR
+    } else {
+        CACHE_FOR
+    };
     if entry.fetched_at.elapsed() < ttl {
         Some(entry.body.clone())
     } else {
@@ -36,7 +40,11 @@ fn cached() -> Option<Value> {
 
 fn store(body: Value, negative: bool) {
     if let Ok(mut guard) = CACHE.lock() {
-        *guard = Some(Cached { fetched_at: Instant::now(), body, negative });
+        *guard = Some(Cached {
+            fetched_at: Instant::now(),
+            body,
+            negative,
+        });
     }
 }
 

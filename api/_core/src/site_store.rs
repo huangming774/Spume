@@ -6,14 +6,7 @@ use sqlx::PgPool;
 use thiserror::Error;
 
 const KINDS: [&str; 8] = [
-    "about",
-    "gallery",
-    "moment",
-    "bili",
-    "article",
-    "journal",
-    "project",
-    "friend",
+    "about", "gallery", "moment", "bili", "article", "journal", "project", "friend",
 ];
 
 /// 一条待写入的内容。
@@ -182,7 +175,9 @@ fn checked(entry: NewEntry) -> Result<NewEntry, StoreError> {
         return Err(StoreError::Invalid("正文过长"));
     }
     if !image_url.is_empty() && !public_http_url(image_url) {
-        return Err(StoreError::Invalid("图片地址必须是公开的 http 或 https 地址"));
+        return Err(StoreError::Invalid(
+            "图片地址必须是公开的 http 或 https 地址",
+        ));
     }
     let needs_title = !matches!(kind, "gallery");
     if needs_title && title.is_empty() {
@@ -196,7 +191,11 @@ fn checked(entry: NewEntry) -> Result<NewEntry, StoreError> {
         return Err(StoreError::Invalid("请先把图片上传到 S3"));
     }
     if kind == "bili" {
-        let bvid = entry.extra.get("bvid").and_then(Value::as_str).unwrap_or("");
+        let bvid = entry
+            .extra
+            .get("bvid")
+            .and_then(Value::as_str)
+            .unwrap_or("");
         if !bvid.starts_with("BV")
             || !(6..=16).contains(&bvid.len())
             || !bvid.chars().all(|ch| ch.is_ascii_alphanumeric())
