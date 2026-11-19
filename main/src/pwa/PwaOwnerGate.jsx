@@ -29,8 +29,17 @@ const PwaOwnerGate = ({ children }) => {
     setError("");
     try {
       const result = await authMe();
-      setAuth(result.ok ? result.data : { loggedIn: false });
-      if (!result.ok) setError("Could not confirm the owner session. Try again.");
+      // 只有后端明确说未登录才判登出；5xx/网关错误保留现有会话，避免误拦。
+      if (result.ok && result.data?.loggedIn === false) {
+        setAuth({ loggedIn: false });
+      } else if (result.ok && result.data?.loggedIn) {
+        setAuth(result.data);
+      } else {
+        setAuth((current) =>
+          userHasOwnerAppAccess(current) ? current : { loggedIn: false },
+        );
+        setError("Could not confirm the owner session. Try again.");
+      }
     } catch {
       setAuth((current) =>
         userHasOwnerAppAccess(current) ? current : { loggedIn: false },
