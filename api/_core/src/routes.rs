@@ -1069,7 +1069,11 @@ async fn owner_analytics_save(
         }
     }
     let Some(pool) = state.db.as_ref() else {
-        return fail(StatusCode::SERVICE_UNAVAILABLE, "DB_UNAVAILABLE", "数据库还没有连上");
+        return fail(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "DB_UNAVAILABLE",
+            "数据库还没有连上",
+        );
     };
     if let Err(error) = sqlx::query(
         "INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, now())
