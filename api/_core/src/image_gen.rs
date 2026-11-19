@@ -143,6 +143,8 @@ pub fn dashscope_image(payload: &Value) -> Option<GeneratedImage> {
 }
 
 /// 调用已配置的上游。Cloudflare 优先于 Agnes，Agnes 优先于百炼。
+/// 某个上游临时失败（Provider）时自动降级到下一个已配置上游；
+/// 提示词被内容策略拒绝（PromptRejected）不降级，直接返回让用户改词。
 pub async fn generate(
     http: &reqwest::Client,
     cfg: &Config,
@@ -150,16 +152,36 @@ pub async fn generate(
     size: &str,
 ) -> Result<GeneratedImage, ImageGenError> {
     let size = normalize_size(size);
+    let mut candidates: Vec<&str> = Vec::new();
     if cloudflare_ready(cfg) {
-        return request_cloudflare(http, cfg, prompt, size).await;
+        candidates.push("cloudflare");
     }
     if !cfg.agnes_api_key.is_empty() {
-        return request_agnes(http, cfg, prompt, size).await;
+        candidates.push("agnes");
     }
     if !cfg.dashscope_api_key.is_empty() {
-        return request_dashscope(http, cfg, prompt, size).await;
+        candidates.push("dashscope");
     }
-    Err(ImageGenError::NotConfigured)
+    if candidates.is_empty() {
+        return Err(ImageGenError::NotConfigured);
+    }
+    let mut last_err = ImageGenError::Provider;
+    for provider in candidates {
+        let result = match provider {
+            "cloudflare" => request_cloudflare(http, cfg, prompt, size).await,
+            "agnes" => request_agnes(http, cfg, prompt, size).await,
+            _ => request_dashscope(http, cfg, prompt, size).await,
+        };
+        match result {
+            Ok(image) => return Ok(image),
+            Err(ImageGenError::PromptRejected) => return Err(ImageGenError::PromptRejected),
+            Err(error) => {
+                tracing::warn!(provider, %error, "image provider failed; trying next configured provider");
+                last_err = error;
+            }
+        }
+    }
+    Err(last_err)
 }
 
 async fn request_agnes(
