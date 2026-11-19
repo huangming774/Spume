@@ -654,7 +654,9 @@ body {
   }
 
   .nav-menu-btn {
-    @apply relative flex h-10 w-10 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-black/40 text-blue-50;
+    /* md:hidden 必须写在这里：同层后定义的 flex 会盖掉元素类上的 md:hidden，
+       导致桌面端也显示汉堡按钮。 */
+    @apply relative flex h-10 w-10 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-black/40 text-blue-50 md:hidden;
   }
 
 
