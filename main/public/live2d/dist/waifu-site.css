@@ -13,3 +13,8 @@
     display: none !important;
   }
 }
+/* 管理员后台界面不显示看板娘（控制台挂载时给 body 打标记） */
+body.owner-console-active #waifu,
+body.owner-console-active #waifu-toggle {
+  display: none !important;
+}

@@ -145,6 +145,11 @@ const notificationSourceLabel = (source) => {
 };
 
 const AppConsolePage = () => {
+  // 后台界面不显示看板娘：挂载期间给 body 打标记，离开时还原。
+  useEffect(() => {
+    document.body.classList.add("owner-console-active");
+    return () => document.body.classList.remove("owner-console-active");
+  }, []);
   const [activeScreen, setActiveScreen] = useState("home");
   const [auth, setAuth] = useState(null);
   const [health, setHealth] = useState(null);
