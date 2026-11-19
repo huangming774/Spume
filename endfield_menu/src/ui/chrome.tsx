@@ -39,15 +39,17 @@ export function NetInfo() {
     <div className="net">
       <IconSignal />
       <span>82ms</span>
-      <span>UID: xxxxx</span>
+      <span>UID: 1061280173</span>
     </div>
   );
 }
 
-type SiteProfile = { avatar: string; displayName: string };
+type SiteProfile = { avatar: string; displayName: string; uid: string };
 
 const AVATAR_UPDATED_EVENT = "blog-avatar-updated";
 const AVATAR_REV_KEY = "spume-avatar-rev";
+
+const EMPTY_PROFILE: SiteProfile = { avatar: "", displayName: "", uid: "" };
 
 async function readSiteProfile(): Promise<SiteProfile> {
   try {
@@ -55,19 +57,32 @@ async function readSiteProfile(): Promise<SiteProfile> {
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
-    if (!res.ok) return { avatar: "", displayName: "" };
+    if (!res.ok) return EMPTY_PROFILE;
     const data = await res.json();
     const avatar = typeof data?.avatar === "string" ? data.avatar.trim() : "";
     const displayName = typeof data?.displayName === "string" ? data.displayName.trim() : "";
     const validAvatar = /^https?:\/\//.test(avatar) ? avatar : "";
-    return { avatar: validAvatar, displayName };
+    let uid = "";
+    try {
+      const health = await fetch("/api/v1/health", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (health.ok) {
+        const body = await health.json();
+        uid = typeof body?.uid === "string" ? body.uid.trim() : String(body?.uid ?? "");
+      }
+    } catch {
+      uid = "";
+    }
+    return { avatar: validAvatar, displayName, uid };
   } catch {
-    return { avatar: "", displayName: "" };
+    return EMPTY_PROFILE;
   }
 }
 
 export const Badge = memo(function Badge() {
-  const [profile, setProfile] = useState<SiteProfile>({ avatar: "", displayName: "" });
+  const [profile, setProfile] = useState<SiteProfile>(EMPTY_PROFILE);
   const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
@@ -115,11 +130,11 @@ export const Badge = memo(function Badge() {
           <i className="scan" /><i className="chip" />
         </div>
         <div className="mid">
-          <div className="name">{profile.displayName || "xxxxx"}</div>
+          <div className="name">{profile.displayName || "清沫"}</div>
           <div className="sub">[ X · · · ]</div>
           <div className="lv">60</div>
           <div className="bar" />
-          <div className="uid">UID:xxxxx</div>
+          <div className="uid">{profile.uid ? `UID:${profile.uid}` : "UID:未知"}</div>
         </div>
         <div className="perm">
           <i className="pill" />
