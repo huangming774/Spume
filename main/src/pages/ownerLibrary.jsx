@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { friendCards } from "../data/friendCards";
 import { notifyEntriesChanged, useEntries } from "../lib/siteEntries";
 import {
   deleteOwnerEntry,
@@ -462,5 +463,55 @@ export function ProjectPanel() {
         <RecordList items={items} empty="还没有星空馆项目。" onDelete={remove} busyId={busyId} />
       </div>
     </div>
+  );
+}
+
+export function FriendLibrary() {
+  const { items: stored } = useEntries("friend");
+  const items = stored.map((entry) => ({
+    id: entry.id,
+    label: `${entry.title} · ${entry.extra?.url || ""}`,
+    viewHref: entry.extra?.url || "",
+  }));
+  const [busyId, setBusyId] = useState("");
+  const [error, setError] = useState("");
+
+  const remove = async (item) => {
+    if (!window.confirm(`删除友链「${item.label}」？朋友页会同步移除。`)) return;
+    setBusyId(item.id);
+    setError("");
+    try {
+      await deleteOwnerEntry(item.id, "friend");
+      notifyEntriesChanged();
+    } catch (cause) {
+      setError(cause.message || "友链删除失败");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  return (
+    <section className="owner-panel owner-glass owner-library">
+      <div className="owner-panel-title">
+        <h2>已发布友链</h2>
+      </div>
+      <RecordList items={items} empty="还没有友链。可以在上方发布，或在收件箱一键通过申请。" onDelete={remove} busyId={busyId} />
+      {friendCards.length ? (
+        <>
+          <p className="owner-record-empty">以下旧友链保存在源码里，如需移除请在仓库 friendCards.js 删除：</p>
+          <ul className="owner-record-list">
+            {friendCards.map((card) => (
+              <li key={card.url}>
+                <span>{card.name} · {card.url}</span>
+                <a className="owner-secondary" href={card.url} target="_blank" rel="noreferrer">
+                  查看
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {error ? <p className="owner-record-error">{error}</p> : null}
+    </section>
   );
 }

@@ -25,6 +25,7 @@ import {
   AboutPanel,
   ArticleLibrary,
   BiliPanel,
+  FriendLibrary,
   GalleryLibrary,
   MomentLibrary,
   ProjectPanel,
@@ -2046,6 +2047,7 @@ const AppConsolePage = () => {
                 <p>{friendUrl || "https://www.miku.coffee"}</p>
               </aside>
             </div>
+            <FriendLibrary />
           </section>
 
           <section className={`owner-screen ${activeScreen === "inbox" ? "active" : ""}`}>
