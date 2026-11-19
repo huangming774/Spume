@@ -43,6 +43,8 @@ pub struct Config {
     pub vector_collection: String,
     pub qstash_signing_key: String,
     pub qstash_next_signing_key: String,
+    /// QStash 发布令牌（入队用）。空则异步任务回退进程内 spawn。
+    pub qstash_token: String,
     pub public_origin: String,
     pub allow_unsigned_internal: bool,
     pub github_token: String,
@@ -150,6 +152,7 @@ impl Config {
             vector_collection: env("ZILLIZ_COLLECTION", "taozhiyy_search"),
             qstash_signing_key: env("QSTASH_CURRENT_SIGNING_KEY", ""),
             qstash_next_signing_key: env("QSTASH_NEXT_SIGNING_KEY", ""),
+            qstash_token: env("QSTASH_TOKEN", ""),
             public_origin: env("ACG_PUBLIC_ORIGIN", "https://www.miku.coffee")
                 .trim_end_matches('/')
                 .to_string(),
@@ -210,6 +213,7 @@ impl Config {
             vector_collection: "taozhiyy_search".into(),
             qstash_signing_key: String::new(),
             qstash_next_signing_key: String::new(),
+            qstash_token: String::new(),
             public_origin: "https://www.miku.coffee".into(),
             allow_unsigned_internal: false,
             github_token: String::new(),

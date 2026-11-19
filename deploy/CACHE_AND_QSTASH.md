@@ -60,3 +60,22 @@ serverless 不能常驻 cron。QStash 按 cron 签名回调内部接口，代替
 
 ### 安全
 内部接口仍走 `qstash.rs` 签名校验（含目标 URL、时间窗、body 哈希）；未配签名 key 时内部接口默认拒绝（除 `ACG_ALLOW_UNSIGNED_INTERNAL=true` 的本地开发模式）。
+
+## 三、第二期：发布异步化 + Redis 新能力
+
+### 发布异步化（3 件）
+发布先落库立即返回，以下三件异步做，配了 `QSTASH_TOKEN` 走 QStash（重试 3 次），否则进程内 spawn 尽力交付：
+1. **GitHub 写回**：`/api/internal/publish`。文章写 md、友链直写主分支、碎语/相册写数据文件。
+2. **向量索引重建**：`/api/internal/reindex`（发布后触发，另有每日定时）。
+3. **邮件通知**：`/api/internal/mail`。留言/友链申请/站长回复的邮件改异步发送。
+
+启用：Vercel 加 `QSTASH_TOKEN`（与签名 key 同一 QStash 项目）。不配时行为回退同步/spawn，不丢功能。
+
+### Redis 新能力
+| 能力 | key | 说明 |
+| --- | --- | --- |
+| 浏览计数/热门 | `views:{kind}:{ISO周}` | 文章页上报 `POST /api/client/view`、壁纸抽取自动 ZINCRBY；`GET /api/client/hot?kind=article` 出周榜 Top6，首页「本周热门」条消费。不写 DB。 |
+| 配额计数 | `quota:chat:{key}:{date}`、`quota:image:user:{id}:{date}` | 聊天/生图每日配额改 INCR+TTL(26h)，5 秒间隔用 `pace:*` SETNX；失败 DECR 回退。未配 Redis 回退 DB 原子 UPSERT。 |
+| 短窗去重 | `dedupe:gb:{ip}:{content}` | 留言提交 SETNX 60s 防连点；未配/出错回退 DB 去重查询。 |
+
+注意：配额与去重的 Redis 路径以 Redis 为权威计数；从「未配」切到「已配」当天计数从 0 起（一次性宽松），次日自然对齐。

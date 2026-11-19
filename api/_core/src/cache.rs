@@ -98,6 +98,106 @@ pub async fn del(state: &AppState, keys: &[&str]) {
     let _ = pipeline(state, vec![command]).await;
 }
 
+/// 原子自增；首增时设 TTL。返回自增后的值；未配置/出错返回 None。
+pub async fn incr(state: &AppState, key: &str, ttl: Duration) -> Option<i64> {
+    let rows = pipeline(
+        state,
+        vec![
+            vec!["INCR".into(), key.to_string()],
+            vec![
+                "EXPIRE".into(),
+                key.to_string(),
+                ttl.as_secs().max(1).to_string(),
+                "NX".into(),
+            ],
+        ],
+    )
+    .await?;
+    rows.first()?.as_i64()
+}
+
+/// 原子自减（不低于 0 由调用方语义保证，这里只做 DECR）。
+pub async fn decr(state: &AppState, key: &str) -> Option<i64> {
+    let rows = pipeline(state, vec![vec!["DECR".into(), key.to_string()]]).await?;
+    rows.first()?.as_i64()
+}
+
+/// 读计数；未配置/不存在返回 None。
+pub async fn get_int(state: &AppState, key: &str) -> Option<i64> {
+    let rows = pipeline(state, vec![vec!["GET".into(), key.to_string()]]).await?;
+    let raw = rows.first()?.as_str()?;
+    raw.parse::<i64>().ok()
+}
+
+/// SET key 1 NX EX ttl：键已存在返回 Some(false)（重复），新建返回 Some(true)。
+pub async fn set_nx(state: &AppState, key: &str, ttl: Duration) -> Option<bool> {
+    let rows = pipeline(
+        state,
+        vec![vec![
+            "SET".into(),
+            key.to_string(),
+            "1".into(),
+            "NX".into(),
+            "EX".into(),
+            ttl.as_secs().max(1).to_string(),
+        ]],
+    )
+    .await?;
+    Some(rows.first()?.as_str() == Some("OK"))
+}
+
+/// 有序集合加分（浏览计数），member 先清洗。
+pub async fn zincrby(state: &AppState, key: &str, member: &str, by: f64) {
+    let _ = pipeline(
+        state,
+        vec![vec![
+            "ZINCRBY".into(),
+            key.to_string(),
+            by.to_string(),
+            sanitize(member),
+        ]],
+    )
+    .await;
+}
+
+/// 取周榜键：ISO 周（东八区），如 views:article:2026-W47。
+pub fn week_key(prefix: &str) -> String {
+    let now = chrono::Utc::now() + chrono::Duration::hours(8);
+    format!("{prefix}:{}", now.format("%G-W%V"))
+}
+
+/// 周榜 Top N，返回 (member, score)；未配置/空返回空。
+pub async fn ztop(state: &AppState, key: &str, n: usize) -> Vec<(String, f64)> {
+    let Some(rows) = pipeline(
+        state,
+        vec![vec![
+            "ZREVRANGE".into(),
+            key.to_string(),
+            "0".into(),
+            n.saturating_sub(1).to_string(),
+            "WITHSCORES".into(),
+        ]],
+    )
+    .await
+    else {
+        return Vec::new();
+    };
+    let Some(arr) = rows.first().and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut iter = arr.iter();
+    while let (Some(member), Some(score)) = (iter.next(), iter.next()) {
+        if let (Some(m), Some(s)) = (
+            member.as_str(),
+            score.as_str().and_then(|s| s.parse::<f64>().ok()),
+        ) {
+            out.push((m.to_string(), s));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

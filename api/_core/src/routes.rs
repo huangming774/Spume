@@ -142,6 +142,11 @@ pub fn router(state: AppState) -> Router {
         .route("/api/internal/index-content", post(index_site))
         .route("/api/internal/refresh-ai-model", post(refresh_ai_model))
         .route("/api/internal/jobs/image/{id}", post(restock_image))
+        .route("/api/internal/publish", post(internal_publish))
+        .route("/api/internal/mail", post(internal_mail))
+        .route("/api/internal/reindex", post(internal_reindex))
+        .route("/api/client/view", post(client_view))
+        .route("/api/client/hot", get(client_hot))
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .layer(axum::middleware::from_fn(inject_remote_ip))
         .with_state(state);
@@ -1162,15 +1167,29 @@ async fn guestbook_create(
     {
         return *response;
     }
-    if let Err(response) = guestbook_duplicate(
-        pool,
-        user.as_ref().map(|item| item.id),
-        &ip_hash,
-        &content_hash,
-    )
-    .await
-    {
-        return *response;
+    // Redis SETNX 60s 防连点，比查库便宜；未配置/出错回退 DB 去重。
+    let dedupe_key = format!("dedupe:gb:{ip_hash}:{content_hash}");
+    match crate::cache::set_nx(&state, &dedupe_key, Duration::from_secs(60)).await {
+        Some(false) => {
+            return fail(
+                StatusCode::TOO_MANY_REQUESTS,
+                "RATE_LIMITED",
+                "相同内容刚刚提交过，请稍后再试。",
+            );
+        }
+        Some(true) => {}
+        None => {
+            if let Err(response) = guestbook_duplicate(
+                pool,
+                user.as_ref().map(|item| item.id),
+                &ip_hash,
+                &content_hash,
+            )
+            .await
+            {
+                return *response;
+            }
+        }
     }
     let region = match crate::guestbook::lookup_region(Some(pool), &state.http, &ip).await {
         Ok(region) => region,
@@ -1233,21 +1252,21 @@ async fn guestbook_create(
     let nickname = composed.nickname;
     // Go 用 RFC3339 秒精度、Z 结尾（guestbook_messages.go:422）。
     let created_at = created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-    let notice = crate::mail::GuestbookNotice {
-        channel: &channel,
-        nickname: &nickname,
-        content,
-        created_at: &created_at,
-        reply: parent_id > 0,
-    };
-    if let Err(error) = crate::mail::notify_owner(&state.cfg, &notice).await {
-        tracing::warn!(%error, "guestbook owner notification failed");
-    }
-    if admin && parent_id > 0 {
-        if let Err(error) = crate::mail::notify_reply(&state.cfg, pool, parent_id, &notice).await {
-            tracing::warn!(%error, "guestbook reply notification failed");
-        }
-    }
+    let mail_payload = json!({
+        "channel": channel,
+        "nickname": nickname,
+        "content": content,
+        "createdAt": created_at,
+        "reply": parent_id > 0,
+        "adminReply": admin && parent_id > 0,
+        "parentId": parent_id,
+    });
+    let mail_state = state.clone();
+    let mail_payload2 = mail_payload.clone();
+    enqueue_or_spawn(&state, "/api/internal/mail", mail_payload, async move {
+        run_mail_job(&mail_state, &mail_payload2).await;
+    })
+    .await;
     if let Err(response) = note_audit(
         &state,
         &headers,
@@ -1618,6 +1637,61 @@ fn wants_api_wallpaper(source: Option<&str>, api_only: Option<&str>) -> bool {
     source == Some("api") || api_only == Some("1")
 }
 
+#[derive(Deserialize)]
+struct ViewBody {
+    kind: String,
+    id: String,
+}
+
+/// 浏览上报：ZINCRBY 周榜，不写 DB。未配 Redis 时静默 no-op。
+async fn client_view(State(state): State<AppState>, AppJson(body): AppJson<ViewBody>) -> Response {
+    let kind = match body.kind.as_str() {
+        "article" | "journal" | "wallpaper" => body.kind.as_str(),
+        _ => return fail(StatusCode::BAD_REQUEST, "INVALID_KIND", "浏览类型无效。"),
+    };
+    let id = body.id.trim();
+    if id.is_empty() || id.len() > 64 {
+        return fail(StatusCode::BAD_REQUEST, "INVALID_ID", "浏览 ID 无效。");
+    }
+    let key = crate::cache::week_key(&format!("views:{kind}"));
+    crate::cache::zincrby(&state, &key, id, 1.0).await;
+    Json(json!({"ok": true})).into_response()
+}
+
+#[derive(Deserialize)]
+struct HotQuery {
+    kind: Option<String>,
+}
+
+/// 本周热门：周榜 Top6 关联标题/封面。未配 Redis 时 configured=false。
+async fn client_hot(State(state): State<AppState>, Query(query): Query<HotQuery>) -> Response {
+    let kind = match query.kind.as_deref() {
+        Some("journal") => "journal",
+        _ => "article",
+    };
+    if !state.cfg.redis_ready() {
+        return Json(json!({"configured": false, "items": []})).into_response();
+    }
+    let key = crate::cache::week_key(&format!("views:{kind}"));
+    let top = crate::cache::ztop(&state, &key, 6).await;
+    let mut items = Vec::new();
+    if let Some(pool) = state.db.as_ref() {
+        if let Ok(entries) = crate::site_store::list(pool, kind).await {
+            for (id, views) in top {
+                if let Some(entry) = entries.iter().find(|e| e.id.to_string() == id) {
+                    items.push(json!({
+                        "id": entry.id,
+                        "title": entry.title,
+                        "views": views as i64,
+                        "url": if kind == "journal" { format!("/build/post/{}", entry.id) } else { format!("/blog/{}", entry.id) },
+                    }));
+                }
+            }
+        }
+    }
+    Json(json!({"configured": true, "items": items})).into_response()
+}
+
 async fn wallpaper_draw(
     State(state): State<AppState>,
     Query(query): Query<WallpaperQuery>,
@@ -1700,6 +1774,8 @@ async fn wallpaper_draw(
         .into_response();
     };
     let item = json!({"id": id, "url": url, "previewUrl": preview, "source": source, "author": author, "sourceUrl": source_url, "licenseNote": license, "kind": kind, "status": "active", "addedAt": added.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)});
+    let view_key = crate::cache::week_key("views:wallpaper");
+    crate::cache::zincrby(&state, &view_key, &id, 1.0).await;
     Json(if api_only {
         json!({"item": item, "apiOnly": true})
     } else {
@@ -2268,6 +2344,14 @@ async fn quota_of(
     user: &Option<SessionUser>,
 ) -> Result<(i64, i64), Box<Response>> {
     let limit = chat_daily_limit(user);
+    let key = format!(
+        "quota:chat:{}:{}",
+        crate::cache::sanitize(&chat_quota_key(user, headers)),
+        quota_date()
+    );
+    if let Some(used) = crate::cache::get_int(state, &key).await {
+        return Ok((limit, used.max(0)));
+    }
     let Some(pool) = state.db.as_ref() else {
         return Ok((limit, 0));
     };
@@ -2289,6 +2373,47 @@ async fn claim_chat_turn(
     user: &Option<SessionUser>,
     limit: i64,
 ) -> Result<(), Box<Response>> {
+    let qkey = format!(
+        "quota:chat:{}:{}",
+        crate::cache::sanitize(&chat_quota_key(user, headers)),
+        quota_date()
+    );
+    if state.cfg.redis_ready() {
+        let pace_key = format!(
+            "pace:chat:{}",
+            crate::cache::sanitize(&chat_quota_key(user, headers))
+        );
+        match crate::cache::set_nx(state, &pace_key, Duration::from_secs(5)).await {
+            Some(false) => {
+                record_chat(state, user, ChatStat::RateDenied).await?;
+                let used = crate::cache::get_int(state, &qkey).await.unwrap_or(0);
+                let mut quota = quota_json(state, user, limit, used).await;
+                quota["error"] = json!("RATE_LIMIT_EXCEEDED");
+                quota["message"] = json!("提问太快啦，请稍等 5 秒再试～");
+                return Err(Box::new(
+                    (StatusCode::TOO_MANY_REQUESTS, Json(quota)).into_response(),
+                ));
+            }
+            Some(true) => {
+                if let Some(used) =
+                    crate::cache::incr(state, &qkey, Duration::from_secs(26 * 3600)).await
+                {
+                    if limit >= 0 && used > limit {
+                        crate::cache::decr(state, &qkey).await;
+                        record_chat(state, user, ChatStat::QuotaDenied).await?;
+                        let mut quota = quota_json(state, user, limit, used - 1).await;
+                        quota["error"] = json!("DAILY_LIMIT_EXCEEDED");
+                        quota["message"] = json!("今日提问次数用完啦，明天再来问我吧～");
+                        return Err(Box::new(
+                            (StatusCode::TOO_MANY_REQUESTS, Json(quota)).into_response(),
+                        ));
+                    }
+                    return Ok(());
+                }
+            }
+            None => {}
+        }
+    }
     let Some(pool) = state.db.as_ref() else {
         return Ok(());
     };
@@ -2349,6 +2474,14 @@ fn quota_date() -> chrono::NaiveDate {
 
 /// 模型失败后退回预占的次数。
 async fn release_chat_turn(state: &AppState, headers: &HeaderMap, user: &Option<SessionUser>) {
+    let qkey = format!(
+        "quota:chat:{}:{}",
+        crate::cache::sanitize(&chat_quota_key(user, headers)),
+        quota_date()
+    );
+    if crate::cache::decr(state, &qkey).await.is_some() {
+        return;
+    }
     let Some(pool) = state.db.as_ref() else {
         return;
     };
@@ -2667,6 +2800,10 @@ async fn image_quota_of(
     let Some(user) = user else {
         return Ok((0, 0));
     };
+    let key = format!("quota:image:user:{}:{}", user.id, quota_date());
+    if let Some(used) = crate::cache::get_int(state, &key).await {
+        return Ok((LIMIT, used.max(0)));
+    }
     let Some(pool) = state.db.as_ref() else {
         return Ok((LIMIT, 0));
     };
@@ -2688,6 +2825,39 @@ async fn claim_image_quota(
     user: &SessionUser,
     limit: i64,
 ) -> Result<(), Box<Response>> {
+    let qkey = format!("quota:image:user:{}:{}", user.id, quota_date());
+    if state.cfg.redis_ready() {
+        let pace_key = format!("pace:image:user:{}", user.id);
+        match crate::cache::set_nx(state, &pace_key, Duration::from_secs(5)).await {
+            Some(false) => {
+                let used = crate::cache::get_int(state, &qkey).await.unwrap_or(0);
+                let mut body = image_quota_json(state, &Some(user.clone()), limit, used);
+                body["error"] = json!("RATE_LIMIT_EXCEEDED");
+                body["message"] = json!("提问太快啦，请稍等 5 秒再试～");
+                return Err(Box::new(
+                    (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response(),
+                ));
+            }
+            Some(true) => {
+                if let Some(used) =
+                    crate::cache::incr(state, &qkey, Duration::from_secs(26 * 3600)).await
+                {
+                    if limit >= 0 && used > limit {
+                        crate::cache::decr(state, &qkey).await;
+                        let mut body =
+                            image_quota_json(state, &Some(user.clone()), limit, used - 1);
+                        body["error"] = json!("DAILY_LIMIT_EXCEEDED");
+                        body["message"] = json!("今日生图次数用完啦，明天再来画吧～");
+                        return Err(Box::new(
+                            (StatusCode::TOO_MANY_REQUESTS, Json(body)).into_response(),
+                        ));
+                    }
+                    return Ok(());
+                }
+            }
+            None => {}
+        }
+    }
     let Some(pool) = state.db.as_ref() else {
         return Ok(());
     };
@@ -2741,6 +2911,10 @@ async fn claim_image_quota(
 
 /// 生成失败后退回预占的额度。
 async fn release_image_quota(state: &AppState, user: &SessionUser) {
+    let qkey = format!("quota:image:user:{}:{}", user.id, quota_date());
+    if crate::cache::decr(state, &qkey).await.is_some() {
+        return;
+    }
     let Some(pool) = state.db.as_ref() else {
         return;
     };
@@ -3360,6 +3534,212 @@ async fn invalidate_content_caches(state: &AppState, kind: &str) {
     crate::cache::del(state, &[kind_key.as_str(), "content:recent"]).await;
 }
 
+/// 发布异步化：配了 QStash 就入队（带重试），否则进程内 spawn 尽力交付。
+/// 两条路径都不阻塞发布响应；serverless 上 spawn 可能被冻结回收，QStash 才是可靠路径。
+async fn enqueue_or_spawn(
+    state: &AppState,
+    path: &str,
+    payload: Value,
+    work: impl std::future::Future<Output = ()> + Send + 'static,
+) {
+    match crate::qstash::enqueue(
+        &state.http,
+        &state.cfg.qstash_token,
+        &state.cfg.public_origin,
+        path,
+        &payload,
+    )
+    .await
+    {
+        Ok(()) => {}
+        Err(error) => {
+            tracing::warn!(%error, path, "qstash enqueue failed; falling back to in-process spawn");
+            tokio::spawn(work);
+        }
+    }
+}
+
+fn owned_repo(state: &AppState) -> Option<(String, String, String)> {
+    let branch = if state.cfg.github_branch.is_empty() {
+        "main"
+    } else {
+        state.cfg.github_branch.as_str()
+    };
+    crate::github_publish::repo_from_config(&state.cfg.github_token, &state.cfg.github_repo, branch)
+        .ok()
+        .map(|(o, r, b)| (o.to_string(), r.to_string(), b.to_string()))
+}
+
+async fn run_publish_job(state: &AppState, payload: &Value) {
+    let Some((owner, repo, branch)) = owned_repo(state) else {
+        tracing::warn!("publish job skipped: github not configured");
+        return;
+    };
+    let spec = crate::github_publish::RepoSpec {
+        api_base: "https://api.github.com",
+        token: &state.cfg.github_token,
+        owner: &owner,
+        repo: &repo,
+        branch: &branch,
+    };
+    let kind = payload["kind"].as_str().unwrap_or("");
+    let get = |key: &str| payload[key].as_str().unwrap_or("");
+    let result = match kind {
+        "article" => crate::github_publish::publish_article(
+            &state.http,
+            &spec,
+            get("title"),
+            get("markdown"),
+            get("path"),
+            Utc::now(),
+        )
+        .await
+        .map(|_| ()),
+        "friend" => crate::github_publish::publish_friend_direct(
+            &state.http,
+            &spec,
+            crate::js_source::FriendInput {
+                name: get("name"),
+                desc: get("desc"),
+                url: get("url"),
+                avatar: get("avatar"),
+            },
+            Utc::now(),
+        )
+        .await
+        .map(|_| ()),
+        "moment" => crate::github_publish::publish_moment(
+            &state.http,
+            &spec,
+            crate::js_source::MomentInput {
+                year: get("year"),
+                date: get("date"),
+                kind: get("type"),
+                category: get("category"),
+                content: get("content"),
+            },
+            Utc::now(),
+        )
+        .await
+        .map(|_| ()),
+        "gallery" => crate::github_publish::publish_gallery(
+            &state.http,
+            &spec,
+            crate::js_source::GalleryInput {
+                album_id: get("albumId"),
+                album_title: get("albumTitle"),
+                image_url: get("imageUrl"),
+            },
+            Utc::now(),
+        )
+        .await
+        .map(|_| ()),
+        _ => {
+            tracing::warn!(kind, "unknown publish job kind");
+            return;
+        }
+    };
+    if let Err(error) = result {
+        tracing::warn!(%error, kind, "publish write-back failed");
+    }
+}
+
+async fn internal_publish(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+        return *response;
+    }
+    let Ok(payload) = serde_json::from_slice::<Value>(&body) else {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_JSON",
+            "任务内容格式不正确。",
+        );
+    };
+    run_publish_job(&state, &payload).await;
+    Json(json!({"ok": true})).into_response()
+}
+
+async fn run_mail_job(state: &AppState, payload: &Value) {
+    let get = |key: &str| payload[key].as_str().unwrap_or("");
+    let notice = crate::mail::GuestbookNotice {
+        channel: get("channel"),
+        nickname: get("nickname"),
+        content: get("content"),
+        created_at: get("createdAt"),
+        reply: payload["reply"].as_bool().unwrap_or(false),
+    };
+    if let Err(error) = crate::mail::notify_owner(&state.cfg, &notice).await {
+        tracing::warn!(%error, "async owner notification failed");
+    }
+    let parent_id = payload["parentId"].as_i64().unwrap_or(0);
+    if payload["adminReply"].as_bool().unwrap_or(false) && parent_id > 0 {
+        if let Some(pool) = state.db.as_ref() {
+            if let Err(error) =
+                crate::mail::notify_reply(&state.cfg, pool, parent_id, &notice).await
+            {
+                tracing::warn!(%error, "async reply notification failed");
+            }
+        }
+    }
+}
+
+async fn internal_mail(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+        return *response;
+    }
+    let Ok(payload) = serde_json::from_slice::<Value>(&body) else {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_JSON",
+            "任务内容格式不正确。",
+        );
+    };
+    run_mail_job(&state, &payload).await;
+    Json(json!({"ok": true})).into_response()
+}
+
+async fn internal_reindex(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+        return *response;
+    }
+    match crate::jobs::index_content(&state).await {
+        Ok(count) => Json(json!({"ok": true, "indexed": count})).into_response(),
+        Err(error) => fail(StatusCode::BAD_GATEWAY, "INDEX_FAILED", &error.to_string()),
+    }
+}
+
+/// 发布后的异步事：GitHub 写回 + 向量索引重建（邮件在留言侧单独入队）。
+async fn dispatch_publish_extras(state: &AppState, payload: Value) {
+    let state2 = state.clone();
+    let payload2 = payload.clone();
+    enqueue_or_spawn(state, "/api/internal/publish", payload, async move {
+        run_publish_job(&state2, &payload2).await;
+    })
+    .await;
+    let state3 = state.clone();
+    enqueue_or_spawn(state, "/api/internal/reindex", json!({}), async move {
+        if let Err(error) = crate::jobs::index_content(&state3).await {
+            tracing::warn!(%error, "async reindex failed");
+        }
+    })
+    .await;
+}
+
 async fn save_entry(
     state: &AppState,
     headers: &HeaderMap,
@@ -3519,7 +3899,7 @@ async fn owner_publish(
     let cover = body.get("coverUrl").and_then(Value::as_str).unwrap_or("");
     let draft_id = body.get("draftId").and_then(Value::as_i64).unwrap_or(0);
     let now = Utc::now();
-    if let Err(error) = crate::post_markdown::build_article(
+    let article = match crate::post_markdown::build_article(
         crate::post_markdown::ArticleInput {
             title,
             body: markdown_body,
@@ -3527,17 +3907,20 @@ async fn owner_publish(
         },
         now,
     ) {
-        let message = error.to_string();
-        let code = if message.starts_with("发布标题") {
-            "INVALID_TITLE"
-        } else if message.starts_with("发布正文") {
-            "INVALID_BODY"
-        } else {
-            "INVALID_PUBLISH"
-        };
-        return fail(StatusCode::BAD_REQUEST, code, &message);
-    }
-    save_entry(
+        Ok(article) => article,
+        Err(error) => {
+            let message = error.to_string();
+            let code = if message.starts_with("发布标题") {
+                "INVALID_TITLE"
+            } else if message.starts_with("发布正文") {
+                "INVALID_BODY"
+            } else {
+                "INVALID_PUBLISH"
+            };
+            return fail(StatusCode::BAD_REQUEST, code, &message);
+        }
+    };
+    let response = save_entry(
         &state,
         &headers,
         &owner,
@@ -3552,7 +3935,15 @@ async fn owner_publish(
         },
         draft_id,
     )
-    .await
+    .await;
+    if response.status().is_success() {
+        dispatch_publish_extras(
+            &state,
+            json!({"kind": "article", "title": title, "markdown": article.markdown, "path": article.path}),
+        )
+        .await;
+    }
+    response
 }
 
 async fn mark_draft_published(state: &AppState, draft_id: i64) -> Result<(), Box<Response>> {
@@ -4129,7 +4520,12 @@ async fn owner_gallery(
     } else {
         body.album_title.clone()
     };
-    save_entry(
+    let (album_id, album_title, image_url) = (
+        body.album_id.clone(),
+        body.album_title.clone(),
+        body.image_url.clone(),
+    );
+    let response = save_entry(
         &state,
         &headers,
         &owner,
@@ -4140,11 +4536,19 @@ async fn owner_gallery(
             title,
             body: String::new(),
             image_url: body.image_url,
-            extra: json!({"albumId": body.album_id, "albumTitle": body.album_title}),
+            extra: json!({"albumId": album_id, "albumTitle": album_title}),
         },
         0,
     )
-    .await
+    .await;
+    if response.status().is_success() {
+        dispatch_publish_extras(
+            &state,
+            json!({"kind": "gallery", "albumId": album_id, "albumTitle": album_title, "imageUrl": image_url}),
+        )
+        .await;
+    }
+    response
 }
 async fn owner_friends(
     State(state): State<AppState>,
@@ -4155,75 +4559,37 @@ async fn owner_friends(
         Ok(user) => user,
         Err(response) => return *response,
     };
-    let spec = match publish_spec(&state) {
-        Ok(spec) => spec,
-        Err(response) => {
-            return publish_not_configured(
-                &state,
-                &headers,
-                owner.id,
-                "owner.friend_publish",
-                crate::github_publish::FRIEND_CARDS_PATH,
-                response,
-            )
-            .await
-        }
-    };
-    let input = crate::js_source::FriendInput {
-        name: &body.name,
-        desc: &body.desc,
-        url: &body.url,
-        avatar: &body.avatar,
-    };
-    match crate::github_publish::publish_friend(&state.http, &spec, input, Utc::now()).await {
-        Ok(item) => {
-            if let Err(response) = note_audit(
-                &state,
-                &headers,
-                AuditNote {
-                    event: "owner.friend_publish",
-                    outcome: "success",
-                    actor: owner.id,
-                    target_type: "owner_publish",
-                    target_id: &item.path,
-                    detail: "published",
-                },
-            )
-            .await
-            {
-                return *response;
-            }
-            Json(owner_payload(&owner, json!({
-            "name": item.name,
-            "url": item.url,
-            "path": item.path,
-            "commitSha": item.commit_sha,
-            "changed": item.changed,
-            "branch": item.branch,
-            "commitMessage": item.commit_message,
-            "pullRequestURL": item.pull_request_url,
-            "pullRequestNumber": item.pull_request_number,
-            "repoURL": format!("https://github.com/{}/{}/blob/{}/{}", spec.owner, spec.repo, item.branch, item.path)
-        }))).into_response()
-        }
-        Err(error) => {
-            publish_error(
-                &state,
-                &headers,
-                PublishFailure {
-                    actor: owner.id,
-                    event: "owner.friend_publish",
-                    target: crate::github_publish::FRIEND_CARDS_PATH,
-                    invalid_code: "INVALID_FRIEND_PUBLISH",
-                    github_code: "FRIEND_PUBLISH_FAILED",
-                    internal_status: StatusCode::BAD_REQUEST,
-                    internal_code: "INVALID_FRIEND_PUBLISH",
-                },
-                error,
-            )
-            .await
-        }
+    if !public_http_url(body.url.trim()) {
+        return fail(
+            StatusCode::BAD_REQUEST,
+            "INVALID_FRIEND_PUBLISH",
+            "友链 URL 必须是公开的 http 或 https 地址。",
+        );
     }
+    let response = save_entry(
+        &state,
+        &headers,
+        &owner,
+        "owner.friend_publish",
+        "INVALID_FRIEND_PUBLISH",
+        crate::site_store::NewEntry {
+            kind: "friend".into(),
+            title: body.name.clone(),
+            body: body.desc.clone(),
+            image_url: body.avatar.clone(),
+            extra: json!({"url": body.url, "desc": body.desc}),
+        },
+        0,
+    )
+    .await;
+    if response.status().is_success() {
+        dispatch_publish_extras(
+            &state,
+            json!({"kind": "friend", "name": body.name, "desc": body.desc, "url": body.url, "avatar": body.avatar}),
+        )
+        .await;
+    }
+    response
 }
 
 async fn owner_moments(
@@ -4255,7 +4621,14 @@ async fn owner_moments(
     } else {
         body.date.clone()
     };
-    save_entry(
+    let (m_year, m_date, m_kind, m_category, m_content) = (
+        year.clone(),
+        date.clone(),
+        kind.clone(),
+        body.category.clone(),
+        body.content.clone(),
+    );
+    let response = save_entry(
         &state,
         &headers,
         &owner,
@@ -4270,7 +4643,15 @@ async fn owner_moments(
         },
         0,
     )
-    .await
+    .await;
+    if response.status().is_success() {
+        dispatch_publish_extras(
+            &state,
+            json!({"kind": "moment", "year": m_year, "date": m_date, "type": m_kind, "category": m_category, "content": m_content}),
+        )
+        .await;
+    }
+    response
 }
 async fn fixed_answers(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if require_owner(&state, &headers).await.is_err() {

@@ -70,6 +70,22 @@ export function BlogPostPage() {
   }, [post]);
 
   useEffect(() => {
+    if (!post?.id) return;
+    const marker = `viewed:article:${post.id}`;
+    try {
+      if (sessionStorage.getItem(marker)) return;
+      sessionStorage.setItem(marker, "1");
+    } catch {
+      /* 存储不可用时不去重 */
+    }
+    fetch("/api/client/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "article", id: String(post.id) }),
+    }).catch(() => {});
+  }, [post]);
+
+  useEffect(() => {
     articleRef.current?.querySelectorAll("pre code").forEach((block) => {
       hljs.highlightElement(block);
     });

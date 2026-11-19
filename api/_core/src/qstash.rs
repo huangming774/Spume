@@ -166,3 +166,35 @@ fn constant_eq(left: &[u8], right: &[u8]) -> bool {
     }
     diff == 0
 }
+
+/// 把任务入队到 QStash，回调目标为 `{public_origin}{path}`，失败重试 3 次。
+/// 未配置 token / origin 或请求失败时返回 Err，调用方回退进程内 spawn。
+pub async fn enqueue(
+    http: &reqwest::Client,
+    token: &str,
+    public_origin: &str,
+    path: &str,
+    payload: &serde_json::Value,
+) -> Result<(), String> {
+    if token.is_empty() {
+        return Err("qstash token not configured".into());
+    }
+    let origin = public_origin.trim_end_matches('/');
+    if origin.is_empty() {
+        return Err("public origin not configured".into());
+    }
+    let url = format!("https://qstash.upstash.io/v2/publish/{origin}{path}");
+    let response = http
+        .post(&url)
+        .bearer_auth(token)
+        .header("Upstash-Retries", "3")
+        .timeout(std::time::Duration::from_secs(5))
+        .json(payload)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("qstash publish http {}", response.status()));
+    }
+    Ok(())
+}
