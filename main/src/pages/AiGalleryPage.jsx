@@ -35,7 +35,40 @@ const AiGalleryPage = () => {
   const [reachedEnd, setReachedEnd] = useState(false);
   const [error, setError] = useState(null);
   const [active, setActive] = useState(null); // selected item for modal
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(null); // null = 未搜索，走时间序 feed
+  const [searching, setSearching] = useState(false);
   const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults(null);
+      setSearching(false);
+      return undefined;
+    }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      let cancelled = false;
+      fetch(`/api/client/image-search?q=${encodeURIComponent(q)}`, {
+        headers: { Accept: "application/json" },
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!cancelled) setResults(data?.items || []);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const fetchPage = useCallback(async (before) => {
     const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
@@ -112,10 +145,10 @@ const AiGalleryPage = () => {
     };
   }, [active]);
 
-  const tiles = useMemo(
-    () => items.map((it, i) => ({ ...it, _span: tileSpan(i) })),
-    [items]
-  );
+  const tiles = useMemo(() => {
+    const source = results ?? items;
+    return source.map((it, i) => ({ ...it, _span: tileSpan(i) }));
+  }, [items, results]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#fef6f1] pt-24 text-[#241322]">
@@ -143,6 +176,29 @@ const AiGalleryPage = () => {
             去工坊生图
           </Link>
         </div>
+        <div className="mt-6 flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="按描述搜图，如「猫 星空 水彩」"
+            aria-label="按描述搜索生成图"
+            className="w-full max-w-xl rounded-full border border-[#e8cfc0] bg-white/70 px-5 py-3 text-sm text-[#241322] outline-none backdrop-blur-md transition focus:border-[#ff8fab]"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="rounded-full border border-[#e8cfc0] bg-white/70 px-4 py-3 text-xs font-bold text-[#5f4b52]"
+            >
+              清除
+            </button>
+          )}
+        </div>
+        {results !== null && (
+          <p className="mt-3 font-general text-xs uppercase tracking-[0.3em] text-[#b76e79]">
+            {searching ? "Searching …" : `${results.length} results`}
+          </p>
+        )}
       </header>
 
       <section className="container mx-auto px-5 pb-24 md:px-10">
@@ -153,7 +209,14 @@ const AiGalleryPage = () => {
           </div>
         )}
 
-        {!error && !loading && items.length === 0 && (
+        {results !== null && !searching && results.length === 0 && (
+          <div className="rounded-3xl border border-white/60 bg-white/55 p-12 text-center text-[#5f4b52] backdrop-blur-md">
+            <p className="font-general text-xs uppercase tracking-[0.36em] text-[#b76e79]">No match</p>
+            <p className="mt-3 text-base">没有匹配的生成图，换个描述词试试。</p>
+          </div>
+        )}
+
+        {!error && !loading && items.length === 0 && results === null && (
           <div className="rounded-3xl border border-white/60 bg-white/55 p-12 text-center text-[#5f4b52] backdrop-blur-md">
             <p className="font-general text-xs uppercase tracking-[0.36em] text-[#b76e79]">Empty</p>
             <p className="mt-3 text-base">还没有人在工坊生成图片。</p>
@@ -211,15 +274,15 @@ const AiGalleryPage = () => {
           </div>
         )}
 
-        <div ref={sentinelRef} aria-hidden="true" className="h-12" />
+        {results === null && <div ref={sentinelRef} aria-hidden="true" className="h-12" />}
 
-        {loading && items.length > 0 && (
+        {results === null && loading && items.length > 0 && (
           <p className="py-6 text-center font-general text-xs uppercase tracking-[0.36em] text-[#b76e79]/70">
             Loading more …
           </p>
         )}
 
-        {reachedEnd && items.length > 0 && (
+        {results === null && reachedEnd && items.length > 0 && (
           <p className="py-8 text-center font-general text-xs uppercase tracking-[0.36em] text-[#b76e79]/60">
             — End of plaza —
           </p>

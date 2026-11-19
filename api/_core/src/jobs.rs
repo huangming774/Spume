@@ -98,6 +98,61 @@ pub async fn index_content(state: &AppState) -> Result<usize, JobError> {
     Ok(docs.len())
 }
 
+/// 生成图的索引文档：prompt 作为可搜索文本，url 指向图片本身。
+pub fn image_doc(id: i64, prompt: &str, url: &str, author: &str) -> ContentDoc {
+    let title: String = prompt.chars().take(80).collect();
+    let excerpt: String = prompt.chars().take(200).collect();
+    ContentDoc {
+        id: format!("image:{id}"),
+        data: format!("{prompt}\n{author}"),
+        title,
+        url: url.to_string(),
+        excerpt,
+        kind: "image".into(),
+    }
+}
+
+/// 单条生成图写入索引（先删同 id 再插，幂等）。生图成功后异步调用。
+pub async fn index_image(
+    state: &AppState,
+    id: i64,
+    prompt: &str,
+    url: &str,
+    author: &str,
+) -> Result<(), JobError> {
+    if !state.cfg.vector_ready() {
+        return Err(JobError::Vector("向量库还没有配置".into()));
+    }
+    ensure_collection(state).await?;
+    delete_ids(state, &[format!("image:{id}")]).await?;
+    insert_docs(state, &[image_doc(id, prompt, url, author)]).await
+}
+
+/// 全量重建生成图索引：扫 ai_images 表，先删 image: 前缀再整批插。
+pub async fn index_images(state: &AppState) -> Result<usize, JobError> {
+    if !state.cfg.vector_ready() {
+        return Err(JobError::Vector("向量库还没有配置".into()));
+    }
+    let pool = state.db.as_ref().ok_or(JobError::NoDatabase)?;
+    let rows = sqlx::query_as::<_, (i64, String, String, String)>(
+        "SELECT id, prompt, image_url, author FROM ai_images ORDER BY id",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|error| JobError::Database(error.to_string()))?;
+    ensure_collection(state).await?;
+    delete_prefix(state, "image:").await?;
+    if rows.is_empty() {
+        return Ok(0);
+    }
+    let docs: Vec<ContentDoc> = rows
+        .iter()
+        .map(|(id, prompt, url, author)| image_doc(*id, prompt, url, author))
+        .collect();
+    insert_docs(state, &docs).await?;
+    Ok(docs.len())
+}
+
 /// 如果这张生成图还停在临时地址，就再转存一次到 R2。已经有对象键则直接返回。
 pub async fn restock_image(state: &AppState, id: i64) -> Result<Value, JobError> {
     let pool = state.db.as_ref().ok_or(JobError::NoDatabase)?;
@@ -310,6 +365,25 @@ async fn delete_prefix(state: &AppState, prefix: &str) -> Result<(), JobError> {
         state,
         "v2/vectordb/entities/delete",
         &json!({"collectionName": state.cfg.vector_collection, "filter": filter}),
+    )
+    .await
+    .map(|_| ())
+}
+
+/// 按精确 id 列表删除条目（单条重建用）。
+async fn delete_ids(state: &AppState, ids: &[String]) -> Result<(), JobError> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let list = ids
+        .iter()
+        .map(|id| format!("\"{id}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    vector_post(
+        state,
+        "v2/vectordb/entities/delete",
+        &json!({"collectionName": state.cfg.vector_collection, "filter": format!("id in [{list}]")}),
     )
     .await
     .map(|_| ())

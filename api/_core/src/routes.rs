@@ -147,6 +147,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/internal/reindex", post(internal_reindex))
         .route("/api/client/view", post(client_view))
         .route("/api/client/hot", get(client_hot))
+        .route("/api/client/image-search", get(client_image_search))
         .layer(DefaultBodyLimit::max(8 * 1024 * 1024))
         .layer(axum::middleware::from_fn(inject_remote_ip))
         .with_state(state);
@@ -1692,6 +1693,87 @@ async fn client_hot(State(state): State<AppState>, Query(query): Query<HotQuery>
     Json(json!({"configured": true, "items": items})).into_response()
 }
 
+#[derive(Deserialize)]
+struct ImageSearchQuery {
+    q: String,
+    limit: Option<u32>,
+}
+
+/// 生成图文字搜图：配了 Zilliz 走 BM25（type=image），否则回退 prompt LIKE 查库。
+async fn client_image_search(
+    State(state): State<AppState>,
+    Query(query): Query<ImageSearchQuery>,
+) -> Response {
+    let q = query.q.trim();
+    if q.is_empty() {
+        return Json(json!({"configured": state.cfg.vector_ready(), "items": []})).into_response();
+    }
+    let limit = query.limit.unwrap_or(24).clamp(1, 60);
+    if state.cfg.vector_ready() {
+        let body = json!({
+            "collectionName": state.cfg.vector_collection,
+            "data": [q],
+            "annsField": "sparse",
+            "limit": limit,
+            "filter": "type == \"image\"",
+            "outputFields": ["title", "url", "excerpt", "type", "id"],
+            "searchParams": {"metric_type": "BM25", "params": {}}
+        });
+        let sent = state
+            .http
+            .post(format!(
+                "{}/v2/vectordb/entities/search",
+                state.cfg.vector_uri.trim_end_matches('/')
+            ))
+            .bearer_auth(&state.cfg.vector_token)
+            .timeout(Duration::from_secs(6))
+            .json(&body)
+            .send()
+            .await;
+        if let Ok(response) = sent {
+            if response.status().is_success() {
+                if let Ok(payload) = response.json::<Value>().await {
+                    if let Ok(hits) = crate::search_hits::hits_from_milvus(&payload) {
+                        let items: Vec<Value> = hits
+                            .iter()
+                            .map(|hit| {
+                                json!({
+                                    "imageUrl": hit.url,
+                                    "prompt": hit.excerpt,
+                                    "score": hit.score,
+                                })
+                            })
+                            .collect();
+                        return Json(json!({"configured": true, "items": items})).into_response();
+                    }
+                }
+            }
+        }
+        // 向量查询失败时回退查库，保证搜索可用。
+    }
+    let Some(pool) = state.db.as_ref() else {
+        return Json(json!({"configured": false, "items": []})).into_response();
+    };
+    let pattern = format!("%{q}%");
+    let rows = sqlx::query_as::<_, (i64, String, String)>(
+        "SELECT id, prompt, image_url FROM ai_images WHERE prompt ILIKE $1 ORDER BY id DESC LIMIT $2",
+    )
+    .bind(&pattern)
+    .bind(limit as i64)
+    .fetch_all(pool)
+    .await;
+    match rows {
+        Ok(rows) => {
+            let items: Vec<Value> = rows
+                .iter()
+                .map(|(id, prompt, url)| json!({"id": id.to_string(), "imageUrl": url, "prompt": prompt}))
+                .collect();
+            Json(json!({"configured": false, "items": items})).into_response()
+        }
+        Err(error) => query_failed(&error),
+    }
+}
+
 async fn wallpaper_draw(
     State(state): State<AppState>,
     Query(query): Query<WallpaperQuery>,
@@ -1788,8 +1870,22 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
     if !state.cfg.vector_ready() {
         return Json(json!({"configured": false, "items": []})).into_response();
     }
-    // limit 默认 10，上限 50，和迁移计划里的接口约定一致。type 参数先接受不生效。
+    // limit 默认 10，上限 50，和迁移计划里的接口约定一致。
     let limit = query.limit.unwrap_or(10).clamp(1, 50);
+    let mut search_body = json!({
+        "collectionName": state.cfg.vector_collection,
+        "data": [query.q],
+        "annsField": "sparse",
+        "limit": limit,
+        "outputFields": ["title", "url", "excerpt", "type", "id"],
+        "searchParams": {"metric_type": "BM25", "params": {}}
+    });
+    // type 过滤走白名单，避免把用户输入拼进 filter 表达式。
+    if let Some(kind) = query.kind.as_deref() {
+        if matches!(kind, "blog" | "journal" | "image") {
+            search_body["filter"] = json!(format!("type == \"{kind}\""));
+        }
+    }
     // Zilliz Cloud（Milvus REST v2）BM25 全文检索：data 直接传查询原文，
     // BM25 Function 把查询编成稀疏向量，metric_type 固定 BM25。
     let response = match state
@@ -1799,14 +1895,7 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
             state.cfg.vector_uri.trim_end_matches('/')
         ))
         .bearer_auth(&state.cfg.vector_token)
-        .json(&json!({
-            "collectionName": state.cfg.vector_collection,
-            "data": [query.q],
-            "annsField": "sparse",
-            "limit": limit,
-            "outputFields": ["title", "url", "excerpt", "type", "id"],
-            "searchParams": {"metric_type": "BM25", "params": {}}
-        }))
+        .json(&search_body)
         .send()
         .await
     {
@@ -1855,6 +1944,9 @@ async fn search(State(state): State<AppState>, Query(query): Query<SearchQuery>)
 struct SearchQuery {
     q: String,
     limit: Option<u32>,
+    /// 限定命中类型：blog / journal / image。空则全类型。
+    #[serde(rename = "type")]
+    kind: Option<String>,
 }
 
 async fn sync_trigger(
@@ -3075,23 +3167,38 @@ async fn image_generate_flow(
     };
     // author 存邮箱作联表键（users.email 不可变更），画廊再 LEFT JOIN users 现算显示名。
     let author = user.as_ref().map(|item| item.email.as_str()).unwrap_or("");
-    if let Err(error) = sqlx::query(
-        "INSERT INTO ai_images (prompt, image_url, size, author, object_key) VALUES ($1, $2, $3, $4, $5)",
+    let inserted = sqlx::query_scalar::<_, i64>(
+        "INSERT INTO ai_images (prompt, image_url, size, author, object_key) VALUES ($1, $2, $3, $4, $5) RETURNING id",
     )
     .bind(prompt)
     .bind(&stored.url)
     .bind(size)
     .bind(author)
     .bind(&stored.key)
-    .execute(pool)
-    .await
+    .fetch_one(pool)
+    .await;
+    let image_id = match inserted {
+        Ok(id) => id,
+        Err(error) => {
+            // 原始错误只进日志，不回给客户端。
+            tracing::error!(error = %error, "image record insert failed");
+            let mut body = quota;
+            body["error"] = json!("SERVER_ERROR");
+            body["message"] = json!("生成图已保存到 R2，记录没有写上");
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
+        }
+    };
+    // 异步把 prompt 写进向量索引，供广场文字搜图；未配 Zilliz 时静默跳过。
     {
-        // 原始错误只进日志，不回给客户端。
-        tracing::error!(error = %error, "image record insert failed");
-        let mut body = quota;
-        body["error"] = json!("SERVER_ERROR");
-        body["message"] = json!("生成图已保存到 R2，记录没有写上");
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
+        let s = state.clone();
+        let p = prompt.to_string();
+        let u = stored.url.clone();
+        let a = author.to_string();
+        tokio::spawn(async move {
+            if let Err(error) = crate::jobs::index_image(&s, image_id, &p, &u, &a).await {
+                tracing::warn!(%error, "image index failed");
+            }
+        });
     }
     if let Err(response) = note_audit(
         state,
@@ -3717,8 +3824,15 @@ async fn internal_reindex(
     if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
         return *response;
     }
+    let images = match crate::jobs::index_images(&state).await {
+        Ok(count) => count,
+        Err(error) => {
+            tracing::warn!(%error, "image reindex failed");
+            0
+        }
+    };
     match crate::jobs::index_content(&state).await {
-        Ok(count) => Json(json!({"ok": true, "indexed": count})).into_response(),
+        Ok(count) => Json(json!({"ok": true, "indexed": count, "images": images})).into_response(),
         Err(error) => fail(StatusCode::BAD_GATEWAY, "INDEX_FAILED", &error.to_string()),
     }
 }
