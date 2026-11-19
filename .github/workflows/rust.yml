@@ -40,6 +40,11 @@ jobs:
         with:
           workspaces: api/_core
 
+      # rust-toolchain.toml 锁定 1.94.0，上面的组件装在 stable 上，
+      # 这里给锁定的工具链补装 rustfmt/clippy，否则 cargo fmt 找不到组件。
+      - name: Install components for pinned toolchain
+        run: rustup component add rustfmt clippy
+
       - name: Format
         run: cargo fmt --all -- --check
 
