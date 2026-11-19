@@ -925,6 +925,26 @@ const AppConsolePage = () => {
     }
   };
 
+  const [reindexBusy, setReindexBusy] = useState(false);
+  const handleReindex = async () => {
+    setReindexBusy(true);
+    try {
+      const res = await fetch("/api/internal/reindex", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
+      flash(`索引重建完成：内容 ${data.indexed ?? 0} 条，生成图 ${data.images ?? 0} 张。`);
+    } catch (e) {
+      setError(e.message || "索引重建失败");
+    } finally {
+      setReindexBusy(false);
+    }
+  };
+
   const visibleDrafts = liveDrafts;
 
   // 站长登录界面：没登录只给账号密码表单，登录后才进控制台。
@@ -1336,6 +1356,14 @@ const AppConsolePage = () => {
                   </div>
                   <button type="button" className="owner-secondary" onClick={handleSync}>
                     <FiRefreshCw aria-hidden /> 刷新后端状态
+                  </button>
+                  <button
+                    type="button"
+                    className="owner-secondary"
+                    onClick={handleReindex}
+                    disabled={reindexBusy}
+                  >
+                    <FiRefreshCw aria-hidden /> {reindexBusy ? "重建中..." : "重建搜索索引"}
                   </button>
                 </section>
 

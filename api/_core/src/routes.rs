@@ -3821,7 +3821,12 @@ async fn internal_reindex(
     uri: OriginalUri,
     body: Bytes,
 ) -> Response {
-    if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+    // QStash 调度走签名；站长后台一键重建走会话。
+    if headers.get("upstash-signature").is_some() {
+        if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+            return *response;
+        }
+    } else if let Err(response) = require_owner(&state, &headers).await {
         return *response;
     }
     let images = match crate::jobs::index_images(&state).await {
