@@ -86,6 +86,10 @@ pub fn router(state: AppState) -> Router {
         .route("/api/client/music", get(client_music))
         .route("/api/client/music/playlist", get(client_music_playlist))
         .route("/api/owner/music", axum::routing::put(owner_music_save))
+        .route(
+            "/api/owner/analytics",
+            get(owner_analytics_get).put(owner_analytics_save),
+        )
         .route("/api/content", get(content_recent))
         .route("/api/content/{kind}", get(content_list))
         .route("/api/owner/status", get(owner_status))
@@ -1010,6 +1014,75 @@ async fn owner_music_save(
     let (enabled, playlist_id, raw) = music_setting(&state).await;
     Json(json!({"ok": true, "enabled": enabled, "playlistId": playlist_id, "raw": raw}))
         .into_response()
+}
+
+const ANALYTICS_SETTING_KEY: &str = "analytics_url";
+
+async fn analytics_setting(state: &AppState) -> String {
+    let Some(pool) = state.db.as_ref() else {
+        return String::new();
+    };
+    sqlx::query_scalar("SELECT value FROM site_settings WHERE key = $1")
+        .bind(ANALYTICS_SETTING_KEY)
+        .fetch_optional(pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_default()
+}
+
+/// 后台「访问统计」页读取嵌入地址（站长可见）。
+async fn owner_analytics_get(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_owner(&state, &headers).await {
+        return *response;
+    }
+    Json(json!({"url": analytics_setting(&state).await})).into_response()
+}
+
+#[derive(Deserialize)]
+struct AnalyticsBody {
+    #[serde(default)]
+    url: String,
+}
+
+/// 保存 Vercel Analytics 面板地址；只允许 vercel.com 域名，避免后台嵌入任意站点。
+async fn owner_analytics_save(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    AppJson(body): AppJson<AnalyticsBody>,
+) -> Response {
+    if let Err(response) = require_owner(&state, &headers).await {
+        return *response;
+    }
+    let raw = body.url.trim();
+    if !raw.is_empty() {
+        let ok = reqwest::Url::parse(raw)
+            .ok()
+            .filter(|url| url.scheme() == "https")
+            .and_then(|url| url.host_str().map(str::to_string))
+            .is_some_and(|host| host == "vercel.com" || host.ends_with(".vercel.com"));
+        if !ok {
+            return fail(
+                StatusCode::BAD_REQUEST,
+                "INVALID_ANALYTICS_URL",
+                "请填 https://vercel.com/… 的 Analytics 面板地址",
+            );
+        }
+    }
+    let Some(pool) = state.db.as_ref() else {
+        return fail(StatusCode::SERVICE_UNAVAILABLE, "DB_UNAVAILABLE", "数据库还没有连上");
+    };
+    if let Err(error) = sqlx::query(
+        "INSERT INTO site_settings (key, value, updated_at) VALUES ($1, $2, now())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+    )
+    .bind(ANALYTICS_SETTING_KEY)
+    .bind(raw)
+    .execute(pool)
+    .await
+    {
+        return query_failed(&error);
+    }
+    Json(json!({"ok": true, "url": raw})).into_response()
 }
 
 /// Go 接口里的时间串：RFC3339 秒精度、Z 结尾（`time.Now().UTC().Format(time.RFC3339)`）。

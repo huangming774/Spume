@@ -83,6 +83,13 @@ export const ownerConsoleScreens = [
     title: "AI 调试区",
     subtitle: "把满意答案保存为用户侧固定回复。",
   },
+  {
+    id: "analytics",
+    navLabel: "统计",
+    icon: "📊",
+    title: "访问统计",
+    subtitle: "Vercel Analytics 页面数据，单独在此查看。",
+  },
 ];
 
 export const ownerConsoleModules = [

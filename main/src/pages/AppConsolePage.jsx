@@ -8,6 +8,7 @@ import {
   createOwnerFixedAnswer,
   createOwnerDraft,
   deleteOwnerEntry,
+  fetchAnalyticsConfig,
   fetchMusicConfig,
   generateOwnerAi,
   isPublicImageURL,
@@ -17,6 +18,7 @@ import {
   publishOwnerGalleryImage,
   publishOwnerJournal,
   publishOwnerMoment,
+  saveAnalyticsConfig,
   saveMusicConfig,
   uploadOwnerAsset,
 } from "../services/ownerApi";
@@ -341,6 +343,40 @@ const AppConsolePage = () => {
       cancelled = true;
     };
   }, []);
+
+  const [analyticsInput, setAnalyticsInput] = useState("");
+  const [analyticsUrl, setAnalyticsUrl] = useState("");
+  const [analyticsBusy, setAnalyticsBusy] = useState(false);
+  const [analyticsNotice, setAnalyticsNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAnalyticsConfig()
+      .then((data) => {
+        if (cancelled) return;
+        setAnalyticsInput(data.url || "");
+        setAnalyticsUrl(data.url || "");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleAnalyticsSave = async () => {
+    setAnalyticsBusy(true);
+    setAnalyticsNotice("");
+    try {
+      const data = await saveAnalyticsConfig(analyticsInput.trim());
+      setAnalyticsUrl(data.url || "");
+      setAnalyticsInput(data.url || "");
+      setAnalyticsNotice(data.url ? "已保存，下方嵌入面板。" : "已清空嵌入地址。");
+    } catch (e) {
+      setAnalyticsNotice(e.message || "保存失败");
+    } finally {
+      setAnalyticsBusy(false);
+    }
+  };
 
   const handleMusicSave = async () => {
     setMusicBusy(true);
@@ -2209,6 +2245,54 @@ const AppConsolePage = () => {
                   )}
                 </div>
               </aside>
+            </div>
+          </section>
+
+          <section className={`owner-screen ${activeScreen === "analytics" ? "active" : ""}`}>
+            <div className="owner-panel owner-glass">
+              <div className="owner-panel-title">
+                <h2>访问统计 · Vercel Analytics</h2>
+                <StatusTag>{analyticsUrl ? "已配置" : "未配置"}</StatusTag>
+              </div>
+              <div className="owner-field">
+                <label htmlFor="analyticsUrl">Analytics 面板地址</label>
+                <input
+                  id="analyticsUrl"
+                  value={analyticsInput}
+                  placeholder="https://vercel.com/<团队>/<项目>/analytics"
+                  onChange={(event) => setAnalyticsInput(event.target.value)}
+                  disabled={analyticsBusy}
+                />
+              </div>
+              <p className="owner-frontmatter-hint">
+                在 Vercel 控制台打开项目 Analytics，复制地址栏 URL 粘贴到这里保存。
+                若内嵌显示空白（Vercel 禁止 iframe），点「新标签打开」。
+              </p>
+              {analyticsNotice ? <p className="owner-frontmatter-hint">{analyticsNotice}</p> : null}
+              <div className="owner-quick-line">
+                <button
+                  type="button"
+                  className="owner-primary"
+                  onClick={handleAnalyticsSave}
+                  disabled={analyticsBusy}
+                >
+                  {analyticsBusy ? "保存中..." : "保存地址"}
+                </button>
+                {analyticsUrl ? (
+                  <a className="owner-secondary" href={analyticsUrl} target="_blank" rel="noreferrer">
+                    新标签打开
+                  </a>
+                ) : null}
+              </div>
+              {analyticsUrl ? (
+                <iframe
+                  title="Vercel Analytics"
+                  src={analyticsUrl}
+                  style={{ width: "100%", height: "72vh", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 12, background: "#fff" }}
+                />
+              ) : (
+                <p className="owner-record-empty">还没有配置 Analytics 地址。</p>
+              )}
             </div>
           </section>
         </section>

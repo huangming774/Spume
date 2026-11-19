@@ -50,6 +50,27 @@ export async function saveMusicConfig(playlist) {
   return parseResponse(res);
 }
 
+export async function fetchAnalyticsConfig() {
+  const res = await fetch("/api/owner/analytics", {
+    credentials: "include",
+    headers: JSON_HEADERS,
+  });
+  return parseResponse(res);
+}
+
+export async function saveAnalyticsConfig(url) {
+  const res = await fetch("/api/owner/analytics", {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      ...JSON_HEADERS,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+  return parseResponse(res);
+}
+
 export async function createOwnerDraft(payload) {
   const res = await fetch("/api/owner/drafts", {
     method: "POST",
