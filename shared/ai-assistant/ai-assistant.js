@@ -65,6 +65,9 @@
           if (/^https?:\/\//.test(a) && a !== siteAvatarCache) {
             siteAvatarCache = a;
             if (ui.avatarBtn) fillAvatar(ui.avatarBtn, { clickable: true });
+            if (ui.brandLogo) ui.brandLogo.src = brandAvatarURL();
+            var botImgs = document.querySelectorAll(".bai-msg.bot .bai-msg-role img");
+            for (var i = 0; i < botImgs.length; i++) botImgs[i].src = brandAvatarURL();
             if (typeof refreshAuthMe === "function") refreshAuthMe();
           }
         })
@@ -74,6 +77,11 @@
 
   function userAvatarURL() {
     return siteAvatarCache || (state.user && state.user.avatar) || "";
+  }
+
+  // 面板头部与 AI 气泡的品牌头像：站长上传后全站一起换，没设置时用默认 logo。
+  function brandAvatarURL() {
+    return siteAvatarCache || LOGO_URL;
   }
 
   // 头像更换的全站广播：同页听事件，跨标签页听 storage。
@@ -676,8 +684,9 @@
     var brand = el("div", "bai-brand");
     var brandMark = el("div", "bai-brand-mark");
     var logo = el("img");
-    logo.src = LOGO_URL;
+    logo.src = brandAvatarURL();
     logo.alt = "博客小精灵";
+    ui.brandLogo = logo;
     brandMark.appendChild(logo);
     var brandText = el("div", "bai-brand-text");
     brandText.appendChild(el("b", null, "博客小精灵"));
@@ -926,7 +935,7 @@
       }
     } else if (role === "bot") {
       var bimg = el("img");
-      bimg.src = LOGO_URL;
+      bimg.src = brandAvatarURL();
       bimg.alt = "AI";
       avatar.appendChild(bimg);
     }
