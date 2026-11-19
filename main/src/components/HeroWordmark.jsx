@@ -40,6 +40,7 @@ const getGlyphStyle = (index, length) => ({
   "--len": length || 1,
   "--dur": `${GLYPH_DRAW_DURATION}s`,
   "--delay": `${index * GLYPH_STAGGER}s`,
+  "--fill-delay": `${index * GLYPH_STAGGER + GLYPH_DRAW_DURATION + 0.2}s`,
   strokeDasharray: length || 1,
   strokeDashoffset: length || 1,
   stroke: "url(#hero-wordmark-stroke-gradient)",

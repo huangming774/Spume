@@ -763,18 +763,19 @@ body {
     opacity: 0;
   }
 
+  /* 6s 一轮循环：描边 → 填充 → 停留展示 → 淡出 → 重新书写。
+     每个字母用 --delay 错开起笔，保持一笔连写的感觉。 */
   .hero-wordmark--ready .hero-wordmark-stroke-path {
-    animation: heroWordmarkDraw var(--dur) cubic-bezier(0.45, 0, 0.25, 1)
-        var(--delay) forwards,
-      heroWordmarkShow 0.01s var(--delay) forwards;
+    animation: heroWordmarkDraw 6s cubic-bezier(0.45, 0, 0.25, 1)
+        var(--delay) infinite,
+      heroWordmarkShow 6s linear var(--delay) infinite;
   }
 
   .hero-wordmark--ready .hero-wordmark-fill-after {
-    animation: heroWordmarkDraw var(--dur) cubic-bezier(0.45, 0, 0.25, 1)
-        var(--delay) forwards,
-      heroWordmarkShow 0.01s var(--delay) forwards,
-      heroWordmarkFillIn 1.2s ease-out calc(var(--delay) + var(--dur) + 0.2s)
-        forwards;
+    animation: heroWordmarkDraw 6s cubic-bezier(0.45, 0, 0.25, 1)
+        var(--delay) infinite,
+      heroWordmarkShow 6s linear var(--delay) infinite,
+      heroWordmarkFillIn 6s ease-out var(--fill-delay) infinite;
   }
 
   @keyframes heroWordmarkDraw {
@@ -782,8 +783,12 @@ body {
       stroke-dashoffset: var(--len);
       stroke-width: 3.2;
     }
-    60% {
+    6% {
       stroke-width: 2.8;
+    }
+    10% {
+      stroke-dashoffset: 0;
+      stroke-width: 2.6;
     }
     100% {
       stroke-dashoffset: 0;
@@ -798,8 +803,14 @@ body {
     1% {
       opacity: 1;
     }
-    100% {
+    86% {
       opacity: 1;
+    }
+    94% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
     }
   }
 
@@ -807,8 +818,17 @@ body {
     0% {
       fill-opacity: 0;
     }
-    100% {
+    20% {
       fill-opacity: 1;
+    }
+    86% {
+      fill-opacity: 1;
+    }
+    94% {
+      fill-opacity: 0;
+    }
+    100% {
+      fill-opacity: 0;
     }
   }
 
