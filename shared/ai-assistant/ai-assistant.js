@@ -53,8 +53,26 @@
     return node;
   }
 
+  // 站长公开头像兜底：未登录或登录行没有头像时，面板也显示站长上传的头像。
+  var siteAvatarCache = "";
+  function refreshSiteAvatar() {
+    try {
+      fetch("/api/site/avatar", { headers: { Accept: "application/json" }, cache: "no-store" })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          var a = data && typeof data.avatar === "string" ? data.avatar.trim() : "";
+          if (/^https?:\/\//.test(a) && a !== siteAvatarCache) {
+            siteAvatarCache = a;
+            if (ui.avatarBtn) fillAvatar(ui.avatarBtn, { clickable: true });
+            if (typeof refreshAuthMe === "function") refreshAuthMe();
+          }
+        })
+        .catch(function () { /* 忽略 */ });
+    } catch (e) { /* 忽略 */ }
+  }
+
   function userAvatarURL() {
-    return (state.user && state.user.avatar) || "";
+    return (state.user && state.user.avatar) || siteAvatarCache || "";
   }
 
   // 头像更换的全站广播：同页听事件，跨标签页听 storage。
@@ -72,11 +90,14 @@
 
   // 其它入口（后台/导航栏）换了头像时，刷新本面板的登录态与头像。
   function subscribeAvatarUpdates() {
-    var refresh = function () { refreshAuthMe(); };
+    var refresh = function () { refreshSiteAvatar(); refreshAuthMe(); };
     window.addEventListener(AVATAR_UPDATED_EVENT, refresh);
     window.addEventListener("storage", function (event) {
       if (event.key === AVATAR_REV_KEY) refresh();
     });
+    refreshSiteAvatar();
+    // 跨标签页/部署后广播可能 missed，定时兜底保证头像最终一致。
+    window.setInterval(refreshSiteAvatar, 60000);
   }
 
   function userInitial() {

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWindowScroll } from "react-use";
 import { cosAsset } from "../lib/cosAsset.js";
+import { defaultSiteAvatarUrl, fetchSiteProfile, onAvatarUpdated } from "../lib/siteAvatar.js";
 import { usePlaylistAudio } from "../lib/usePlaylistAudio.js";
 import VisitorNetworkBadge from "./VisitorNetworkBadge";
 import WeatherBadge from "./WeatherBadge";
@@ -55,6 +56,24 @@ const NavBar = () => {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [whereOpen, setWhereOpen] = useState(false);
   const [whereWarm, setWhereWarm] = useState(false);
+  const [ownerAvatar, setOwnerAvatar] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = (force) => {
+      fetchSiteProfile({ force }).then((profile) => {
+        if (cancelled) return;
+        // 站长没上传头像时接口回退默认图，这里保持原 logo。
+        setOwnerAvatar(profile.avatar && profile.avatar !== defaultSiteAvatarUrl ? profile.avatar : "");
+      });
+    };
+    load(false);
+    const unsubscribe = onAvatarUpdated(() => load(true));
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
 
   const navContainerRef = useRef(null);
   const menuBtnRef = useRef(null);
@@ -473,9 +492,9 @@ const NavBar = () => {
                 onClick={() => handleNavClick({ to: "/" })}
               >
                 <img
-                  src={logoSrc}
+                  src={ownerAvatar || logoSrc}
                   alt="logo"
-                  className="h-8 w-8 sm:h-10 sm:w-10"
+                  className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
                 />
               </Link>
               {currentScrollY === 0 && !isSubPage && (
