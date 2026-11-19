@@ -58,6 +58,9 @@ pub fn known_kind(kind: &str) -> bool {
     KINDS.contains(&kind)
 }
 
+/// site_entries 查询行：id, kind, title, body, image_url, extra::text, created_at。
+type EntryRow = (i64, String, String, String, String, String, DateTime<Utc>);
+
 /// 检查草稿。通过后的字符串已经去掉首尾空白。
 pub fn prepare(entry: NewEntry) -> Result<NewEntry, StoreError> {
     checked(entry)
@@ -92,7 +95,7 @@ pub async fn list(pool: &PgPool, kind: &str) -> Result<Vec<Entry>, StoreError> {
     if !known_kind(kind) {
         return Err(StoreError::Invalid("栏目无效"));
     }
-    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>)>(
+    let rows = sqlx::query_as::<_, EntryRow>(
         "SELECT id, kind, title, body, image_url, extra::text, created_at FROM site_entries WHERE kind = $1 ORDER BY created_at DESC, id DESC",
     )
     .bind(kind)
@@ -105,7 +108,7 @@ pub async fn list(pool: &PgPool, kind: &str) -> Result<Vec<Entry>, StoreError> {
 /// 跨栏目列出最近发布的内容。
 pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<Entry>, StoreError> {
     let limit = limit.clamp(1, 40);
-    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, DateTime<Utc>)>(
+    let rows = sqlx::query_as::<_, EntryRow>(
         "SELECT id, kind, title, body, image_url, extra::text, created_at FROM site_entries ORDER BY created_at DESC, id DESC LIMIT $1",
     )
     .bind(limit)
@@ -115,9 +118,7 @@ pub async fn list_recent(pool: &PgPool, limit: i64) -> Result<Vec<Entry>, StoreE
     rows_to_entries(rows)
 }
 
-fn rows_to_entries(
-    rows: Vec<(i64, String, String, String, String, String, DateTime<Utc>)>,
-) -> Result<Vec<Entry>, StoreError> {
+fn rows_to_entries(rows: Vec<EntryRow>) -> Result<Vec<Entry>, StoreError> {
     rows.into_iter()
         .map(|(id, kind, title, body, image_url, extra, created_at)| {
             Ok(Entry {
