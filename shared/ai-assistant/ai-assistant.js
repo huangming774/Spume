@@ -53,7 +53,8 @@
     return node;
   }
 
-  // 站长公开头像兜底：未登录或登录行没有头像时，面板也显示站长上传的头像。
+  // 面板头像默认读站长公开头像（/api/site/avatar），与首页保持一致；
+  // 站长没设置时才回退登录行头像。
   var siteAvatarCache = "";
   function refreshSiteAvatar() {
     try {
@@ -72,7 +73,7 @@
   }
 
   function userAvatarURL() {
-    return (state.user && state.user.avatar) || siteAvatarCache || "";
+    return siteAvatarCache || (state.user && state.user.avatar) || "";
   }
 
   // 头像更换的全站广播：同页听事件，跨标签页听 storage。

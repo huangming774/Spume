@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiBell, FiEye, FiEyeOff, FiRefreshCw, FiUpload, FiX } from "react-icons/fi";
+import { FiBell, FiEye, FiEyeOff, FiRefreshCw, FiUpload } from "react-icons/fi";
 import AvatarCropDialog from "../components/owner-console/AvatarCropDialog";
 import { authLogin, authLogout, authUploadAvatar } from "../services/authApi";
 import {
@@ -38,7 +38,6 @@ import {
   ownerConsoleAvatars,
   ownerConsoleModules,
   ownerConsoleScreens,
-  publishSteps,
 } from "../pwa/appConsoleBlueprint";
 import {
   getBackendHealthLabel,
@@ -214,18 +213,8 @@ const AppConsolePage = () => {
   const [deploy, setDeploy] = useState(null);
   const [mobileAiBusy, setMobileAiBusy] = useState(false);
   const [answersBusy, setAnswersBusy] = useState(false);
-  const [publishView, setPublishView] = useState(null);
+  const [notice, setNotice] = useState(null);
   const articleTextareaRef = useRef(null);
-  const [publishState, setPublishState] = useState({
-    open: false,
-    title: "发布任务",
-    activeIndex: -1,
-    failIndex: null,
-    simulated: false,
-    toast: "第一阶段主要提供真实上传和真实草稿，不直接改线上正式内容。",
-    view: null,
-  });
-  const publishTimerRef = useRef(null);
 
   const readSession = useCallback(async () => {
     // 只有后端明确说未登录才回登录页；冷启动超时/网络抖动保留当前会话，
@@ -296,9 +285,6 @@ const AppConsolePage = () => {
   useEffect(() => {
     readSession();
     refreshSignals();
-    return () => {
-      if (publishTimerRef.current) clearInterval(publishTimerRef.current);
-    };
   }, [readSession, refreshSignals]);
 
   const activeMeta = screenMap[activeScreen] || screenMap.home;
@@ -403,58 +389,8 @@ const AppConsolePage = () => {
     }
   };
 
-  const clearPublishTimer = () => {
-    if (publishTimerRef.current) {
-      clearInterval(publishTimerRef.current);
-      publishTimerRef.current = null;
-    }
-  };
-
-  const startPublish = (title) => {
-    clearPublishTimer();
-    setPublishState({
-      open: true,
-      title,
-      activeIndex: 0,
-      failIndex: null,
-      simulated: true,
-      toast: "这里展示发布流程预览；真实写入能力已经接到草稿、图片和文章/相册发布接口。",
-    });
-
-    let step = 0;
-    publishTimerRef.current = setInterval(() => {
-      step += 1;
-      if (step >= publishSteps.length) {
-        clearPublishTimer();
-        setPublishState((current) => ({
-          ...current,
-          activeIndex: publishSteps.length,
-          failIndex: null,
-          simulated: true,
-          toast: "流程预览完成。真实发布请使用文章或相册里的发布按钮。",
-        }));
-        return;
-      }
-      setPublishState((current) => ({ ...current, activeIndex: step, failIndex: null, simulated: true }));
-    }, 760);
-  };
-
-  const simulateFail = () => {
-    clearPublishTimer();
-    setPublishState((current) => ({
-      ...current,
-      open: true,
-      activeIndex: 2,
-      failIndex: 2,
-      simulated: true,
-      toast: "这里是失败状态预览，不会影响线上内容。",
-    }));
-  };
-
-  const closePublish = () => {
-    clearPublishTimer();
-    setPublishState((current) => ({ ...current, open: false }));
-  };
+  // 轻量内联通知：替代原来的五步发布流程弹窗。
+  const flash = (text, view = null) => setNotice({ text, view });
 
   const handleAvatarFile = (event) => {
     const file = event.target.files?.[0];
@@ -485,15 +421,9 @@ const AppConsolePage = () => {
       notifyAvatarUpdated(nextUser);
       setAvatarCropFile(null);
       setError("");
-      setPublishState({
-        open: true,
-        title: "头像已保存",
-        activeIndex: -1,
-        failIndex: null,
-        simulated: false,
-        view: null,
-        toast: nextUser.avatar || "头像已写入对象存储",
-      });
+      flash("头像已保存，全站同步更新。");
+    } catch (e) {
+      setError(e.message || "头像上传失败");
     } finally {
       setAvatarUploadBusy(false);
     }
@@ -538,9 +468,8 @@ const AppConsolePage = () => {
     }
   };
 
-  const saveArticleDraft = async ({ title, body, toastTitle, toastMessage }) => {
+  const saveArticleDraft = async ({ title, body, toastMessage }) => {
     setSaveBusy(true);
-    clearPublishTimer();
     try {
       await createOwnerDraft({
         kind: "article",
@@ -549,14 +478,7 @@ const AppConsolePage = () => {
         coverUrl: articleImageURL.trim(),
         status: "draft",
       });
-      setPublishState({
-        open: true,
-        title: toastTitle,
-        activeIndex: -1,
-        failIndex: null,
-        simulated: false,
-        toast: toastMessage,
-      });
+      flash(toastMessage);
       await loadConsole();
     } catch (e) {
       setError(e.message || "草稿保存失败");
@@ -569,7 +491,6 @@ const AppConsolePage = () => {
     await saveArticleDraft({
       title: articleTitle,
       body: articleBody,
-      toastTitle: "草稿已保存",
       toastMessage: "桌面端 Markdown 草稿已保存到真实后端，后续可以继续编辑。",
     });
   };
@@ -579,24 +500,14 @@ const AppConsolePage = () => {
     title,
     body,
     coverUrl = "",
-    publishTitle = "发布文章",
   }) => {
     if (!title.trim() || !body.trim()) {
       setError("请先填写标题和正文，再发布。");
       return;
     }
     setPublishBusy(true);
-    clearPublishTimer();
     setError("");
-    setPublishView(null);
-    setPublishState({
-      open: true,
-      title: publishTitle,
-      activeIndex: 3,
-      failIndex: null,
-      simulated: false,
-      toast: "正在提交到真实文章发布接口...",
-    });
+    flash("正在提交到真实文章发布接口...");
 
     try {
       const data = articleKind === "建站记录"
@@ -608,7 +519,10 @@ const AppConsolePage = () => {
             coverUrl,
           });
       const item = data.item || {};
-      setPublishView(
+      flash(
+        item.path
+          ? `正文已写入数据库 ${item.path}。图片地址保存在同一条记录里。`
+          : "文章已写入数据库。",
         item.id
           ? {
               to: articleKind === "建站记录" ? `/build/post/${item.id}` : `/blog/${item.id}`,
@@ -616,29 +530,11 @@ const AppConsolePage = () => {
             }
           : null,
       );
-      setPublishState({
-        open: true,
-        title: publishTitle,
-        activeIndex: publishSteps.length,
-        failIndex: null,
-        simulated: false,
-        toast: item.path
-          ? `正文已写入数据库 ${item.path}。图片地址保存在同一条记录里。`
-          : "文章已写入数据库。",
-      });
       notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
       const message = e.message || "文章发布失败";
       setError(message);
-      setPublishState({
-        open: true,
-        title: publishTitle,
-        activeIndex: 3,
-        failIndex: 3,
-        simulated: false,
-        toast: message,
-      });
     } finally {
       setPublishBusy(false);
     }
@@ -666,7 +562,6 @@ const AppConsolePage = () => {
     await saveArticleDraft({
       title: nextDraft.title,
       body: nextDraft.body,
-      toastTitle: "移动端 AI 草稿已保存",
       toastMessage: "移动端 AI 文章已经保存为真实草稿，当前阶段不会直接发布到网站。",
     });
     setMobileToast("AI 草稿已保存到真实草稿箱，可以在草稿页继续处理。");
@@ -694,13 +589,7 @@ const AppConsolePage = () => {
         },
         ...current,
       ]);
-      setPublishState({
-        open: true,
-        title: "图片已上传",
-        activeIndex: -1,
-        failIndex: null,
-        toast: `图片已上传到真实后端：${item.url || file.name}`,
-      });
+      flash(`图片已上传到真实后端：${item.url || file.name}`);
       await loadConsole();
     } catch (e) {
       setError(e.message || "图片上传失败");
@@ -732,14 +621,7 @@ const AppConsolePage = () => {
       ...current,
     ]);
     setGalleryURLInput("");
-    setPublishState({
-      open: true,
-      title: "相册图片链接已加入",
-      activeIndex: -1,
-      failIndex: null,
-      simulated: false,
-      toast: `相册发布将使用 ${next}`,
-    });
+    flash(`相册发布将使用 ${next}`);
   };
 
   const handlePublishGalleryImage = async () => {
@@ -754,16 +636,8 @@ const AppConsolePage = () => {
     }
 
     setGalleryPublishBusy(true);
-    clearPublishTimer();
     setError("");
-    setPublishState({
-      open: true,
-      title: "发布相册图片",
-      activeIndex: 3,
-      failIndex: null,
-      simulated: false,
-      toast: "正在提交到真实相册发布接口...",
-    });
+    flash("正在提交到真实相册发布接口...");
 
     try {
       const data = await publishOwnerGalleryImage({
@@ -784,28 +658,14 @@ const AppConsolePage = () => {
         ),
       );
       const albumId = item.extra?.albumId || latest.albumId || item.id;
-      setPublishView(albumId ? { to: `/gallery/${albumId}`, label: "查看线上相册" } : null);
-      setPublishState({
-        open: true,
-        title: "发布相册图片",
-        activeIndex: publishSteps.length,
-        failIndex: null,
-        simulated: false,
-        toast: `图片地址已写入数据库 ${item.path || ""}`.trim(),
-      });
+      flash(
+        `图片地址已写入数据库 ${item.path || ""}`.trim(),
+        albumId ? { to: `/gallery/${albumId}`, label: "查看线上相册" } : null,
+      );
       notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
-      const message = e.message || "相册发布失败";
-      setError(message);
-      setPublishState({
-        open: true,
-        title: "发布相册图片",
-        activeIndex: 3,
-        failIndex: 3,
-        simulated: false,
-        toast: message,
-      });
+      setError(e.message || "相册发布失败");
     } finally {
       setGalleryPublishBusy(false);
     }
@@ -822,42 +682,17 @@ const AppConsolePage = () => {
     }
 
     setMomentPublishBusy(true);
-    clearPublishTimer();
     setError("");
-    setPublishState({
-      open: true,
-      title: "发布碎语",
-      activeIndex: 3,
-      failIndex: null,
-      simulated: false,
-      toast: "正在提交到真实碎语发布接口...",
-    });
+    flash("正在提交到真实碎语发布接口...");
 
     try {
       const data = await publishOwnerMoment({ year, date, type, content });
       const item = data.item || {};
-      setPublishView({ to: "/glimmer", label: "查看线上碎语" });
-      setPublishState({
-        open: true,
-        title: "发布碎语",
-        activeIndex: publishSteps.length,
-        failIndex: null,
-        simulated: false,
-        toast: `碎语已写入数据库 ${item.path || ""}`.trim(),
-      });
+      flash(`碎语已写入数据库 ${item.path || ""}`.trim(), { to: "/glimmer", label: "查看线上碎语" });
       notifyEntriesChanged();
       await loadConsole();
     } catch (e) {
-      const message = e.message || "碎语发布失败";
-      setError(message);
-      setPublishState({
-        open: true,
-        title: "发布碎语",
-        activeIndex: 3,
-        failIndex: 3,
-        simulated: false,
-        toast: message,
-      });
+      setError(e.message || "碎语发布失败");
     } finally {
       setMomentPublishBusy(false);
     }
@@ -874,14 +709,7 @@ const AppConsolePage = () => {
     setFriendUrl(parsed.url);
     setFriendAvatar(parsed.avatar);
     setError("");
-    setPublishState({
-      open: true,
-      title: "友链快速识别",
-      activeIndex: -1,
-      failIndex: null,
-      simulated: false,
-      toast: "已按四行格式识别站名、描述、站点 URL 和头像 URL（本地规则），并填入友链表单。",
-    });
+    flash("已按四行格式识别站名、描述、站点 URL 和头像 URL（本地规则），并填入友链表单。");
   };
 
   const handlePublishFriend = async () => {
@@ -903,50 +731,26 @@ const AppConsolePage = () => {
     }
 
     setFriendPublishBusy(true);
-    clearPublishTimer();
     setError("");
-    setPublishState({
-      open: true,
-      title: "发布友链",
-      activeIndex: 3,
-      failIndex: null,
-      simulated: false,
-      toast: "正在提交到真实友链发布接口...",
-    });
+    flash("正在提交到真实友链发布接口...");
 
     try {
       const data = await publishOwnerFriend({ name, desc, url, avatar: avatarUrl });
       const item = data.item || {};
-      setPublishView(
-        item.pullRequestURL
-          ? { href: item.pullRequestURL, label: "查看友链 PR" }
-          : { to: "/friends", label: "查看朋友页" },
-      );
       setFriendName("");
       setFriendDesc("");
       setFriendUrl("");
       setFriendAvatar("");
       setFriendQuickInput("");
-      setPublishState({
-        open: true,
-        title: "发布友链",
-        activeIndex: publishSteps.length,
-        failIndex: null,
-        simulated: false,
-        toast: ownerFriendPublishToast(item),
-      });
+      flash(
+        ownerFriendPublishToast(item),
+        item.pullRequestURL
+          ? { href: item.pullRequestURL, label: "查看友链 PR" }
+          : { to: "/friends", label: "查看朋友页" },
+      );
       await loadConsole();
     } catch (e) {
-      const message = e.message || "友链发布失败";
-      setError(message);
-      setPublishState({
-        open: true,
-        title: "发布友链",
-        activeIndex: 3,
-        failIndex: 3,
-        simulated: false,
-        toast: message,
-      });
+      setError(e.message || "友链发布失败");
     } finally {
       setFriendPublishBusy(false);
     }
@@ -964,18 +768,12 @@ const AppConsolePage = () => {
       notifyEntriesChanged();
       await loadConsole();
       const name = data.item?.name || "友链";
-      setPublishView({ to: "/friends", label: "查看朋友页" });
-      setPublishState({
-        open: true,
-        title: "友链已通过",
-        activeIndex: -1,
-        failIndex: null,
-        simulated: false,
-        view: null,
-        toast: data.duplicate
+      flash(
+        data.duplicate
           ? `${name} 已在友链列表里，未重复添加。${data.githubNote || ""}`
           : `${name} 已展示到朋友页。${data.githubNote || ""}`,
-      });
+        { to: "/friends", label: "查看朋友页" },
+      );
     } catch (e) {
       setError(e.message || "通过失败");
     } finally {
@@ -993,14 +791,7 @@ const AppConsolePage = () => {
     try {
       await markOwnerNotificationRead(item.id);
       await loadConsole();
-      setPublishState({
-        open: true,
-        title: "提醒已读",
-        activeIndex: -1,
-        failIndex: null,
-        simulated: false,
-        toast: "已从站长收件箱移除这条未读提醒，公开留言内容不会被隐藏。",
-      });
+      flash("已从站长收件箱移除这条未读提醒，公开留言内容不会被隐藏。");
     } catch (e) {
       setError(e.message || "标记已读失败");
     } finally {
@@ -1068,14 +859,7 @@ const AppConsolePage = () => {
       const item = data.item || {};
       const nextURL = item.url || "";
       setArticleImageURL(nextURL);
-      setPublishState({
-        open: true,
-        title: "文章封面已上传",
-        activeIndex: -1,
-        failIndex: null,
-        simulated: false,
-        toast: nextURL || file.name,
-      });
+      flash(`文章封面已上传：${nextURL || file.name}`);
     } catch (e) {
       setError(e.message || "文章图片上传失败");
     } finally {
@@ -1135,10 +919,9 @@ const AppConsolePage = () => {
   const handleSync = async () => {
     try {
       await triggerBackendSync();
-      startPublish("刷新 Bili 缓存");
+      flash("已触发后端同步，Bili 缓存稍后刷新。");
     } catch (e) {
       setError(e.message || "同步触发失败");
-      simulateFail();
     }
   };
 
@@ -1425,6 +1208,25 @@ const AppConsolePage = () => {
           </header>
 
           {error ? <p className="owner-alert">{error}</p> : null}
+          {notice ? (
+            <div className="owner-quick-line owner-glass" style={{ padding: "0.6rem 1rem", margin: "0 0 1rem" }}>
+              <p className="owner-frontmatter-hint" style={{ margin: 0 }}>{notice.text}</p>
+              {notice.view ? (
+                notice.view.href ? (
+                  <a className="owner-secondary" href={notice.view.href} target="_blank" rel="noreferrer">
+                    {notice.view.label}
+                  </a>
+                ) : (
+                  <Link className="owner-secondary" to={notice.view.to}>
+                    {notice.view.label}
+                  </Link>
+                )
+              ) : null}
+              <button type="button" className="owner-secondary" onClick={() => setNotice(null)}>
+                关闭
+              </button>
+            </div>
+          ) : null}
 
           <section className={`owner-screen ${activeScreen === "home" ? "active" : ""}`}>
             <div className="owner-content-grid">
@@ -2098,14 +1900,7 @@ const AppConsolePage = () => {
                         return;
                       }
                       setError("");
-                      setPublishState({
-                        open: true,
-                        title: "友链校验通过",
-                        activeIndex: -1,
-                        failIndex: null,
-                        simulated: false,
-                        toast: "站点 URL 格式有效，可以提交到真实友链数据。",
-                      });
+                      flash("站点 URL 格式有效，可以提交到真实友链数据。");
                     }}
                   >
                     校验链接
@@ -2406,89 +2201,6 @@ const AppConsolePage = () => {
           ))}
       </nav>
 
-      <div className={`owner-drawer ${publishState.open ? "open" : ""}`}>
-        <div className="owner-drawer-panel owner-glass">
-          <div className="owner-drawer-head">
-            <div>
-              <div className="owner-kicker">发布流程</div>
-              <h2>{publishState.title}</h2>
-            </div>
-            <button type="button" className="owner-close" onClick={closePublish} aria-label="关闭">
-              <FiX aria-hidden />
-            </button>
-          </div>
-          <div className="owner-step-list">
-            {publishSteps.map((step, index) => {
-              const done = index < publishState.activeIndex;
-              const active = index === publishState.activeIndex;
-              const failed = index === publishState.failIndex;
-              return (
-                <div
-                  key={step}
-                  className={[
-                    "owner-step",
-                    done ? "done" : "",
-                    active ? "active" : "",
-                    failed ? "fail" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <span className="owner-step-no">{index + 1}</span>
-                  <span>
-                    <strong>{step}</strong>
-                    <small>
-                      {failed
-                        ? publishState.simulated
-                          ? "预览失败"
-                          : "失败"
-                        : active
-                          ? "运行中"
-                          : done
-                            ? "已完成"
-                            : "等待中"}
-                    </small>
-                  </span>
-                  <em>{failed ? "失败" : done ? "完成" : active ? "进行中" : "等待"}</em>
-                </div>
-              );
-            })}
-          </div>
-          <p className="owner-toast">{publishState.toast}</p>
-          {publishView ? (
-            <div className="owner-quick-line">
-              {publishView.href ? (
-                <a
-                  className="owner-primary"
-                  href={publishView.href}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {publishView.label}
-                </a>
-              ) : (
-                <Link className="owner-primary" to={publishView.to} onClick={closePublish}>
-                  {publishView.label}
-                </Link>
-              )}
-            </div>
-          ) : null}
-          {publishState.simulated ? (
-            <div className="owner-quick-line">
-              <button type="button" className="owner-secondary" onClick={simulateFail}>
-                预览失败
-              </button>
-              <button
-                type="button"
-                className="owner-primary"
-                onClick={() => startPublish(publishState.title || "重试发布流程")}
-              >
-                重试预览
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
       {avatarCropFile ? (
         <AvatarCropDialog
           file={avatarCropFile}
