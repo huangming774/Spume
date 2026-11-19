@@ -21,6 +21,7 @@ import {
   uploadOwnerAsset,
 } from "../services/ownerApi";
 import { parseFriendQuickInput } from "../lib/friendQuickInput";
+import { notifyAvatarUpdated } from "../lib/siteAvatar";
 import { notifyEntriesChanged } from "../lib/siteEntries";
 import {
   AboutPanel,
@@ -481,6 +482,7 @@ const AppConsolePage = () => {
         loggedIn: true,
         user: { ...(current?.user || {}), ...nextUser },
       }));
+      notifyAvatarUpdated(nextUser);
       setAvatarCropFile(null);
       setError("");
       setPublishState({

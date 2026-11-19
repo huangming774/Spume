@@ -660,6 +660,16 @@ async fn auth_profile(
             &format!("昵称没有保存: {error}"),
         );
     }
+    // 与头像同理：公开读取落在最早的站长行，昵称也同步到所有站长行。
+    if user.is_owner {
+        if let Err(error) = sqlx::query("UPDATE users SET display_name = $1 WHERE is_owner = true")
+            .bind(name)
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(error = %error, "owner display name fan-out failed");
+        }
+    }
     let mut updated = user;
     updated.display_name = name.to_string();
     Json(json!({"ok": true, "user": user_json(&updated)})).into_response()
@@ -826,6 +836,17 @@ async fn auth_avatar(
             "SERVER_ERROR",
             &format!("头像已上传，资料没有更新: {error}"),
         );
+    }
+    // 首页/AI 读的是「最早的 is_owner 行」，历史数据可能有多行站长或登录行非站长，
+    // 这里把头像同步到所有站长行，保证上传后全站立刻一致。
+    if user.is_owner {
+        if let Err(error) = sqlx::query("UPDATE users SET avatar = $1 WHERE is_owner = true")
+            .bind(&public)
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(error = %error, "owner avatar fan-out failed");
+        }
     }
     Json(json!({"ok": true, "user": {"id": user.id, "email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name), "avatar": public, "isOwner": user.is_owner}})).into_response()
 }
