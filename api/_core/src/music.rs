@@ -104,11 +104,12 @@ fn store(id: &str, body: Value, negative: bool) {
     }
 }
 
-/// 配置改动后清缓存，让前端立刻拿到新歌单。
-pub fn invalidate(id: &str) {
+/// 配置改动后清缓存（进程内 + 共享），让前端立刻拿到新歌单。
+pub async fn invalidate(state: &AppState, id: &str) {
     if let Ok(mut guard) = CACHE.lock() {
         guard.remove(id);
     }
+    crate::cache::del(state, &[&format!("music:pl:{id}")]).await;
 }
 
 async fn upstream_get(state: &AppState, url: &str) -> Result<Value, String> {
@@ -264,6 +265,7 @@ fn urlencoding_min(raw: &str) -> String {
 }
 
 /// 解析整个歌单为前端播放列表。失败返回 Err（路由层转 502）。
+/// 缓存层级：进程内 → 共享 Redis → 上游；未配 Redis 时与原行为一致。
 pub async fn resolve(state: &AppState, id: &str) -> Result<Value, String> {
     if let Some((body, negative)) = cached(id) {
         return if negative {
@@ -272,10 +274,25 @@ pub async fn resolve(state: &AppState, id: &str) -> Result<Value, String> {
             Ok(body)
         };
     }
+    let key = format!("music:pl:{id}");
+    if let Some((body, negative)) = crate::cache::get(state, &key).await {
+        store(id, body.clone(), negative);
+        return if negative {
+            Err("cached failure".into())
+        } else {
+            Ok(body)
+        };
+    }
     let result = resolve_uncached(state, id).await;
     match &result {
-        Ok(body) => store(id, body.clone(), false),
-        Err(_) => store(id, json!({}), true),
+        Ok(body) => {
+            store(id, body.clone(), false);
+            crate::cache::set(state, &key, body, false, CACHE_FOR).await;
+        }
+        Err(_) => {
+            store(id, json!({}), true);
+            crate::cache::set(state, &key, &json!({}), true, NEGATIVE_FOR).await;
+        }
     }
     result
 }

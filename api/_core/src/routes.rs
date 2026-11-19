@@ -303,6 +303,9 @@ async fn health(State(state): State<AppState>) -> Json<Value> {
     if let Some(body) = fresh_health(&state) {
         return Json(body);
     }
+    if let Some((body, false)) = crate::cache::get(&state, "health:snapshot").await {
+        return Json(body);
+    }
     let body = health_snapshot(&state).await;
     store_health(&state, body.clone());
     Json(body)
@@ -320,8 +323,20 @@ pub(crate) fn fresh_health(state: &AppState) -> Option<Value> {
 
 pub(crate) fn store_health(state: &AppState, body: Value) {
     if let Ok(mut guard) = state.health_cache.lock() {
-        *guard = Some((Instant::now(), body));
+        *guard = Some((Instant::now(), body.clone()));
     }
+    // 共享缓存：其它实例冷启动也能直接读到新鲜快照。
+    let state = state.clone();
+    tokio::spawn(async move {
+        crate::cache::set(
+            &state,
+            "health:snapshot",
+            &body,
+            false,
+            state.cfg.timeouts.health_refresh,
+        )
+        .await;
+    });
 }
 
 pub(crate) async fn health_snapshot(state: &AppState) -> Value {
@@ -670,6 +685,7 @@ async fn auth_profile(
             tracing::warn!(error = %error, "owner display name fan-out failed");
         }
     }
+    crate::cache::del(&state, &["site:profile"]).await;
     let mut updated = user;
     updated.display_name = name.to_string();
     Json(json!({"ok": true, "user": user_json(&updated)})).into_response()
@@ -848,10 +864,14 @@ async fn auth_avatar(
             tracing::warn!(error = %error, "owner avatar fan-out failed");
         }
     }
+    crate::cache::del(&state, &["site:profile"]).await;
     Json(json!({"ok": true, "user": {"id": user.id, "email": user.email, "displayName": crate::account::display_name_or_email(&user.email, &user.display_name), "avatar": public, "isOwner": user.is_owner}})).into_response()
 }
 
 async fn site_avatar(State(state): State<AppState>) -> Json<Value> {
+    if let Some((body, false)) = crate::cache::get(&state, "site:profile").await {
+        return Json(body);
+    }
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"avatar": "", "displayName": ""}));
     };
@@ -878,7 +898,16 @@ async fn site_avatar(State(state): State<AppState>) -> Json<Value> {
         }
         None => (String::new(), String::new()),
     };
-    Json(json!({"avatar": avatar, "displayName": display_name}))
+    let body = json!({"avatar": avatar, "displayName": display_name});
+    crate::cache::set(
+        &state,
+        "site:profile",
+        &body,
+        false,
+        Duration::from_secs(60),
+    )
+    .await;
+    Json(body)
 }
 
 const MUSIC_SETTING_KEY: &str = "netease_playlist";
@@ -970,7 +999,7 @@ async fn owner_music_save(
         return query_failed(&error);
     }
     if let Some(id) = crate::music::parse_playlist_id(raw) {
-        crate::music::invalidate(&id);
+        crate::music::invalidate(&state, &id).await;
     }
     let (enabled, playlist_id, raw) = music_setting(&state).await;
     Json(json!({"ok": true, "enabled": enabled, "playlistId": playlist_id, "raw": raw}))
@@ -1752,8 +1781,18 @@ struct SearchQuery {
     limit: Option<u32>,
 }
 
-async fn sync_trigger(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    if let Err(response) = authorize_sync_trigger(&state, &headers).await {
+async fn sync_trigger(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    body: Bytes,
+) -> Response {
+    // QStash 定时调度走签名分支；人工触发仍走令牌/站长会话。
+    if headers.get("upstash-signature").is_some() {
+        if let Err(response) = scheduler_authorized(&state, &headers, &uri, &body) {
+            return *response;
+        }
+    } else if let Err(response) = authorize_sync_trigger(&state, &headers).await {
         return *response;
     }
     if state
@@ -3315,6 +3354,12 @@ fn content_error(error: crate::site_store::StoreError, code: &str) -> Response {
     }
 }
 
+/// 内容写路径统一失效：该栏目列表 + 最近列表的共享缓存。
+async fn invalidate_content_caches(state: &AppState, kind: &str) {
+    let kind_key = format!("content:{kind}");
+    crate::cache::del(state, &[kind_key.as_str(), "content:recent"]).await;
+}
+
 async fn save_entry(
     state: &AppState,
     headers: &HeaderMap,
@@ -3328,10 +3373,12 @@ async fn save_entry(
         Ok(pool) => pool,
         Err(response) => return *response,
     };
+    let kind = entry.kind.clone();
     let saved = match crate::site_store::insert(pool, entry).await {
         Ok(saved) => saved,
         Err(error) => return content_error(error, code),
     };
+    invalidate_content_caches(state, &kind).await;
     if draft_id > 0 {
         if let Err(response) = mark_draft_published(state, draft_id).await {
             return *response;
@@ -3399,6 +3446,7 @@ async fn remove_entry(
             {
                 return *response;
             }
+            invalidate_content_caches(state, kind).await;
             Json(owner_payload(&owner, json!({"id": id, "kind": kind}))).into_response()
         }
         Ok(false) => fail(StatusCode::NOT_FOUND, code, "没有这条内容"),
@@ -3407,13 +3455,25 @@ async fn remove_entry(
 }
 
 async fn content_recent(State(state): State<AppState>) -> Response {
+    if let Some((body, false)) = crate::cache::get(&state, "content:recent").await {
+        return Json(body).into_response();
+    }
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"items": []})).into_response();
     };
     match crate::site_store::list_recent(pool, 30).await {
         Ok(items) => {
             let items: Vec<Value> = items.iter().map(crate::site_store::entry_json).collect();
-            Json(json!({"items": items})).into_response()
+            let body = json!({"items": items});
+            crate::cache::set(
+                &state,
+                "content:recent",
+                &body,
+                false,
+                Duration::from_secs(30),
+            )
+            .await;
+            Json(body).into_response()
         }
         Err(error) => content_error(error, "CONTENT_READ_FAILED"),
     }
@@ -3423,13 +3483,19 @@ async fn content_list(State(state): State<AppState>, Path(kind): Path<String>) -
     if !crate::site_store::known_kind(&kind) {
         return fail(StatusCode::NOT_FOUND, "NOT_FOUND", "栏目无效");
     }
+    let key = format!("content:{kind}");
+    if let Some((body, false)) = crate::cache::get(&state, &key).await {
+        return Json(body).into_response();
+    }
     let Some(pool) = state.db.as_ref() else {
         return Json(json!({"items": []})).into_response();
     };
     match crate::site_store::list(pool, &kind).await {
         Ok(items) => {
             let items: Vec<Value> = items.iter().map(crate::site_store::entry_json).collect();
-            Json(json!({"items": items})).into_response()
+            let body = json!({"items": items});
+            crate::cache::set(&state, &key, &body, false, Duration::from_secs(30)).await;
+            Json(body).into_response()
         }
         Err(error) => content_error(error, "CONTENT_READ_FAILED"),
     }

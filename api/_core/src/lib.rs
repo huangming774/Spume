@@ -2,6 +2,7 @@ mod account;
 pub mod ai_model;
 pub mod audit;
 mod bili;
+pub mod cache;
 pub mod chat_prompt;
 pub mod chat_quota;
 pub mod config;

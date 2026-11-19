@@ -118,6 +118,17 @@ async fn resolve(state: &AppState, ip: &str) -> Result<Value, String> {
     if let Some(hit) = fresh_cached(state, ip) {
         return hit;
     }
+    let key = format!("weather:{}", crate::cache::sanitize(ip));
+    if let Some((body, negative)) = crate::cache::get(state, &key).await {
+        if let Ok(mut cache) = state.weather_cache.lock() {
+            insert_cached(&mut cache, ip, body.clone(), negative);
+        }
+        return if negative {
+            Err("weather negative cache".into())
+        } else {
+            Ok(body)
+        };
+    }
     let flight = {
         let mut cache = state
             .weather_cache
@@ -161,6 +172,10 @@ async fn resolve(state: &AppState, ip: &str) -> Result<Value, String> {
             Ok(body) => insert_cached(&mut cache, ip, body.clone(), false),
             Err(_) => insert_cached(&mut cache, ip, json!({}), true),
         }
+    }
+    match &result {
+        Ok(body) => crate::cache::set(state, &key, body, false, FRESH_FOR).await,
+        Err(_) => crate::cache::set(state, &key, &json!({}), true, NEGATIVE_FOR).await,
     }
     result
 }
@@ -253,6 +268,28 @@ async fn fetch_geo(state: &AppState, ip: &str) -> Result<Geo, String> {
     {
         return Err("invalid client ip".into());
     }
+    let key = format!("geo:{}", crate::cache::sanitize(ip));
+    if let Some((body, false)) = crate::cache::get(state, &key).await {
+        if let (Some(lat), Some(lon)) = (
+            body.get("lat").and_then(Value::as_f64),
+            body.get("lon").and_then(Value::as_f64),
+        ) {
+            return Ok(Geo {
+                lat,
+                lon,
+                city: body
+                    .get("city")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+                region: body
+                    .get("region")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string(),
+            });
+        }
+    }
     let url =
         format!("http://ip-api.com/json/{ip}?lang=zh-CN&fields=status,lat,lon,city,regionName");
     let response = state
@@ -291,6 +328,14 @@ async fn fetch_geo(state: &AppState, ip: &str) -> Result<Geo, String> {
         .unwrap_or("")
         .trim()
         .to_string();
+    crate::cache::set(
+        state,
+        &key,
+        &json!({"lat": lat, "lon": lon, "city": city, "region": region}),
+        false,
+        Duration::from_secs(3600),
+    )
+    .await;
     Ok(Geo {
         lat,
         lon,

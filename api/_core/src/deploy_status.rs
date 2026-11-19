@@ -77,6 +77,10 @@ pub async fn snapshot(state: &AppState) -> Value {
     if let Some(body) = cached() {
         return body;
     }
+    if let Some((body, negative)) = crate::cache::get(state, "deploy:status").await {
+        store(body.clone(), negative);
+        return body;
+    }
     let url = format!("{API_BASE}/repos/{owner}/{repo}/actions/runs?per_page=20");
     let sent = state
         .http
@@ -97,6 +101,7 @@ pub async fn snapshot(state: &AppState) -> Value {
                 "runs": [],
             });
             store(body.clone(), true);
+            crate::cache::set(state, "deploy:status", &body, true, NEGATIVE_FOR).await;
             return body;
         }
         Err(error) => {
@@ -107,6 +112,7 @@ pub async fn snapshot(state: &AppState) -> Value {
                 "runs": [],
             });
             store(body.clone(), true);
+            crate::cache::set(state, "deploy:status", &body, true, NEGATIVE_FOR).await;
             return body;
         }
     };
@@ -120,6 +126,7 @@ pub async fn snapshot(state: &AppState) -> Value {
                 "runs": [],
             });
             store(body.clone(), true);
+            crate::cache::set(state, "deploy:status", &body, true, NEGATIVE_FOR).await;
             return body;
         }
     };
@@ -140,6 +147,7 @@ pub async fn snapshot(state: &AppState) -> Value {
     });
     let body = json!({ "configured": true, "available": true, "runs": runs });
     store(body.clone(), false);
+    crate::cache::set(state, "deploy:status", &body, false, CACHE_FOR).await;
     body
 }
 
