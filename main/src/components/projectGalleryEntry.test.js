@@ -16,6 +16,6 @@ test('visual-only fragment links are accessible and the old destinations stay in
   const branch=source.slice(source.indexOf('if (visualOnly)'),source.indexOf('if (visualOnly)')+2400);
   assert.match(branch,/href=\{linkUrl\}/);
   assert.match(branch,/aria-label=\{linkText\}/);
-  assert.match(source,/linkUrl="https:\/\/bistutzyy.github.io\/"/);
+  assert.match(source,/linkUrl="https:\/\/github.com\/huangming774"/);
   assert.match(source,/linkUrl="\/build\/"/);
 });

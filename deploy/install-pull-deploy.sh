@@ -2,9 +2,9 @@
 # Install pull-based Taozhiyy deployment on the UCloud host.
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/bistutzyy/taozhiyy.git}"
+REPO_URL="${REPO_URL:-https://github.com/huangming774/Spume.git}"
 REPO_DIR="${REPO_DIR:-/opt/taozhiyy-source}"
-BRANCH="${BRANCH:-master}"
+BRANCH="${BRANCH:-main}"
 DEPLOY_USER="${DEPLOY_USER:-taozhiyy-deploy}"
 DEPLOY_SCRIPT="${DEPLOY_SCRIPT:-/usr/local/sbin/taozhiyy-pull-deploy.sh}"
 DEPLOY_HOME="${DEPLOY_HOME:-/var/lib/taozhiyy-deploy}"

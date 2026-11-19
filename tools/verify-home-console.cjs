@@ -54,7 +54,7 @@ async function checkFit(dialog, width, height) {
       assert.equal(await page.evaluate(() => document.getElementById('root').inert), true);
       assert.equal(await dialog.locator('.console-fragment').count(), 3);
       assert.equal(await dialog.locator('.console-fragments img').count(), 0);
-      assert.equal(await dialog.getByRole('link', { name: '进入花园', exact: true }).last().getAttribute('href'), 'https://bistutzyy.github.io/');
+      assert.equal(await dialog.getByRole('link', { name: '进入花园', exact: true }).last().getAttribute('href'), 'https://github.com/huangming774');
       assert.equal(await dialog.locator('.console-enter-key').nth(0).getAttribute('href'), 'https://www.miku.coffee/projects/');
       assert.equal(await dialog.locator('.console-enter-key').nth(2).getAttribute('href'), 'https://www.miku.coffee/build/');
       assert.equal(await dialog.locator('.console-shortcut--about').getAttribute('href'), '/about');

@@ -24,7 +24,7 @@ const ARCHIVE_ITEMS = [
     subtitle: "进入花园",
     src: `${COS}/videos/feature-2.mp4`,
     note: "一个收纳日常念头、随手灵感与短暂心绪的温柔角落。",
-    linkUrl: "https://bistutzyy.github.io/",
+    linkUrl: "https://github.com/huangming774",
     linkText: "进入花园",
   },
   {
@@ -452,7 +452,7 @@ const Features = () => {
                 </>
               }
               description="一个收纳日常念头、随手灵感与短暂心绪的温柔角落，把路过的故事轻轻写下来。"
-              linkUrl="https://bistutzyy.github.io/"
+              linkUrl="https://github.com/huangming774"
               linkText="进入花园"
             />
           </ExhibitTilt>

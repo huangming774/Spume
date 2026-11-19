@@ -36,7 +36,7 @@
         originalHTML +
         '<div class="card-brand">PLATINUM</div>';
 
-      var siteUrl = 'https://bistutzyy.github.io';
+      var siteUrl = 'https://www.miku.coffee';
       var cardBack = document.createElement('div');
       cardBack.className = 'card-back';
       cardBack.innerHTML =

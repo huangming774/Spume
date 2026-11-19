@@ -28,7 +28,7 @@ const out = path.resolve(__dirname, '../previews/project-gallery/.qa/home-consol
         assert.equal(await feed.locator('article').first().getByRole('link').getAttribute('href'), '/build/post/site-growth-19-folding-fan-covers');
         assert.equal(await dialog.getByRole('link', { name: '进入奇想馆', exact: true }).getAttribute('href'), '/projects/');
         assert.equal(await dialog.getByRole('link', { name: '翻开时间轴', exact: true }).getAttribute('href'), '/build/');
-        assert.equal(await dialog.getByRole('link', { name: '进入花园', exact: true }).getAttribute('href'), 'https://bistutzyy.github.io/');
+        assert.equal(await dialog.getByRole('link', { name: '进入花园', exact: true }).getAttribute('href'), 'https://github.com/huangming774');
         if (theme === 'arcade') await page.screenshot({ path: path.join(out, `console-release-${width}.png`) });
         await dialog.getByRole('button', { name: '收起', exact: true }).click();
         await dialog.waitFor({ state: 'detached' });

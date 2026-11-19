@@ -14,7 +14,7 @@ test("public console provides three existing fragment destinations", async () =>
     CONSOLE_FRAGMENTS.map(({ id, href }) => [id, href]),
     [
       ["01", "/projects/"],
-      ["02", "https://bistutzyy.github.io/"],
+      ["02", "https://github.com/huangming774"],
       ["03", "/build/"],
     ],
   );
