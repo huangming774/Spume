@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::config::Config;
 
-const AGNES_FAILED: &str = "Agnes 生图暂时失败了，请稍后再试。";
+const AGNES_FAILED: &str = "生图上游暂时失败了，请稍后再试。";
 pub const PROMPT_REJECTED_MESSAGE: &str = "提示词被 Agnes 拒绝了，可能包含不适合的内容或过于接近敏感描述。请修改为更安全、更中性的说法后重试。";
 
 /// 上游返回的一张图。
