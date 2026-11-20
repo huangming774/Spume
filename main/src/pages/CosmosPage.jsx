@@ -45,16 +45,35 @@ export default function CosmosPage() {
       navigate("/");
     };
     host.addEventListener("click", onClick);
-    import("../../../previews/project-gallery/src/main.js").then(async ({ mountProjectGallery }) => {
+    // 懒挂载：WebGL 场景进入视口才初始化，避免一进页面就拉起 three + 建上下文。
+    let io = null;
+    const mount = async () => {
+      const { mountProjectGallery } = await import("../../../previews/project-gallery/src/main.js");
       if (stopped) return;
       const stored = asProjects(await loadEntries("project"));
       if (stopped) return;
       const stop = mountProjectGallery(host, stored);
       if (stopped) stop();
       else dispose = stop;
-    });
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      mount();
+    } else {
+      io = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            io?.disconnect();
+            io = null;
+            mount();
+          }
+        },
+        { rootMargin: "200px 0px", threshold: 0.01 },
+      );
+      io.observe(host);
+    }
     return () => {
       stopped = true;
+      io?.disconnect();
       dispose();
       host.removeEventListener("click", onClick);
       host.innerHTML = "";

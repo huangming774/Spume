@@ -286,7 +286,8 @@ export function mountProjectGallery(mountRoot = document, incoming) {
       if (disposed) { scene.dispose(); scene = null; return; }
       scene.setTheme(galleryTheme);
       if (selected) scene.focus(selected.id, false);
-      syncOrbitButton(scene.orbit(true));
+      // 默认静止省电；用户点「开启动态」才自转。
+      syncOrbitButton(scene.orbit(false));
       scene.setPaused(view !== 'scene' || dialog.open);
       window.__galleryDebug = () => ({ ...scene.debug(), view, selected: selected?.id, query, visible: visible.map(p => p.id) });
       if (themeNode) themeNode.dataset.sceneReady = 'true';

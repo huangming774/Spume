@@ -85,9 +85,10 @@ export async function createGallery(canvas, projects, onSelect, onBrowse = () =>
     starLayers.push(points); field.add(points);
   }
   const mobile = innerWidth < 650;
-  stars(mobile ? 1100 : 2400, 0);
-  stars(mobile ? 90 : 180, 1, false, true);
-  stars(mobile ? 1500 : 3400, 2, true);
+  // 移动端粒子降约四成（2700→1600），视觉密度差异小、显著省 GPU。
+  stars(mobile ? 650 : 2400, 0);
+  stars(mobile ? 50 : 180, 1, false, true);
+  stars(mobile ? 900 : 3400, 2, true);
   function circle(radius, color, opacity, parent) {
     const points = Array.from({length:97}, (_, i) => new THREE.Vector3(Math.cos(i / 96 * Math.PI * 2) * radius, Math.sin(i / 96 * Math.PI * 2) * radius, 0));
     const object = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({color, transparent:true, opacity}));
@@ -177,6 +178,15 @@ export async function createGallery(canvas, projects, onSelect, onBrowse = () =>
       panels.set(project.id, panel);
       loader.loadAsync(project.preview||project.cover).then(map => {
         if (panel.disposed) { map.dispose(); return; }
+        // 3D 面板显示尺寸小，封面降采样到 ≤480px 宽再上传，省显存/带宽。
+        const img = map.image;
+        if (img && img.width > 480) {
+          const scale = 480 / img.width;
+          const surface = document.createElement('canvas');
+          surface.width = 480; surface.height = Math.max(1, Math.round(img.height * scale));
+          surface.getContext('2d').drawImage(img, 0, 0, surface.width, surface.height);
+          map.image = surface;
+        }
         map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
         map.generateMipmaps=false;map.minFilter=THREE.LinearFilter;
         screenMaterial.color.set('#ffffff'); screenMaterial.map = map; screenMaterial.needsUpdate = true; if(panels.get(project.id)===panel)wake();
