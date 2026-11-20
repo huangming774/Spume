@@ -25,6 +25,12 @@ body:has(.site-console-layer) #blog-ai-root {
   visibility: hidden;
   pointer-events: none;
 }
+/* 后台 /app（登录页+控制台）不显示右下角 AI 悬浮入口 */
+body:has(.owner-console) #blog-ai-root,
+body:has(.owner-login-page) #blog-ai-root {
+  visibility: hidden;
+  pointer-events: none;
+}
 .site-console {
   position: absolute;
   top: 50%;
