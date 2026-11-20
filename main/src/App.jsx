@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import SiteLayout from "./layouts/SiteLayout";
+import MiniPlayer from "./components/MiniPlayer";
 import AppConsolePage from "./pages/AppConsolePage";
 import HomePage from "./pages/HomePage";
 import BiliHubPage from "./pages/BiliHubPage";
@@ -51,6 +52,7 @@ function App() {
   return (
     <PwaOwnerGate>
       <BrowserRouter>
+        <MiniPlayer />
         <Routes>
           <Route path="app" element={<AppConsoleEntry />} />
           <Route path="build/*" element={<Suspense fallback={<SectionFallback />}><JournalPage /></Suspense>} />

@@ -1,152 +1,203 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
- * 导航栏背景音乐：后台配了网易云歌单就逐首轮播（不可播/加载失败自动跳过，
- * 列表播完循环）；没配置或解析失败回退站点自带 loop.mp3 单曲循环。
- * 返回 { audioRef, isPlaying, toggle, trackLabel }，audio 元素由调用方渲染。
+ * 站点背景音乐（模块级单例）：后台配了网易云歌单就逐首轮播（不可播/加载失败
+ * 自动跳过，列表播完循环）；没配置或解析失败回退站点自带 loop.mp3 单曲循环。
+ *
+ * audio 元素全局只创建一次，导航栏均衡器按钮和首页迷你播放器共用同一实例，
+ * 通过 useSyncExternalStore 订阅同一份状态，避免两个 audio 互相打架。
  */
-export function usePlaylistAudio(fallbackSrc) {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [trackLabel, setTrackLabel] = useState("");
-  const [tracks, setTracks] = useState([]);
-  const [mode, setMode] = useState("fallback"); // "playlist" | "fallback"
-  const indexRef = useRef(0);
-  // 一轮里连续跳过的次数；超过可播总数说明全挂了，回退默认音乐。
-  const skipCountRef = useRef(0);
-  const tracksRef = useRef([]);
-  const modeRef = useRef("fallback");
-  tracksRef.current = tracks;
-  modeRef.current = mode;
 
-  const loadConfig = useCallback(async () => {
-    try {
-      const res = await fetch("/api/client/music", { headers: { Accept: "application/json" } });
-      const config = res.ok ? await res.json() : null;
-      if (!config?.enabled) {
-        setTracks([]);
-        setMode("fallback");
-        setTrackLabel("");
-        return;
-      }
-      const listRes = await fetch("/api/client/music/playlist", {
-        headers: { Accept: "application/json" },
-      });
-      if (!listRes.ok) throw new Error("playlist unavailable");
-      const data = await listRes.json();
-      const playable = (data.tracks || []).filter((track) => track.playable && track.url);
-      if (!playable.length) throw new Error("no playable tracks");
-      setTracks(playable);
-      setMode("playlist");
-      indexRef.current = 0;
-      skipCountRef.current = 0;
-      setTrackLabel(labelOf(playable[0], data.playlistName));
-    } catch {
-      setTracks([]);
-      setMode("fallback");
-      setTrackLabel("");
-    }
-  }, []);
+const listeners = new Set();
+let snapshot = {
+  isPlaying: false,
+  trackLabel: "",
+  mode: "fallback", // "playlist" | "fallback"
+  current: 0,
+  duration: 0,
+  trackName: "",
+  artist: "",
+};
+let audio = null;
+let tracks = [];
+let index = 0;
+let skipCount = 0;
+let loaded = false;
+let fallbackSrc = "";
 
-  useEffect(() => {
-    loadConfig();
-    const onConfigUpdated = () => loadConfig();
-    window.addEventListener("blog-music-config-updated", onConfigUpdated);
-    return () => window.removeEventListener("blog-music-config-updated", onConfigUpdated);
-  }, [loadConfig]);
+function emit(patch) {
+  snapshot = { ...snapshot, ...patch };
+  listeners.forEach((listener) => listener());
+}
 
-  const applyTrack = useCallback(
-    (index, { autoplay }) => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      const list = tracksRef.current;
-      if (modeRef.current === "playlist" && list.length) {
-        const track = list[index % list.length];
-        indexRef.current = index % list.length;
-        setTrackLabel(labelOf(track, ""));
-        audio.src = track.url;
-      } else {
-        audio.src = fallbackSrc;
-      }
-      audio.load();
-      if (autoplay) {
-        audio.play().catch(() => setIsPlaying(false));
-      }
-    },
-    [fallbackSrc],
-  );
+function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
-  // 播放状态 → audio 播放/暂停（沿用原实现：点击按钮在用户手势里触发）。
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      if (!audio.src) applyTrack(indexRef.current, { autoplay: false });
-      audio.play().catch(() => setIsPlaying(false));
-    } else {
-      audio.pause();
-    }
-  }, [isPlaying, applyTrack]);
-
-  // 模式/列表变化时装载当前曲目；正在播则无缝换源继续。
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const wasPlaying = isPlaying;
-    applyTrack(indexRef.current, { autoplay: wasPlaying });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, tracks]);
-
-  const advance = useCallback(() => {
-    const list = tracksRef.current;
-    if (modeRef.current !== "playlist" || !list.length) {
-      // 兜底单曲循环
-      const audio = audioRef.current;
-      if (audio) {
-        audio.currentTime = 0;
-        audio.play().catch(() => setIsPlaying(false));
-      }
-      return;
-    }
-    skipCountRef.current += 1;
-    if (skipCountRef.current > list.length) {
-      // 整轮全部失败：回退默认音乐，避免死循环打接口。
-      setMode("fallback");
-      setTracks([]);
-      setTrackLabel("");
-      return;
-    }
-    applyTrack(indexRef.current + 1, { autoplay: true });
-  }, [applyTrack]);
-
-  const onEnded = useCallback(() => {
-    skipCountRef.current = 0;
-    if (modeRef.current === "playlist") {
-      advance();
-    }
-    // fallback 模式由 audio loop 属性自己循环
-  }, [advance]);
-
-  const onError = useCallback(() => {
-    if (!isPlaying) return;
-    if (modeRef.current === "playlist") {
-      advance();
-    } else {
-      setIsPlaying(false);
-    }
-  }, [advance, isPlaying]);
-
-  const onPlaying = useCallback(() => {
-    skipCountRef.current = 0;
-  }, []);
-
-  const toggle = useCallback(() => setIsPlaying((prev) => !prev), []);
-
-  return { audioRef, isPlaying, toggle, trackLabel, onEnded, onError, onPlaying, mode };
+function getSnapshot() {
+  return snapshot;
 }
 
 function labelOf(track, playlistName) {
   if (!track) return playlistName || "";
   const name = [track.name, track.artist].filter(Boolean).join(" - ");
   return name || playlistName || "";
+}
+
+function ensureAudio() {
+  if (audio || typeof window === "undefined") return audio;
+  audio = new Audio();
+  audio.preload = "auto";
+  audio.addEventListener("ended", () => {
+    skipCount = 0;
+    if (snapshot.mode === "playlist") advance();
+  });
+  audio.addEventListener("error", () => {
+    if (!snapshot.isPlaying) return;
+    if (snapshot.mode === "playlist") advance();
+    else emit({ isPlaying: false });
+  });
+  audio.addEventListener("playing", () => {
+    skipCount = 0;
+  });
+  audio.addEventListener("timeupdate", () => {
+    emit({ current: audio.currentTime || 0 });
+  });
+  audio.addEventListener("loadedmetadata", () => {
+    emit({ duration: audio.duration || 0 });
+  });
+  return audio;
+}
+
+function applyTrack(i, { autoplay }) {
+  const el = ensureAudio();
+  if (!el) return;
+  if (snapshot.mode === "playlist" && tracks.length) {
+    const track = tracks[i % tracks.length];
+    index = i % tracks.length;
+    emit({
+      trackLabel: labelOf(track, ""),
+      trackName: track.name || "",
+      artist: track.artist || "",
+      current: 0,
+      duration: 0,
+    });
+    el.src = track.url;
+  } else {
+    emit({ trackLabel: "", trackName: "", artist: "", current: 0, duration: 0 });
+    el.src = fallbackSrc;
+  }
+  el.loop = snapshot.mode === "fallback";
+  el.load();
+  if (autoplay) el.play().catch(() => emit({ isPlaying: false }));
+}
+
+function advance() {
+  if (snapshot.mode !== "playlist" || !tracks.length) {
+    const el = ensureAudio();
+    if (el) {
+      el.currentTime = 0;
+      el.play().catch(() => emit({ isPlaying: false }));
+    }
+    return;
+  }
+  skipCount += 1;
+  if (skipCount > tracks.length) {
+    // 整轮全部失败：回退默认音乐，避免死循环打接口。
+    tracks = [];
+    emit({ mode: "fallback", trackLabel: "", trackName: "", artist: "" });
+    applyTrack(0, { autoplay: snapshot.isPlaying });
+    return;
+  }
+  applyTrack(index + 1, { autoplay: true });
+}
+
+async function loadConfig() {
+  try {
+    const res = await fetch("/api/client/music", { headers: { Accept: "application/json" } });
+    const config = res.ok ? await res.json() : null;
+    if (!config?.enabled) {
+      tracks = [];
+      emit({ mode: "fallback", trackLabel: "", trackName: "", artist: "" });
+      applyTrack(0, { autoplay: snapshot.isPlaying });
+      return;
+    }
+    const listRes = await fetch("/api/client/music/playlist", {
+      headers: { Accept: "application/json" },
+    });
+    if (!listRes.ok) throw new Error("playlist unavailable");
+    const data = await listRes.json();
+    const playable = (data.tracks || []).filter((track) => track.playable && track.url);
+    if (!playable.length) throw new Error("no playable tracks");
+    tracks = playable;
+    index = 0;
+    skipCount = 0;
+    emit({ mode: "playlist" });
+    applyTrack(0, { autoplay: snapshot.isPlaying });
+  } catch {
+    tracks = [];
+    emit({ mode: "fallback", trackLabel: "", trackName: "", artist: "" });
+    applyTrack(0, { autoplay: snapshot.isPlaying });
+  }
+}
+
+function ensureLoaded() {
+  if (loaded || typeof window === "undefined") return;
+  loaded = true;
+  loadConfig();
+  window.addEventListener("blog-music-config-updated", () => loadConfig());
+}
+
+function toggle() {
+  const el = ensureAudio();
+  if (!el) return;
+  if (snapshot.isPlaying) {
+    el.pause();
+    emit({ isPlaying: false });
+  } else {
+    if (!el.src) applyTrack(index, { autoplay: false });
+    el.play()
+      .then(() => emit({ isPlaying: true }))
+      .catch(() => emit({ isPlaying: false }));
+  }
+}
+
+function next() {
+  if (snapshot.mode !== "playlist") return;
+  skipCount = 0;
+  applyTrack(index + 1, { autoplay: snapshot.isPlaying });
+}
+
+function prev() {
+  if (snapshot.mode !== "playlist") return;
+  skipCount = 0;
+  applyTrack(index - 1 + tracks.length, { autoplay: snapshot.isPlaying });
+}
+
+function seek(time) {
+  const el = ensureAudio();
+  if (!el || !Number.isFinite(time)) return;
+  el.currentTime = Math.max(0, Math.min(time, el.duration || time));
+  emit({ current: el.currentTime });
+}
+
+/**
+ * 订阅共享播放器状态。fallbackSrc 为没配歌单时的默认循环音乐地址。
+ * 返回 { isPlaying, toggle, next, prev, seek, trackLabel, trackName, artist,
+ *         mode, current, duration }。
+ */
+export function usePlaylistAudio(src) {
+  const synced = useSyncExternalStore(subscribe, getSnapshot);
+  useEffect(() => {
+    if (src) fallbackSrc = src;
+    ensureLoaded();
+  }, [src]);
+  return {
+    ...synced,
+    toggle,
+    next,
+    prev,
+    seek,
+  };
 }

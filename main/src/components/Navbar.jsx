@@ -171,16 +171,8 @@ const NavBar = () => {
     });
   }, []);
 
-  const {
-    audioRef: audioElementRef,
-    isPlaying: isAudioPlaying,
-    toggle: toggleAudioIndicator,
-    trackLabel,
-    onEnded: onMusicEnded,
-    onError: onMusicError,
-    onPlaying: onMusicPlaying,
-    mode: musicMode,
-  } = usePlaylistAudio(loopAudioSrc);
+  const { isPlaying: isAudioPlaying, toggle: toggleAudioIndicator, trackLabel } =
+    usePlaylistAudio(loopAudioSrc);
   const isIndicatorActive = isAudioPlaying;
 
   useEffect(() => {
@@ -558,15 +550,6 @@ const NavBar = () => {
                 aria-label="Toggle background music"
                 title={trackLabel || "背景音乐"}
               >
-                <audio
-                  ref={audioElementRef}
-                  className="hidden"
-                  src={loopAudioSrc}
-                  loop={musicMode === "fallback"}
-                  onEnded={onMusicEnded}
-                  onError={onMusicError}
-                  onPlaying={onMusicPlaying}
-                />
                 {[1, 2, 3, 4].map((bar) => (
                   <div
                     key={bar}
