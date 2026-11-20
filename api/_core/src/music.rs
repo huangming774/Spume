@@ -229,11 +229,11 @@ async fn song_details(
     Ok(out)
 }
 
-/// 批量播放外链：id → 可播 url（拿不到为 None）。
+/// 批量播放外链：id → (可播 url, fee)。拿不到 url 为 None；fee 用于不可播原因。
 async fn player_urls(
     state: &AppState,
     ids: &[String],
-) -> Result<HashMap<String, Option<String>>, String> {
+) -> Result<HashMap<String, (Option<String>, i64)>, String> {
     let ids_json = format!("[{}]", ids.join(","));
     let url = format!(
         "{UPSTREAM}/api/song/enhance/player/url?ids={}&br=320000",
@@ -251,7 +251,8 @@ async fn player_urls(
                 .and_then(Value::as_str)
                 .filter(|u| u.starts_with("http"))
                 .map(str::to_string);
-            out.insert(id.to_string(), playable);
+            let fee = item.get("fee").and_then(Value::as_i64).unwrap_or(0);
+            out.insert(id.to_string(), (playable, fee));
         }
     }
     Ok(out)
@@ -308,7 +309,19 @@ async fn resolve_uncached(state: &AppState, id: &str) -> Result<Value, String> {
                 .get(song_id)
                 .cloned()
                 .unwrap_or_else(|| (String::new(), String::new(), 0));
-            let url = urls.get(song_id).cloned().flatten();
+            let (url, fee) = urls
+                .get(song_id)
+                .cloned()
+                .unwrap_or((None, 0));
+            let reason = if url.is_some() {
+                ""
+            } else if fee == 1 {
+                "VIP 歌曲，网易云不提供外链"
+            } else if fee == 4 {
+                "付费专辑，需购买后播放"
+            } else {
+                "版权受限，暂无外链"
+            };
             tracks.push(json!({
                 "id": song_id,
                 "name": title,
@@ -316,6 +329,7 @@ async fn resolve_uncached(state: &AppState, id: &str) -> Result<Value, String> {
                 "duration": duration,
                 "url": url.clone().unwrap_or_default(),
                 "playable": url.is_some(),
+                "reason": reason,
             }));
         }
     }

@@ -10868,3 +10868,21 @@ body {
     height: 8px;
   }
 }
+
+.mini-track-list {
+  scrollbar-width: thin;
+  scrollbar-color: #e8cfc0 transparent;
+}
+
+.mini-track-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mini-track-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #e8cfc0;
+}
+
+.mini-track-list::-webkit-scrollbar-track {
+  background: transparent;
+}

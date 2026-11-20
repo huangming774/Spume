@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   FiChevronDown,
+  FiList,
   FiMusic,
   FiPause,
   FiPlay,
@@ -43,14 +44,20 @@ const MiniPlayer = () => {
     next,
     prev,
     seek,
+    playById,
     trackLabel,
     trackName,
     artist,
     mode,
     current,
     duration,
+    playlistName,
+    allTracks,
+    trackId,
   } = usePlaylistAudio(FALLBACK_SRC);
   const [collapsed, setCollapsed] = useState(true);
+  const [showList, setShowList] = useState(false);
+  const playableCount = allTracks.filter((t) => t.playable).length;
 
   // 后台界面不显示播放器。
   if (pathname.startsWith("/app")) return null;
@@ -172,7 +179,79 @@ const MiniPlayer = () => {
               <FiSkipForward aria-hidden className="h-4 w-4" />
             </button>
           )}
+          {mode === "playlist" && (
+            <button
+              type="button"
+              onClick={() => setShowList((v) => !v)}
+              aria-label="查看歌单"
+              title={`歌单 · ${playableCount}/${allTracks.length} 首可播`}
+              className={`flex h-9 w-9 items-center justify-center rounded-full border transition hover:-translate-y-0.5 ${
+                showList
+                  ? "border-[#b76e79] bg-[#ffd9e0] text-[#b76e79]"
+                  : "border-[#f2d8c8] bg-white/60 text-[#5f4b52] hover:bg-[#ffd9e0]"
+              }`}
+            >
+              <FiList aria-hidden className="h-4 w-4" />
+            </button>
+          )}
         </div>
+
+        {showList && mode === "playlist" && (
+          <div className="mt-3 border-t border-[#f2d8c8] pt-3">
+            <div className="flex items-baseline justify-between">
+              <p className="truncate text-xs font-bold text-[#241322]">
+                {playlistName || "歌单"}
+              </p>
+              <span className="font-general text-[10px] uppercase tracking-[0.2em] text-[#8a6a70]">
+                {playableCount}/{allTracks.length} 可播
+              </span>
+            </div>
+            {playableCount < allTracks.length && (
+              <p className="mt-1 text-[10px] leading-4 text-[#8a6a70]">
+                灰色为 VIP/版权受限歌曲，网易云不提供外链，自动跳过。
+              </p>
+            )}
+            <ul className="mini-track-list mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
+              {allTracks.map((t) => {
+                const active = String(t.id) === trackId;
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      disabled={!t.playable}
+                      onClick={() => playById(t.id)}
+                      title={t.playable ? "播放这首" : t.reason || "暂无外链"}
+                      className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-left transition ${
+                        active
+                          ? "bg-[#ffd9e0] text-[#b76e79]"
+                          : t.playable
+                            ? "text-[#5f4b52] hover:bg-[#ffd9e0]/50"
+                            : "cursor-not-allowed text-[#c9b6ba] opacity-60"
+                      }`}
+                    >
+                      <span className="w-4 shrink-0 text-center">
+                        {active && isPlaying ? (
+                          <EqBars active />
+                        ) : (
+                          <FiMusic aria-hidden className="mx-auto h-3 w-3" />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold">{t.name}</span>
+                        <span className="block truncate text-[10px] opacity-80">{t.artist}</span>
+                      </span>
+                      {!t.playable && (
+                        <span className="shrink-0 rounded-full bg-[#f2d8c8]/70 px-1.5 py-0.5 text-[9px] text-[#8a6a70]">
+                          {t.reason?.includes("VIP") ? "VIP" : t.reason?.includes("付费") ? "付费" : "版权"}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

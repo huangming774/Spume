@@ -17,6 +17,9 @@ let snapshot = {
   duration: 0,
   trackName: "",
   artist: "",
+  playlistName: "",
+  allTracks: [],
+  trackId: "",
 };
 let audio = null;
 let tracks = [];
@@ -80,6 +83,7 @@ function applyTrack(i, { autoplay }) {
       trackLabel: labelOf(track, ""),
       trackName: track.name || "",
       artist: track.artist || "",
+      trackId: String(track.id ?? ""),
       current: 0,
       duration: 0,
     });
@@ -128,16 +132,17 @@ async function loadConfig() {
     });
     if (!listRes.ok) throw new Error("playlist unavailable");
     const data = await listRes.json();
-    const playable = (data.tracks || []).filter((track) => track.playable && track.url);
+    const all = data.tracks || [];
+    const playable = all.filter((track) => track.playable && track.url);
     if (!playable.length) throw new Error("no playable tracks");
     tracks = playable;
     index = 0;
     skipCount = 0;
-    emit({ mode: "playlist" });
+    emit({ mode: "playlist", playlistName: data.playlistName || "", allTracks: all });
     applyTrack(0, { autoplay: snapshot.isPlaying });
   } catch {
     tracks = [];
-    emit({ mode: "fallback", trackLabel: "", trackName: "", artist: "" });
+    emit({ mode: "fallback", trackLabel: "", trackName: "", artist: "", playlistName: "", allTracks: [] });
     applyTrack(0, { autoplay: snapshot.isPlaying });
   }
 }
@@ -182,6 +187,15 @@ function seek(time) {
   emit({ current: el.currentTime });
 }
 
+/** 点击歌单里某首可播歌曲立即播放。 */
+function playById(id) {
+  const i = tracks.findIndex((track) => String(track.id) === String(id));
+  if (i < 0) return;
+  skipCount = 0;
+  emit({ isPlaying: true });
+  applyTrack(i, { autoplay: true });
+}
+
 /**
  * 订阅共享播放器状态。fallbackSrc 为没配歌单时的默认循环音乐地址。
  * 返回 { isPlaying, toggle, next, prev, seek, trackLabel, trackName, artist,
@@ -199,5 +213,6 @@ export function usePlaylistAudio(src) {
     next,
     prev,
     seek,
+    playById,
   };
 }
