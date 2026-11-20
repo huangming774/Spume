@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { FiChevronDown, FiChevronUp, FiMusic, FiPause, FiPlay, FiSkipForward } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiMusic,
+  FiPause,
+  FiPlay,
+  FiSkipBack,
+  FiSkipForward,
+} from "react-icons/fi";
 import { cosAsset } from "../lib/cosAsset.js";
 import { usePlaylistAudio } from "../lib/usePlaylistAudio.js";
 
@@ -15,18 +22,43 @@ function fmt(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** 播放中的小均衡器动画（三条跳动竖线）。 */
+const EqBars = ({ active }) => (
+  <span className="flex h-3.5 items-end gap-[2px]" aria-hidden="true">
+    {[0, 1, 2].map((i) => (
+      <span
+        key={i}
+        className={`w-[3px] rounded-full bg-current ${active ? "mini-eq-bar" : "h-[3px]"}`}
+        style={active ? { animationDelay: `${i * 0.18}s` } : undefined}
+      />
+    ))}
+  </span>
+);
+
 const MiniPlayer = () => {
   const { pathname } = useLocation();
-  const { isPlaying, toggle, next, seek, trackLabel, trackName, artist, mode, current, duration } =
-    usePlaylistAudio(FALLBACK_SRC);
-  const [collapsed, setCollapsed] = useState(false);
+  const {
+    isPlaying,
+    toggle,
+    next,
+    prev,
+    seek,
+    trackLabel,
+    trackName,
+    artist,
+    mode,
+    current,
+    duration,
+  } = usePlaylistAudio(FALLBACK_SRC);
+  const [collapsed, setCollapsed] = useState(true);
 
   // 后台界面不显示播放器。
   if (pathname.startsWith("/app")) return null;
 
   const title = trackName || (mode === "fallback" ? "站点背景音乐" : "网易云歌单");
-  const subtitle = artist || (mode === "playlist" ? trackLabel : "loop");
+  const subtitle = artist || (mode === "playlist" ? trackLabel : "loop · mp3");
 
+  // 收起态：右上角小胶囊，播放时带跳动均衡器。
   if (collapsed) {
     return (
       <button
@@ -34,75 +66,113 @@ const MiniPlayer = () => {
         onClick={() => setCollapsed(false)}
         aria-label="展开音乐播放器"
         title={trackLabel || "背景音乐"}
-        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-white/70 text-[#b76e79] shadow-[0_10px_30px_rgba(183,110,121,0.25)] backdrop-blur-md transition hover:scale-105"
+        className="group fixed right-4 top-20 z-40 flex items-center gap-2 rounded-full border border-white/60 bg-white/70 py-2 pl-3 pr-4 text-[#b76e79] shadow-[0_10px_30px_rgba(183,110,121,0.22)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/85 sm:right-6 sm:top-24"
       >
-        <FiMusic aria-hidden className={isPlaying ? "animate-pulse" : ""} />
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffd9e0,#ffe9c9)] text-[#b76e79]">
+          <FiMusic aria-hidden className="h-3.5 w-3.5" />
+        </span>
+        <EqBars active={isPlaying} />
+        <span className="font-general text-[10px] uppercase tracking-[0.28em] text-[#8a6a70] transition group-hover:text-[#b76e79]">
+          {isPlaying ? "Playing" : "Music"}
+        </span>
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 w-[290px] rounded-2xl border border-white/50 bg-white/75 p-4 shadow-[0_16px_44px_rgba(36,19,34,0.18)] backdrop-blur-xl">
-      <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ffd9e0] text-[#b76e79]">
-          <FiMusic aria-hidden className={isPlaying ? "animate-pulse" : ""} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-[#241322]">{title}</p>
-          <p className="truncate text-xs text-[#8a6a70]">{subtitle}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCollapsed(true)}
-          aria-label="收起播放器"
-          className="text-[#8a6a70] transition hover:text-[#b76e79]"
-        >
-          <FiChevronDown aria-hidden />
-        </button>
-      </div>
-
-      <input
-        type="range"
-        min={0}
-        max={duration || 0}
-        step={0.5}
-        value={Math.min(current, duration || 0)}
-        onChange={(e) => seek(Number(e.target.value))}
-        aria-label="播放进度"
-        className="mt-3 w-full accent-[#b76e79]"
+    <div className="fixed right-4 top-20 z-40 w-[300px] overflow-hidden rounded-3xl border border-white/60 bg-white/75 shadow-[0_24px_60px_rgba(36,19,34,0.22)] backdrop-blur-2xl sm:right-6 sm:top-24">
+      {/* 顶部玫瑰金晕光 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-16 left-1/2 h-32 w-[130%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(255,143,171,0.28),transparent)] blur-xl"
       />
-      <div className="mt-1 flex justify-between font-general text-[10px] uppercase tracking-[0.2em] text-[#8a6a70]">
-        <span>{fmt(current)}</span>
-        <span>{fmt(duration)}</span>
-      </div>
 
-      <div className="mt-2 flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={isPlaying ? "暂停" : "播放"}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#241322] text-[#ffe7ef] transition hover:scale-105"
-        >
-          {isPlaying ? <FiPause aria-hidden /> : <FiPlay aria-hidden className="ml-0.5" />}
-        </button>
-        {mode === "playlist" && (
+      <div className="relative p-4">
+        <div className="flex items-start justify-between">
+          <p className="font-general text-[10px] uppercase tracking-[0.34em] text-[#b76e79]">
+            Now Playing
+          </p>
           <button
             type="button"
-            onClick={next}
-            aria-label="下一首"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e8cfc0] text-[#5f4b52] transition hover:bg-[#ffd9e0]"
+            onClick={() => setCollapsed(true)}
+            aria-label="收起播放器"
+            className="-mr-1 -mt-1 flex h-7 w-7 items-center justify-center rounded-full text-[#8a6a70] transition hover:bg-[#ffd9e0]/60 hover:text-[#b76e79]"
           >
-            <FiSkipForward aria-hidden />
+            <FiChevronDown aria-hidden className="h-4 w-4" />
           </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setCollapsed(true)}
-          aria-label="收起"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e8cfc0] text-[#5f4b52] transition hover:bg-[#ffd9e0]"
-        >
-          <FiChevronUp aria-hidden className="rotate-180" />
-        </button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-3">
+          {/* 旋转唱片 */}
+          <span
+            className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[conic-gradient(from_0deg,#241322,#5f4b52,#241322,#8a6a70,#241322)] shadow-[0_6px_18px_rgba(36,19,34,0.35)] ${
+              isPlaying ? "animate-[spin_5s_linear_infinite]" : ""
+            }`}
+            aria-hidden="true"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ff8fab,#ffd9e0)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
+            </span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-[#241322]" title={title}>
+              {title}
+            </p>
+            <p className="mt-0.5 truncate text-xs text-[#8a6a70]" title={subtitle}>
+              {subtitle}
+            </p>
+          </div>
+        </div>
+
+        <input
+          type="range"
+          min={0}
+          max={duration || 0}
+          step={0.5}
+          value={Math.min(current, duration || 0)}
+          onChange={(e) => seek(Number(e.target.value))}
+          aria-label="播放进度"
+          className="mini-player-range mt-4 w-full"
+        />
+        <div className="mt-1 flex justify-between font-general text-[10px] uppercase tracking-[0.22em] text-[#8a6a70]">
+          <span>{fmt(current)}</span>
+          <span>{fmt(duration)}</span>
+        </div>
+
+        <div className="mt-3 flex items-center justify-center gap-3">
+          {mode === "playlist" && (
+            <button
+              type="button"
+              onClick={prev}
+              aria-label="上一首"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f2d8c8] bg-white/60 text-[#5f4b52] transition hover:-translate-y-0.5 hover:bg-[#ffd9e0]"
+            >
+              <FiSkipBack aria-hidden className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={isPlaying ? "暂停" : "播放"}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-[#241322] text-[#ffe7ef] shadow-[0_10px_26px_rgba(36,19,34,0.35)] transition hover:scale-105 hover:bg-[#3a2130]"
+          >
+            {isPlaying ? (
+              <FiPause aria-hidden className="h-5 w-5" />
+            ) : (
+              <FiPlay aria-hidden className="ml-0.5 h-5 w-5" />
+            )}
+          </button>
+          {mode === "playlist" && (
+            <button
+              type="button"
+              onClick={next}
+              aria-label="下一首"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#f2d8c8] bg-white/60 text-[#5f4b52] transition hover:-translate-y-0.5 hover:bg-[#ffd9e0]"
+            >
+              <FiSkipForward aria-hidden className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

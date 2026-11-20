@@ -10804,3 +10804,67 @@ body {
     transform: none;
   }
 }
+
+/* ── 迷你播放器：均衡器跳动 + 玫瑰金进度条 ───────────────────── */
+.mini-eq-bar {
+  height: 4px;
+  animation: mini-eq 1s ease-in-out infinite;
+}
+
+@keyframes mini-eq {
+  0%,
+  100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+.mini-player-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff8fab, #ffd9e0);
+  outline: none;
+  cursor: pointer;
+}
+
+.mini-player-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #b76e79;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(183, 110, 121, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.mini-player-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.mini-player-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #b76e79;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(183, 110, 121, 0.4);
+}
+
+.mini-player-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff8fab, #ffd9e0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-eq-bar {
+    animation: none;
+    height: 8px;
+  }
+}
