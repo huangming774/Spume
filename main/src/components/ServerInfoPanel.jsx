@@ -191,13 +191,13 @@ const CircleHUD = ({
 
 // ───────────────── Mock 数据（仅本地预览） ─────────────────
 const MOCK_INFO = {
-  vendor: "UCloud 香港",
-  region: "亚太 · 香港",
+  vendor: "Vercel · Serverless",
+  region: "边缘节点",
   os: "Linux",
   arch: "amd64",
-  goVersion: "go1.22.3",
+  goVersion: "rust",
   cpuCores: 4,
-  goroutines: 87,
+  tokioWorkers: 4,
   memory: { usedMB: 1280, totalMB: 4096, usedRatio: 0.3125, source: "system" },
   cpuPercent: 32.4,
   uptime: "12 天 4 小时",
@@ -235,7 +235,6 @@ const ServerInfoPanel = () => {
         setInfo((prev) => ({
           ...(prev || MOCK_INFO),
           cpuPercent: +(20 + Math.random() * 50).toFixed(1),
-          goroutines: 70 + Math.floor(Math.random() * 40),
           serverTime: new Date().toISOString(),
         }));
       }, 2500);
@@ -344,7 +343,7 @@ const ServerInfoPanel = () => {
             label="CPU"
             percent={cpuPercent}
             centerPrimary={`${Number(cpuPercent).toFixed(1)}%`}
-            centerSecondary={`${info.cpuCores ?? "?"} 核 · ${info.goroutines ?? "?"} 协程`}
+            centerSecondary={`${info.cpuCores ?? "?"} 核 · ${info.tokioWorkers ?? "?"} 工作线程`}
             hint="processor"
             accent="#74C0FC"
             glow="#A5D8FF"

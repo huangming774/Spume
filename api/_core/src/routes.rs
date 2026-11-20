@@ -3413,14 +3413,14 @@ async fn server_info(State(state): State<AppState>) -> Json<Value> {
         Err(_) => crate::host::fallback(),
     };
     Json(json!({
-        "vendor": env_label("SERVER_VENDOR", "UCloud 香港"),
-        "region": env_label("SERVER_REGION", "亚太 · 香港"),
+        "vendor": env_label("SERVER_VENDOR", "Vercel · Serverless"),
+        "region": env_label("SERVER_REGION", "边缘节点"),
         "os": host.os,
         "arch": std::env::consts::ARCH,
         "goVersion": "rust",
         "cpuCores": host.cpu_cores,
-        // Go 语义是活跃 goroutine 数，Rust 没有对应计数，用 tokio 工作线程规模近似。
-        "goroutines": host.cpu_cores,
+        // tokio 语义：运行时工作线程数（默认等于核心数），不再是 Go goroutine 近似。
+        "tokioWorkers": tokio::runtime::Handle::current().metrics().num_workers(),
         "memory": {"usedMB": host.memory_used_mb, "totalMB": host.memory_total_mb, "usedRatio": host.memory_ratio, "source": host.memory_source},
         "cpuPercent": host.cpu_percent,
         "uptime": format_uptime(state.started.elapsed()),
