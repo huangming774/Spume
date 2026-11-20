@@ -486,7 +486,7 @@ const NavBar = () => {
                 <img
                   src={ownerAvatar || logoSrc}
                   alt="logo"
-                  className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
+                  className="nav-avatar h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
                 />
               </Link>
               {currentScrollY === 0 && !isSubPage && (

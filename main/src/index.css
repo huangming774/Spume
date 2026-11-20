@@ -10805,6 +10805,24 @@ body {
   }
 }
 
+/* ── 左上角头像：悬停旋转一圈 + 微放大，纯 CSS 无外部库 ───────── */
+.nav-avatar {
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
+.nav-avatar:hover {
+  transform: rotate(360deg) scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-avatar,
+  .nav-avatar:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
 /* ── 迷你播放器：均衡器跳动 + 玫瑰金进度条 ───────────────────── */
 .mini-eq-bar {
   height: 4px;
