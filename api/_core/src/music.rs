@@ -309,10 +309,7 @@ async fn resolve_uncached(state: &AppState, id: &str) -> Result<Value, String> {
                 .get(song_id)
                 .cloned()
                 .unwrap_or_else(|| (String::new(), String::new(), 0));
-            let (url, fee) = urls
-                .get(song_id)
-                .cloned()
-                .unwrap_or((None, 0));
+            let (url, fee) = urls.get(song_id).cloned().unwrap_or((None, 0));
             let reason = if url.is_some() {
                 ""
             } else if fee == 1 {

@@ -42,6 +42,10 @@ test("getGuestbook reads the real guestbook messages endpoint", async (t) => {
       name: "Spume",
       content: "真实留言",
       createdAt: "2026-06-07 18:00",
+      uaOs: "",
+      uaBrowser: "",
+      ipRegion: "",
+      ipMasked: "",
     },
   ]);
 });
@@ -105,6 +109,10 @@ test("postGuestbook creates a real guestbook message and never fabricates offlin
     name: "Spume",
     content: "后端写入",
     createdAt: "2026-06-07 18:01",
+    uaOs: "",
+    uaBrowser: "",
+    ipRegion: "",
+    ipMasked: "",
   });
 });
 

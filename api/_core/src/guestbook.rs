@@ -43,6 +43,10 @@ pub struct StoredMessage {
     pub ip_masked: String,
     /// User-Agent 哈希。只给站长看。
     pub user_agent_hash: String,
+    /// 解析出的操作系统标签（如 Windows 10/11），公开显示。
+    pub ua_os: String,
+    /// 解析出的浏览器标签（如 Chrome 146），公开显示。
+    pub ua_browser: String,
     /// 写入时间。
     pub created_at: DateTime<Utc>,
     /// 友链申请的结构化字段，普通留言为空对象。
@@ -101,7 +105,69 @@ type MessageRow = (
     String,
     DateTime<Utc>,
     String,
+    String,
+    String,
 );
+
+/// 从 User-Agent 解析操作系统与浏览器标签（含主版本），供留言图标行展示。
+/// 只做轻量字符串匹配，不引 UA 解析库；解析不出返回空串。
+pub fn parse_ua(ua: &str) -> (String, String) {
+    let os = if ua.contains("Windows NT 10.0") || ua.contains("Windows NT 11.0") {
+        "Windows 10/11".to_string()
+    } else if ua.contains("Windows NT 6.3") {
+        "Windows 8.1".to_string()
+    } else if ua.contains("Windows NT 6.1") {
+        "Windows 7".to_string()
+    } else if ua.contains("Windows") {
+        "Windows".to_string()
+    } else if ua.contains("Android") {
+        let ver = ua
+            .split("Android ")
+            .nth(1)
+            .and_then(|s| s.split([';', ')']).next())
+            .unwrap_or("")
+            .trim()
+            .to_string();
+        if ver.is_empty() {
+            "Android".to_string()
+        } else {
+            format!("Android {ver}")
+        }
+    } else if ua.contains("iPhone") || ua.contains("iPad") {
+        "iOS".to_string()
+    } else if ua.contains("Mac OS X") {
+        "macOS".to_string()
+    } else if ua.contains("CrOS") {
+        "ChromeOS".to_string()
+    } else if ua.contains("Linux") {
+        "Linux".to_string()
+    } else {
+        String::new()
+    };
+
+    let major = |token: &str| -> String {
+        ua.split(token)
+            .nth(1)
+            .and_then(|s| s.split('.').next())
+            .unwrap_or("")
+            .trim()
+            .to_string()
+    };
+    let browser = if ua.contains("Edg/") {
+        format!("Edge {}", major("Edg/"))
+    } else if ua.contains("OPR/") {
+        format!("Opera {}", major("OPR/"))
+    } else if ua.contains("Firefox/") {
+        format!("Firefox {}", major("Firefox/"))
+    } else if ua.contains("Chrome/") {
+        format!("Chrome {}", major("Chrome/"))
+    } else if ua.contains("Safari/") && ua.contains("Version/") {
+        format!("Safari {}", major("Version/"))
+    } else {
+        String::new()
+    };
+    (os, browser.trim().to_string())
+}
 
 /// 环境变量是否打开主留言区。空值和其它值都是关闭。
 pub fn posts_enabled(raw: &str) -> bool {
@@ -414,7 +480,7 @@ pub fn thread_json(
         .collect()
 }
 
-const COLUMNS: &str = "id, parent_id, nickname, avatar, content, ip_region, is_login_user, is_admin_user, status, ip_masked, user_agent_hash, created_at, extra::text";
+const COLUMNS: &str = "id, parent_id, nickname, avatar, content, ip_region, is_login_user, is_admin_user, status, ip_masked, user_agent_hash, created_at, extra::text, ua_os, ua_browser";
 
 async fn load_descendants(
     pool: &PgPool,
@@ -490,6 +556,8 @@ fn stored_from_row(row: MessageRow) -> StoredMessage {
         user_agent_hash: row.10,
         created_at: row.11,
         extra: serde_json::from_str(&row.12).unwrap_or_else(|_| json!({})),
+        ua_os: row.13,
+        ua_browser: row.14,
     }
 }
 
@@ -541,6 +609,13 @@ fn item_json(
     });
     if item.is_admin_user {
         value["isAdminUser"] = json!(true);
+    }
+    // 客户端信息图标行：系统/浏览器/地区公开；掩码 IP 仍仅站长可见（隐私设计）。
+    if !item.ua_os.is_empty() {
+        value["uaOs"] = json!(item.ua_os);
+    }
+    if !item.ua_browser.is_empty() {
+        value["uaBrowser"] = json!(item.ua_browser);
     }
     if item.extra.as_object().is_some_and(|map| !map.is_empty()) {
         value["extra"] = item.extra.clone();

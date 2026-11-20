@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getGuestbook, postGuestbook } from "../services/guestbookApi";
+import ClientMeta from "./ClientMeta";
 
 const formatTime = (iso) => {
   try {
@@ -193,6 +194,7 @@ const Guestbook = ({ theme = "dark" }) => {
                     {formatTime(row.createdAt)}
                   </time>
                 </div>
+                <ClientMeta item={row} className="mt-1" />
                 <p
                   className={
                     candy

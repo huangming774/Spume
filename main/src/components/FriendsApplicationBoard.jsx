@@ -10,6 +10,7 @@ import {
   postGuestbookMessage,
   postGuestbookReply,
 } from "../services/guestbookMessagesApi";
+import ClientMeta from "./ClientMeta";
 import EmojiPicker from "./EmojiPicker";
 import { appendEmojiToText } from "./emojiInput.js";
 import { buildFriendsApplicationPayload } from "./friendsApplicationContactForm";
@@ -528,9 +529,7 @@ const FriendsApplicationBoard = () => {
                         {roleLabel(item)}
                       </span>
                     </p>
-                    <p className="mt-1 text-xs text-[#9AA4B2]">
-                      {item.ipRegion || "未知地区"}
-                    </p>
+                    <ClientMeta item={item} className="mt-1" />
                   </div>
 
                   <div className="friends-comment-actions flex shrink-0 items-center gap-2">
@@ -685,6 +684,7 @@ const FriendsApplicationBoard = () => {
                                   />
                                 </button>
                               </div>
+                              <ClientMeta item={reply} className="mt-1" />
                               <p className="friends-comment-content mt-3 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-[#4B5563]">
                                 {reply.content}
                               </p>

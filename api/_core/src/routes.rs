@@ -1300,8 +1300,9 @@ async fn guestbook_create(
         }
     }
     let extra_text = serde_json::to_string(&extra).unwrap_or_else(|_| "{}".to_string());
+    let (ua_os, ua_browser) = crate::guestbook::parse_ua(&user_agent);
     let row = sqlx::query_as::<_, (i64, DateTime<Utc>)>(
-        "INSERT INTO guestbook_messages (user_id, nickname, avatar, channel, content, contact_email, content_hash, ip_hash, ip_region, ip_masked, user_agent_hash, parent_id, is_login_user, is_admin_user, extra) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb) RETURNING id, created_at",
+        "INSERT INTO guestbook_messages (user_id, nickname, avatar, channel, content, contact_email, content_hash, ip_hash, ip_region, ip_masked, user_agent_hash, parent_id, is_login_user, is_admin_user, extra, ua_os, ua_browser) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16, $17) RETURNING id, created_at",
     )
     .bind(user.as_ref().map(|item| item.id))
     .bind(&composed.nickname)
@@ -1318,6 +1319,8 @@ async fn guestbook_create(
     .bind(user.is_some())
     .bind(admin)
     .bind(&extra_text)
+    .bind(&ua_os)
+    .bind(&ua_browser)
     .fetch_one(pool)
     .await;
     let Ok((id, created)) = row else {
@@ -1371,8 +1374,10 @@ async fn guestbook_create(
         is_login_user: user.is_some(),
         is_admin_user: admin,
         status: "visible".into(),
-        ip_masked: String::new(),
+        ip_masked: crate::guestbook::mask_ip(&ip),
         user_agent_hash: String::new(),
+        ua_os,
+        ua_browser,
         created_at: created,
         extra,
     };

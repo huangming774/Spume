@@ -157,6 +157,8 @@ fn sample(id: i64, parent_id: i64, created: chrono::DateTime<chrono::Utc>) -> St
         status: "visible".into(),
         ip_masked: String::new(),
         user_agent_hash: String::new(),
+        ua_os: String::new(),
+        ua_browser: String::new(),
         created_at: created,
         extra: serde_json::json!({}),
     }

@@ -17,6 +17,10 @@ function toLegacyRow(item) {
     name: item.name || item.nickname || "匿名",
     content: item.content || "",
     createdAt: item.createdAt,
+    uaOs: item.uaOs || "",
+    uaBrowser: item.uaBrowser || "",
+    ipRegion: item.ipRegion || "",
+    ipMasked: item.ipMasked || "",
   };
 }
 
