@@ -149,6 +149,26 @@ const Hero = () => {
     }
   }, [currentIndex, failedIndexes, loadedHeroIndexes, requestImage]);
 
+  // 滚动期间临时关闭非首屏毛玻璃（导航/播放器豁免），停滚 150ms 后恢复。
+  // 只影响滚动过程中的模糊，静止观感与封面切换效果不变。
+  useEffect(() => {
+    let timer = 0;
+    const onScroll = () => {
+      document.documentElement.classList.add("is-scrolling");
+      window.clearTimeout(timer);
+      timer = window.setTimeout(
+        () => document.documentElement.classList.remove("is-scrolling"),
+        150,
+      );
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.clearTimeout(timer);
+      document.documentElement.classList.remove("is-scrolling");
+    };
+  }, []);
+
   useEffect(() => {
     const handler = () => {
       setSelectorOpen(true);
@@ -208,7 +228,9 @@ const Hero = () => {
       clipPath: "polygon(14% 0, 72% 0, 88% 90%, 0 95%)",
       borderRadius: "0% 0% 40% 10%",
     });
-    gsap.from("#video-frame", {
+    // 保留 clip-path 斜切观感；scrub 数值平滑 + 合成层提示降低逐帧重绘抖动。
+    gsap.set("#video-frame", { willChange: "clip-path, border-radius" });
+    const tween = gsap.from("#video-frame", {
       clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
       borderRadius: "0% 0% 0% 0%",
       ease: "power1.inOut",
@@ -216,9 +238,15 @@ const Hero = () => {
         trigger: "#video-frame",
         start: "center center",
         end: "bottom center",
-        scrub: true,
+        scrub: 0.6,
       },
+      onComplete: () => gsap.set("#video-frame", { willChange: "auto" }),
     });
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
+      gsap.set("#video-frame", { willChange: "auto" });
+    };
   });
 
   const loading =

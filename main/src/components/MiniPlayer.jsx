@@ -73,7 +73,7 @@ const MiniPlayer = () => {
         onClick={() => setCollapsed(false)}
         aria-label="展开音乐播放器"
         title={trackLabel || "背景音乐"}
-        className="group fixed right-4 top-20 z-40 flex items-center gap-2 rounded-full border border-white/60 bg-white/70 py-2 pl-3 pr-4 text-[#b76e79] shadow-[0_10px_30px_rgba(183,110,121,0.22)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/85 sm:right-6 sm:top-24"
+        className="mini-player-root group fixed right-4 top-20 z-40 flex items-center gap-2 rounded-full border border-white/60 bg-white/70 py-2 pl-3 pr-4 text-[#b76e79] shadow-[0_10px_30px_rgba(183,110,121,0.22)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/85 sm:right-6 sm:top-24"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffd9e0,#ffe9c9)] text-[#b76e79]">
           <FiMusic aria-hidden className="h-3.5 w-3.5" />
@@ -87,7 +87,7 @@ const MiniPlayer = () => {
   }
 
   return (
-    <div className="fixed right-4 top-20 z-40 w-[300px] overflow-hidden rounded-3xl border border-white/60 bg-white/75 shadow-[0_24px_60px_rgba(36,19,34,0.22)] backdrop-blur-2xl sm:right-6 sm:top-24">
+    <div className="mini-player-root fixed right-4 top-20 z-40 w-[300px] overflow-hidden rounded-3xl border border-white/60 bg-white/75 shadow-[0_24px_60px_rgba(36,19,34,0.22)] backdrop-blur-2xl sm:right-6 sm:top-24">
       {/* 顶部玫瑰金晕光 */}
       <div
         aria-hidden="true"

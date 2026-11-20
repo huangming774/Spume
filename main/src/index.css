@@ -10869,6 +10869,16 @@ body {
   }
 }
 
+/* 滚动期间暂停非首屏毛玻璃，降低合成开销；停滚即恢复。
+   导航、迷你播放器、字标等首屏/常驻元素豁免，观感不变。 */
+html.is-scrolling .backdrop-blur-sm:not(.nav-mobile-drawer *):not(.mini-player-root *):not(.hero-wordmark *),
+html.is-scrolling .backdrop-blur-md:not(.nav-mobile-drawer *):not(.mini-player-root *):not(.hero-wordmark *),
+html.is-scrolling .backdrop-blur-xl:not(.nav-mobile-drawer *):not(.mini-player-root *):not(.hero-wordmark *),
+html.is-scrolling .backdrop-blur-2xl:not(.nav-mobile-drawer *):not(.mini-player-root *):not(.hero-wordmark *) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .mini-track-list {
   scrollbar-width: thin;
   scrollbar-color: #e8cfc0 transparent;
