@@ -36,7 +36,6 @@
   font-weight: 400;
   color: #827269;
 }
-.owner-videos__profile,
 .owner-video-card__footer a,
 .bili-video-player footer a {
   display: inline-flex;
@@ -48,14 +47,12 @@
   text-decoration: none;
   color: var(--autumn-pumpkin-dark, #924c2a);
 }
-.owner-videos__profile svg,
 .owner-video-card__footer svg,
 .bili-video-player footer a svg {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
 }
-.owner-videos__profile:hover,
 .owner-video-card__footer a:hover,
 .bili-video-player footer a:hover {
   text-decoration: underline;
@@ -328,10 +325,6 @@
   }
   .owner-videos__heading h2 {
     font-size: 21px;
-  }
-  .owner-videos__profile {
-    font-size: 11px;
-    min-height: 36px;
   }
   .owner-videos__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

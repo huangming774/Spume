@@ -9,7 +9,7 @@ import {
   LuVideo,
   LuX,
 } from "react-icons/lu";
-import { biliOwner, ownerVideos } from "../data/biliOwnerVideos.js";
+import { ownerVideos } from "../data/biliOwnerVideos.js";
 import { asVideos, useEntries } from "../lib/siteEntries";
 import {
   formatVideoDate,
@@ -160,7 +160,6 @@ export default function MyBiliVideos({ videos }) {
   const { items } = useEntries("bili");
   const managed = items.length ? asVideos(items) : ownerVideos;
   const sourceVideos = videos === undefined ? managed : videos;
-  const owner = biliOwner;
   const publicVideos = (Array.isArray(sourceVideos) ? sourceVideos : []).filter(
     (video) => video && getBiliVideoHref(video.bvid),
   );
@@ -197,15 +196,6 @@ export default function MyBiliVideos({ videos }) {
             我的视频 <span>{publicVideos.length} 条投稿</span>
           </h2>
         </div>
-        <a
-          className="owner-videos__profile"
-          href={owner.profileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {owner.name}
-          <LuArrowUpRight aria-hidden="true" />
-        </a>
       </header>
       <div
         ref={gridRef}
