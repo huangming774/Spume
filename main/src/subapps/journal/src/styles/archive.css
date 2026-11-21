@@ -85,6 +85,10 @@ svg { flex-shrink: 0; }
 .chronicle-search { display: flex; align-items: center; gap: 8px; padding-left: 7px; border-bottom: 1px solid #d9dfd9; color: #7d8981; min-height: 36px; }
 .chronicle-search input { background: transparent; border: 0; font-size: 11px; color: var(--archive-ink); width: 132px; min-width: 0; padding: 8px 0; outline-offset: 0; }
 .chronicle-search input::-webkit-search-cancel-button { display: none; }
+.chronicle-sync { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 9px 12px; border: 1px dashed #cfd9d2; border-radius: 3px; font-size: 11px; line-height: 1.6; color: #6d7a72; }
+.chronicle-sync svg { flex-shrink: 0; }
+.chronicle-sync.is-live { color: #4c6f60; border-color: #bcd3c6; background: #f2f7f3; }
+.chronicle-sync.is-down { color: #8a6d5c; border-color: #ddc9b8; background: #faf5ef; }
 .chronicle-body { display: grid; grid-template-columns: minmax(0,1fr) 210px; gap: 56px; align-items: start; }
 .chronicle-timeline { position: relative; padding-top: 24px; min-width: 0; --date-width: 96px; --record-gap: 42px; }
 .chronicle-track { position: absolute; top: 33px; bottom: 85px; width: 1px; left: var(--date-width); background: #d8e1db; }

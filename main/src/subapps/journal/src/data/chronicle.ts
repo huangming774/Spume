@@ -115,7 +115,12 @@ const notes: Record<string, EntryNotes> = {
   },
 };
 
-export type ChronicleEntry = Article & EntryNotes & { number: string };
+export type ChronicleEntry = Article & EntryNotes & {
+  number: string;
+  /** GitHub 提交条目专用：外链地址与作者；手写记录不带。 */
+  commitUrl?: string;
+  commitAuthor?: string;
+};
 export const chronicleEntries: ChronicleEntry[] = [...siteContent.articles]
   .sort((a, b) => b.date.localeCompare(a.date) || b.slug.localeCompare(a.slug))
   .map((article, index, entries) => ({

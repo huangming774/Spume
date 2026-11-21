@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowDownUp, ArrowRight, ArrowUpRight, Bookmark, Check, ChevronDown, FileText, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowDownUp, ArrowRight, ArrowUpRight, Bookmark, Check, ChevronDown, FileText, GitCommitHorizontal, Search, X } from 'lucide-react';
 import { motion, useReducedMotion, useScroll } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { journalTo } from '../paths';
 import { ArchiveImage } from '../components/ArchiveImage';
 import { categories, chronicleEntries, type ArchiveCategory } from '../data/chronicle';
+import { commitsToEntries, commitCategoryLabel, type CommitFeed } from '../data/commits';
+import { getRepoCommits } from '../../../../services/repoCommitsApi';
 import { useI18n } from '../i18n/I18nContext';
 import previousHome from '../../mobile-check-4.png';
 import aboutSnapshot from '../assets/archive/about-20261026.webp';
@@ -19,14 +21,30 @@ export function HomePage() {
   const [query, setQuery] = useState('');
   const [oldestFirst, setOldestFirst] = useState(false);
   const [activeSlug, setActiveSlug] = useState(chronicleEntries[0]?.slug ?? '');
+  const [commitFeed, setCommitFeed] = useState<CommitFeed | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: timelineRef, offset: ['start center', 'end center'] });
+
+  useEffect(() => {
+    let alive = true;
+    getRepoCommits().then(feed => { if (alive) setCommitFeed(feed); });
+    return () => { alive = false; };
+  }, []);
+
+  // 手写成长记录 + GitHub 提交说明，同一时间轴按日期倒序；编号按合并后位置重排。
+  const allEntries = useMemo(() => {
+    const commitEntries = commitFeed?.available ? commitsToEntries(commitFeed.commits) : [];
+    return [...chronicleEntries, ...commitEntries]
+      .sort((a, b) => b.date.localeCompare(a.date) || b.slug.localeCompare(a.slug))
+      .map((entry, index, entries) => ({ ...entry, number: entry.commitUrl ? entry.number : String(entries.length - index).padStart(2, '0') }));
+  }, [commitFeed]);
+
   const visible = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
-    const items = chronicleEntries.filter(entry => (category === 'all' || entry.category === category)
+    const items = allEntries.filter(entry => (category === 'all' || entry.category === category)
       && (!search || [entry.title_zh, entry.title_en, ...entry.title, entry.excerpt_zh, entry.excerpt_en, entry.date, ...entry.tags].join(' ').toLocaleLowerCase().includes(search)));
     return oldestFirst ? items.reverse() : items;
-  }, [category, query, oldestFirst]);
+  }, [allEntries, category, query, oldestFirst]);
 
   useEffect(() => {
     const records = timelineRef.current?.querySelectorAll<HTMLElement>('[data-record]');
@@ -44,8 +62,8 @@ export function HomePage() {
     document.getElementById(slug)?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' });
   }
 
-  const firstDate = chronicleEntries.at(-1)?.date ?? '';
-  const lastDate = chronicleEntries[0]?.date ?? '';
+  const firstDate = allEntries.at(-1)?.date ?? '';
+  const lastDate = allEntries[0]?.date ?? '';
   const activeEntry = visible.find(entry => entry.slug === activeSlug) ?? visible[0];
 
   return (
@@ -62,7 +80,7 @@ export function HomePage() {
           </div>
         </div>
         <div className="chronicle-colophon">
-          <span><strong>{String(chronicleEntries.length).padStart(2, '0')}</strong>{zh ? '篇成长记录' : 'growth records'}</span>
+          <span><strong>{String(allEntries.length).padStart(2, '0')}</strong>{zh ? '篇成长记录' : 'growth records'}</span>
           <span><FileText size={15} />{zh ? '始于' : 'Since'} {firstDate.replaceAll('-', '.')}</span>
           <span className="chronicle-colophon-last">{zh ? '最近一页' : 'Latest entry'}<time dateTime={lastDate}>{lastDate.replaceAll('-', '.')}</time></span>
           <span className="chronicle-ongoing"><span className="archive-status-dot" />{zh ? '未完待续' : 'Still in progress'}</span>
@@ -73,7 +91,7 @@ export function HomePage() {
         <div className="chronicle-toolbar">
           <div className="chronicle-filters" role="group" aria-label={zh ? '记录分类' : 'Filter records'}>
             {categories.map(item => <button key={item.id} type="button" aria-pressed={category === item.id}
-              onClick={() => setCategory(item.id)}>{item.label[languageIndex]}<span>{chronicleEntries.filter(entry => item.id === 'all' || entry.category === item.id).length}</span></button>)}
+              onClick={() => setCategory(item.id)}>{item.label[languageIndex]}<span>{allEntries.filter(entry => item.id === 'all' || entry.category === item.id).length}</span></button>)}
           </div>
           <div className="chronicle-tools">
             <label className="chronicle-search"><Search size={16} /><input type="search" value={query}
@@ -88,13 +106,23 @@ export function HomePage() {
           </div>
         </div>
 
+        {commitFeed && commitFeed.configured && (
+          <p className={`chronicle-sync ${commitFeed.available ? 'is-live' : 'is-down'}`} role="status">
+            <GitCommitHorizontal size={14} />
+            {commitFeed.available
+              ? (zh ? `已同步 ${commitFeed.repo || 'GitHub'} 仓库最近 ${commitFeed.commits.length} 条提交说明 · 每 10 分钟更新` : `Synced ${commitFeed.commits.length} recent commits from ${commitFeed.repo || 'GitHub'} · refreshes every 10 min`)
+              : (zh ? '提交记录暂时无法同步，稍后再来看看。' : 'Commit feed is temporarily unavailable. Check back later.')}
+          </p>
+        )}
         <p className="archive-sr-only" aria-live="polite">{zh ? `共 ${visible.length} 条记录` : `${visible.length} records`}</p>
         <div className="chronicle-body">
           <div className="chronicle-timeline" ref={timelineRef}>
             {visible.length > 0 && <div className="chronicle-track" aria-hidden="true"><motion.div style={{ scaleY: scrollYProgress }} /></div>}
             {visible.map((entry, index) => {
               const active = activeSlug === entry.slug;
-              const categoryLabel = categories.find(item => item.id === entry.category)?.label[languageIndex];
+              const categoryLabel = entry.commitUrl
+                ? commitCategoryLabel(entry.tags[0] ?? '')[languageIndex]
+                : categories.find(item => item.id === entry.category)?.label[languageIndex];
               return (
                 <article key={entry.slug} id={entry.slug} data-record={entry.slug}
                   className={`chronicle-record chronicle-record--${entry.category} ${active ? 'is-current' : ''}`}>
@@ -109,7 +137,9 @@ export function HomePage() {
                     <div className="record-eyebrow"><span>{categoryLabel}</span><span className="record-file-id">ARCHIVE / {entry.number}</span>
                       {index === 0 && !oldestFirst && category === 'all' && !query && <span className="record-latest">{zh ? '最新一页' : 'LATEST'}</span>}
                     </div>
-                    <h2><Link to={journalTo(`/post/${entry.slug}`)}>{entry.title[languageIndex]}</Link></h2>
+                    <h2>{entry.commitUrl
+                      ? <a href={entry.commitUrl} target="_blank" rel="noopener noreferrer">{entry.title[languageIndex]}</a>
+                      : <Link to={journalTo(`/post/${entry.slug}`)}>{entry.title[languageIndex]}</Link>}</h2>
                     <p className="record-summary">{entry.note[languageIndex]}</p>
                     {entry.slug === 'site-growth-09-about-quizcard-showcase' && <ArchiveImage src={aboutSnapshot}
                       alt={zh ? '关于我页面的当前画面' : 'The current About page'}
@@ -126,20 +156,28 @@ export function HomePage() {
                       </blockquote>
                     </div>}
                     <ul className="record-tags" aria-label={zh ? '涉及主题' : 'Topics'}>{entry.tags.map(tag => <li key={tag}>{tag}</li>)}</ul>
-                    <details className="record-notes">
+                    {!entry.commitUrl && <details className="record-notes">
                       <summary><Bookmark size={14} />{zh ? '这一页的笔记' : 'Notes from this page'}<ChevronDown size={14} /></summary>
                       <p>{zh ? entry.excerpt_zh : entry.excerpt_en}</p>
-                    </details>
-                    <div className="record-bottom"><span><Check size={13} />{zh ? '已收录' : 'Archived'}<i />{entry.minutes} {zh ? '分钟阅读' : 'min read'}</span>
-                      <Link to={journalTo(`/post/${entry.slug}`)}>{zh ? '阅读完整记录' : 'Read the full story'}<ArrowUpRight size={16} /></Link>
+                    </details>}
+                    <div className="record-bottom"><span><Check size={13} />{entry.commitUrl
+                      ? <>{zh ? '来自提交' : 'From commit'}{entry.commitAuthor && <><i />{entry.commitAuthor}</>}</>
+                      : <>{zh ? '已收录' : 'Archived'}<i />{entry.minutes} {zh ? '分钟阅读' : 'min read'}</>}</span>
+                      {entry.commitUrl
+                        ? <a href={entry.commitUrl} target="_blank" rel="noopener noreferrer">{zh ? '在 GitHub 查看' : 'View on GitHub'}<ArrowUpRight size={16} /></a>
+                        : <Link to={journalTo(`/post/${entry.slug}`)}>{zh ? '阅读完整记录' : 'Read the full story'}<ArrowUpRight size={16} /></Link>}
                     </div>
                   </motion.div>
                 </article>
               );
             })}
-            {visible.length === 0 && <div className="chronicle-empty"><Search size={28} /><h2>{zh ? '还没有这一页' : 'No matching records'}</h2>
-              <p>{zh ? '换一个关键词，或回到全部记录。' : 'Try another keyword or return to all records.'}</p>
-              <button type="button" onClick={() => { setCategory('all'); setQuery(''); }}>{zh ? '查看全部记录' : 'Show all records'}<ArrowRight size={16} /></button>
+            {visible.length === 0 && <div className="chronicle-empty"><Search size={28} />
+              {allEntries.length === 0 && commitFeed && !commitFeed.available
+                ? <><h2>{zh ? '暂时无法同步' : 'Feed unavailable'}</h2>
+                  <p>{zh ? '提交记录还没取回来，稍后刷新再来看看。' : 'The commit feed has not arrived yet. Refresh a little later.'}</p></>
+                : <><h2>{zh ? '还没有这一页' : 'No matching records'}</h2>
+                  <p>{zh ? '换一个关键词，或回到全部记录。' : 'Try another keyword or return to all records.'}</p>
+                  <button type="button" onClick={() => { setCategory('all'); setQuery(''); }}>{zh ? '查看全部记录' : 'Show all records'}<ArrowRight size={16} /></button></>}
             </div>}
             {visible.length > 0 && <div className="chronicle-end"><span /><p>{zh ? (oldestFirst ? '下一页，还在慢慢写。' : '故事，从这里开始。') : (oldestFirst ? 'The next page is still being written.' : 'This is where it began.')}</p><small>TO BE CONTINUED</small></div>}
           </div>

@@ -45,7 +45,7 @@ cargo check --manifest-path ../../Cargo.toml --bin index
 | `UPSTASH_REDIS_REST_URL`、`UPSTASH_REDIS_REST_TOKEN` | 配置后，限流计数走 Redis |
 | `ZILLIZ_URI`、`ZILLIZ_TOKEN`、`ZILLIZ_COLLECTION` | 站内内容检索（Zilliz Cloud，BM25 全文检索） |
 | `QSTASH_CURRENT_SIGNING_KEY`、`QSTASH_NEXT_SIGNING_KEY` | 校验内部调度请求 |
-| `GITHUB_TOKEN`、`GITHUB_REPO`、`OWNER_PUBLISH_GITHUB_BRANCH` | 站长把文章、友链、动态和图册写回仓库 |
+| `GITHUB_TOKEN`、`GITHUB_REPO`、`OWNER_PUBLISH_GITHUB_BRANCH` | 站长把文章、友链、动态和图册写回仓库；也用于部署状态与「创造纪事」提交时间轴读取 |
 | `SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_PASS`、`SMTP_FROM`、`MAIL_NOTIFY_TO` | 留言邮件 |
 | `SYNC_TRIGGER_TOKEN` | 手动同步口令。留空时只接受站长会话 |
 | `GUESTBOOK_MAIN_POSTS_ENABLED` | 主留言区是否接受新留言。友链分区不受影响 |
@@ -66,6 +66,7 @@ cargo check --manifest-path ../../Cargo.toml --bin index
 | GET | `/api/client/network` | 访客地区和掩码后的 IP |
 | GET | `/api/client/place` | 访客 IP 定位的坐标和城市，给菜单圆框地图用 |
 | GET | `/api/client/map-tile/{layer}/{z}/{x}/{y}` | OpenStreetMap 瓦片代理。图层限 `osm`，z 1~19，无需密钥 |
+| GET | `/api/client/repo-commits` | 「创造纪事」提交时间轴。读配置仓库分支最近 30 条提交说明，进程内 + Redis 双层缓存 10 分钟，失败 30 秒负缓存；未配置返回 `configured=false`，不可达返回 `available=false` |
 
 ### 账号
 

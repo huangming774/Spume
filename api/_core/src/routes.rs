@@ -83,6 +83,7 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/weather", get(crate::weather::get))
         .route("/api/client/deploy-status", get(client_deploy_status))
+        .route("/api/client/repo-commits", get(client_repo_commits))
         .route("/api/client/music", get(client_music))
         .route("/api/client/music/playlist", get(client_music_playlist))
         .route("/api/owner/music", axum::routing::put(owner_music_save))
@@ -5580,6 +5581,11 @@ fn public_http_url(value: &str) -> bool {
     let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
     let host = authority.rsplit('@').next().unwrap_or("");
     !host.is_empty() && !host.starts_with(':')
+}
+
+/// 「创造纪事」提交时间轴：公开读配置仓库的提交说明，双层缓存 10 分钟。
+async fn client_repo_commits(State(state): State<AppState>) -> Response {
+    Json(crate::repo_commits::snapshot(&state).await).into_response()
 }
 
 async fn client_deploy_status(State(state): State<AppState>) -> Response {

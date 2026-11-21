@@ -24,6 +24,7 @@ pub mod post_markdown;
 pub mod qstash;
 mod r2;
 pub mod rate_limit;
+pub mod repo_commits;
 mod routes;
 pub mod search_hits;
 pub mod site_records;
